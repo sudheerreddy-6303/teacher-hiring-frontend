@@ -949,7 +949,7 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked }) {
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState("");
 
-  const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  const API = process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api";
 
   // Fetch from acadhr.jobs table
   useEffect(() => {

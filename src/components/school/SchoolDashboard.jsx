@@ -43,7 +43,7 @@ function SchoolDashboard({ user, setPage }) {
 
   const showToast = m => { setToast(m); setTimeout(() => setToast(""), 3000); };
   const up = (k, v) => setForm(f => ({...f, [k]:v}));
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  const API_BASE = process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api";
 
   // ── Fetch school's own jobs from acadhr.jobs ──────────────────────────────
   useEffect(() => {
@@ -109,7 +109,7 @@ function SchoolDashboard({ user, setPage }) {
         title: (form.requirement_type || "Teacher") + " — " + form.subject,
       };
       const res = await fetch(
-        (process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/jobs",
+        (process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api") + "/jobs",
         {
           method: "POST",
           headers: {
@@ -273,7 +273,7 @@ function SchoolDashboard({ user, setPage }) {
               setReqIdLoading(true);
               try {
                 const token = localStorage.getItem("acadhr_token");
-                const r = await fetch((process.env.REACT_APP_API_URL||"http://localhost:5000/api") + "/generate-req-id", {
+                const r = await fetch((process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api") + "/generate-req-id", {
                   headers: token ? { Authorization: "Bearer " + token } : {}
                 });
                 const d = await r.json();
@@ -302,7 +302,7 @@ function SchoolDashboard({ user, setPage }) {
                 setShowPost(true); setReqIdLoading(true);
                 try {
                   const token = localStorage.getItem("acadhr_token");
-                  const r = await fetch((process.env.REACT_APP_API_URL||"http://localhost:5000/api") + "/generate-req-id", { headers: token ? { Authorization:"Bearer "+token } : {} });
+                  const r = await fetch((process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api") + "/generate-req-id", { headers: token ? { Authorization:"Bearer "+token } : {} });
                   const d = await r.json(); setAutoReqId(d.requirement_id || "");
                 } catch { setAutoReqId(""); } finally { setReqIdLoading(false); }
               }}>+ Post a Job</button>
@@ -411,7 +411,7 @@ function SchoolDashboard({ user, setPage }) {
                   setShowPost(true); setReqIdLoading(true);
                   try {
                     const token = localStorage.getItem("acadhr_token");
-                    const r = await fetch((process.env.REACT_APP_API_URL||"http://localhost:5000/api") + "/generate-req-id", { headers: token ? { Authorization:"Bearer "+token } : {} });
+                    const r = await fetch((process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api") + "/generate-req-id", { headers: token ? { Authorization:"Bearer "+token } : {} });
                     const d = await r.json(); setAutoReqId(d.requirement_id || "");
                   } catch { setAutoReqId(""); } finally { setReqIdLoading(false); }
                 }} style={{ border:"2px dashed #D1D5DB", borderRadius:12, padding:16, cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, color:"#9CA3AF", minHeight:120, transition:"all .15s" }}
@@ -691,7 +691,7 @@ function SchoolDashboard({ user, setPage }) {
                 setShowPost(true); setReqIdLoading(true);
                 try {
                   const token = localStorage.getItem("acadhr_token");
-                  const r = await fetch((process.env.REACT_APP_API_URL||"http://localhost:5000/api") + "/jobs/generate-req-id", { headers: { Authorization:"Bearer "+token } });
+                  const r = await fetch((process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api") + "/jobs/generate-req-id", { headers: { Authorization:"Bearer "+token } });
                   const d = await r.json(); setAutoReqId(d.requirement_id||"");
                 } catch { setAutoReqId(""); } finally { setReqIdLoading(false); }
               }}>+ Post New Job</button>
@@ -836,7 +836,7 @@ function SchoolDashboard({ user, setPage }) {
                               ? <img
                                   src={a.profile_photo.startsWith("http")
                                     ? a.profile_photo
-                                    : (process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + a.profile_photo}
+                                    : (process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api").replace("/api","") + a.profile_photo}
                                   alt=""
                                   style={{ width:"100%", height:"100%", objectFit:"cover" }}
                                   onError={e => { e.target.style.display="none"; e.target.parentNode.innerHTML = (a.teacher_name||"A").charAt(0).toUpperCase(); }}
@@ -1062,7 +1062,7 @@ function SchoolDashboard({ user, setPage }) {
                             {/* Avatar */}
                             <div style={{ width:44, height:44, borderRadius:10, overflow:"hidden", background:"#E0E7FF", border:"1px solid #C7D2FE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:800, color:"#4338CA", flexShrink:0 }}>
                               {t.profile_photo
-                                ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + t.profile_photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                                ? <img src={(process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api").replace("/api","") + t.profile_photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                                 : (t.name||"T").charAt(0).toUpperCase()}
                             </div>
                             <div>
@@ -1211,7 +1211,7 @@ function SchoolDashboard({ user, setPage }) {
                   if (link.endsWith(".pdf") || link.includes("/uploads/")) {
                     const fileUrl = link.startsWith("http")
                       ? link
-                      : (process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + link;
+                      : (process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api").replace("/api","") + link;
                     return <iframe src={fileUrl} style={{ width:"100%", height:520, border:"none", borderRadius:10 }} title="Resume" />;
                   }
 
@@ -1236,7 +1236,7 @@ function SchoolDashboard({ user, setPage }) {
                   </div>
                   <div style={{ display:"flex", gap:10 }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => setResumeApplicant(null)}>Close</button>
-                    <a href={resumeApplicant.resume_link.startsWith("http") ? resumeApplicant.resume_link : (process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + resumeApplicant.resume_link}
+                    <a href={resumeApplicant.resume_link.startsWith("http") ? resumeApplicant.resume_link : (process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api").replace("/api","") + resumeApplicant.resume_link}
                       target="_blank" rel="noreferrer" className="btn btn-primary btn-sm" style={{ textDecoration:"none" }}>
                       Open in New Tab ↗
                     </a>
@@ -1274,7 +1274,7 @@ function SchoolDashboard({ user, setPage }) {
                   ) : resumeTeacher.resume_link.endsWith(".pdf") ||
                       resumeTeacher.resume_link.includes("uploads") ? (
                     <iframe
-                      src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + resumeTeacher.resume_link}
+                      src={(process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api").replace("/api","") + resumeTeacher.resume_link}
                       style={{ width:"100%", height:520, border:"none", borderRadius:10 }}
                       title="Resume"
                     />

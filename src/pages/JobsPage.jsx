@@ -12,7 +12,7 @@ function JobsPage({ setPage }) {
   const [applied,    setApplied]    = useState([]);
   const [loginAlert, setLoginAlert] = useState(false);
 
-  const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  const API = process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api";
 
   // ── Fetch from acadhr.jobs ─────────────────────────────────────────────────
   useEffect(() => {

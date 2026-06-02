@@ -64,7 +64,7 @@ function TeacherDashboard({ user, setPage }) {
   useEffect(() => {
     const token = localStorage.getItem("acadhr_token");
     if (!token) { setProfileLoading(false); return; }
-    fetch((process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/teacher/profile", {
+    fetch((process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api") + "/teacher/profile", {
       headers: { Authorization: "Bearer " + token }
     })
     .then(r => r.ok ? r.json() : null)
@@ -126,7 +126,7 @@ function TeacherDashboard({ user, setPage }) {
       const token = localStorage.getItem("acadhr_token");
       const payload = { ...profile, completion_pct: completion };
       const res = await fetch(
-        (process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/teacher/profile",
+        (process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api") + "/teacher/profile",
         {
           method: "PATCH",
           headers: {
@@ -209,7 +209,7 @@ function TeacherDashboard({ user, setPage }) {
           <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
             <div style={{ width:46, height:46, borderRadius:"50%", overflow:"hidden", border:"2px solid #BFDBFE", flexShrink:0, background:"#EBF5FF", display:"flex", alignItems:"center", justifyContent:"center" }}>
               {profile.profile_photo
-                ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + profile.profile_photo} alt="Photo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                ? <img src={(process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api").replace("/api","") + profile.profile_photo} alt="Photo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                 : <span style={{ fontSize:20 }}>👤</span>}
             </div>
             <div>
@@ -401,7 +401,7 @@ function TeacherDashboard({ user, setPage }) {
                 <div style={{ display:"flex", alignItems:"center", gap:16, marginTop:6 }}>
                   <div style={{ width:80, height:80, borderRadius:"50%", overflow:"hidden", border:"3px solid #BFDBFE", background:"#EBF5FF", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                     {profile.profile_photo
-                      ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + profile.profile_photo} alt="Profile" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                      ? <img src={(process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api").replace("/api","") + profile.profile_photo} alt="Profile" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                       : <span style={{ fontSize:36 }}>👤</span>}
                   </div>
                   {editMode && (
@@ -415,7 +415,7 @@ function TeacherDashboard({ user, setPage }) {
                           const token = localStorage.getItem("acadhr_token");
                           try {
                             const r = await fetch(
-                              (process.env.REACT_APP_API_URL||"http://localhost:5000/api") + "/teacher/upload-photo",
+                              (process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api") + "/teacher/upload-photo",
                               { method:"POST", headers: token ? { Authorization:"Bearer "+token } : {}, body: fd }
                             );
                             const d = await r.json();
