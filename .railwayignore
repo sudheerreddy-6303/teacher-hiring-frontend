@@ -1,0 +1,4 @@
+*.log
+.env.example
+README.md
+netlify.toml
