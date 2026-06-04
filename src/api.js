@@ -27,7 +27,16 @@ async function request(method, path, body = null, authRequired = false) {
   let data = {};
   const text = await res.text();
   if (text) {
-    try { data = JSON.parse(text); } catch { throw new Error('Invalid response from server.'); }
+    try {
+      data = JSON.parse(text);
+    } catch {
+      if (text.trim().startsWith('<!') || text.includes('<html')) {
+        throw new Error(
+          'API is pointing at the frontend URL. Set REACT_APP_API_URL to your backend: https://teacher-hiring-backend-production.up.railway.app/api'
+        );
+      }
+      throw new Error('Invalid response from server.');
+    }
   }
   if (!res.ok) throw new Error(data.message || `Request failed (${res.status}).`);
   return data;
