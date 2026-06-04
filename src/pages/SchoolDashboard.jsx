@@ -63,7 +63,7 @@ function SchoolDashboard({ user, setPage }) {
         title: (form.requirement_type || "Teacher") + " — " + form.subject,
       };
       const res = await fetch(
-        (process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api") + "/jobs",
+        (process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/jobs",
         {
           method: "POST",
           headers: {
@@ -181,7 +181,7 @@ function SchoolDashboard({ user, setPage }) {
               setReqIdLoading(true);
               try {
                 const token = localStorage.getItem("acadhr_token");
-                const r = await fetch((process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api") + "/generate-req-id", {
+                const r = await fetch((process.env.REACT_APP_API_URL||"http://localhost:5000/api") + "/generate-req-id", {
                   headers: token ? { Authorization: "Bearer " + token } : {}
                 });
                 const d = await r.json();
@@ -204,7 +204,7 @@ function SchoolDashboard({ user, setPage }) {
               setReqIdLoading(true);
               try {
                 const token = localStorage.getItem("acadhr_token");
-                const r = await fetch((process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api") + "/generate-req-id", {
+                const r = await fetch((process.env.REACT_APP_API_URL||"http://localhost:5000/api") + "/generate-req-id", {
                   headers: token ? { Authorization: "Bearer " + token } : {}
                 });
                 const d = await r.json();
@@ -292,7 +292,7 @@ function SchoolDashboard({ user, setPage }) {
                 setReqIdLoading(true);
                 try {
                   const token = localStorage.getItem("acadhr_token");
-                  const r = await fetch((process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api") + "/generate-req-id", {
+                  const r = await fetch((process.env.REACT_APP_API_URL||"http://localhost:5000/api") + "/generate-req-id", {
                     headers: token ? { Authorization: "Bearer " + token } : {}
                   });
                   const d = await r.json();

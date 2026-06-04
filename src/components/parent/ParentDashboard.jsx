@@ -17,7 +17,7 @@ function ParentDashboard({ user, setPage }) {
   const [saving, setSaving]     = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  const API = process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api";
+  const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
   useEffect(() => {
     const token = localStorage.getItem("acadhr_token");
@@ -309,7 +309,7 @@ function TutorFinder({ user, profile }) {
   const [filter,   setFilter]   = useState({ subject:"", city:"" });
   const [contacted, setContacted] = useState([]);
 
-  const API = process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api";
+  const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
   useEffect(() => {
     const token = localStorage.getItem("acadhr_token");

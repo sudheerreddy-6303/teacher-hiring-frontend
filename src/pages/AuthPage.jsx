@@ -165,7 +165,7 @@ function AuthPage({ mode, setPage }) {
   const SUBS   = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit"];
   const EXPS   = ["Fresher (0-1 year)","1-3 years","3-5 years","5-10 years","10+ years"];
   const QUALS  = ["B.Ed","M.Ed","M.Sc + B.Ed","B.Tech + B.Ed","M.Tech + B.Ed","PhD","Diploma in Education"];
-  const ITYPES = ["School (CBSE)","School (ICSE)","School (State Board)","Junior College","Degree College","Coaching Institute","Tuition Centre","Online Platform"];
+  const ITYPES = ["School (CBSE)","School (ICSE)","School (State Board)","Junior College","Coaching Institute","Tuition Centre","Online Platform"];
   const stepLabels = ["Your Info","Details","Verify Email"];
 
 
@@ -451,7 +451,7 @@ function AuthPage({ mode, setPage }) {
                       <select className="input" value={form.student_class} onChange={e => up("student_class",e.target.value)} required>
                         <option value="">Select class</option>
                         {["Pre-Primary (Nursery–KG)","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5",
-                          "Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12","Degree"].map(c => <option key={c}>{c}</option>)}
+                          "Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12"].map(c => <option key={c}>{c}</option>)}
                       </select>
                     </div>
                   </div>

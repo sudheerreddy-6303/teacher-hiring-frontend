@@ -2,7 +2,7 @@
 // All backend calls go through this file.
 // Token is stored in localStorage under 'acadhr_token'.
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://teacher-hiring-backend.onrender.com/api';
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
 export function getToken()         { return localStorage.getItem('acadhr_token'); }

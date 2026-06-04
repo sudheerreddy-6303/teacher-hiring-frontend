@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { MOCK_JOBS, SUBS } from "../../constants";
+import { SUBS } from "../../constants";
 import { Toast, Spinner, JobCard, OtpBoxes, InlineBrowseJobs, FilterBar } from "../../components/common/Shared";
 import './Auth.css';
 
 function AuthPage({ mode, setPage }) {
   const { login } = useAuth();
-  const [form, setForm] = useState({ name:"", email:"", password:"", role:"teacher", phone:"", city:"", subject:"", experience:"", qualification:"", bio:"", institute_type:"", est_year:"", student_count:"", website:"", hourly_rate:"", teaching_mode:"Both" });
+  const [form, setForm] = useState(() => {
+    const savedRole = localStorage.getItem("acadhr_selected_role") || "teacher";
+    return { name:"", email:"", password:"", role: savedRole, phone:"", city:"", subject:"", experience:"", qualification:"", bio:"", institute_type:"", est_year:"", student_count:"", website:"", hourly_rate:"", teaching_mode:"Both" };
+  });
   const [step, setStep]           = useState(1);
   const [err,  setErr]            = useState("");
   const [loading, setLoading]     = useState(false);
@@ -26,7 +29,15 @@ function AuthPage({ mode, setPage }) {
   const [loginOtpLoading,setLoginOtpLoading]= useState(false);
   const [loginResendTimer,setLoginResendTimer] = useState(0);
 
-  const [roleSelected, setRoleSelected] = useState(false);
+  const [roleSelected, setRoleSelected] = useState(() => {
+    // If role was pre-selected from welcome popup, skip role selection screen
+    const saved = localStorage.getItem("acadhr_selected_role");
+    if (saved) {
+      localStorage.removeItem("acadhr_selected_role"); // clean up
+      return true;  // go straight to signup form
+    }
+    return false;
+  });
 
   function up(k, v) { setForm(f => ({...f, [k]:v})); }
 

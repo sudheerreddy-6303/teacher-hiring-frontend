@@ -61,13 +61,37 @@ function TeacherDashboard({ user, setPage }) {
 
   function up(k, v) { setProfile(p => ({...p, [k]: v})); }
 
-  // Load applications from backend
+  const [resumeUploading, setResumeUploading] = useState(false);
+  const [resumeError,     setResumeError]     = useState("");
+  const [resumeSuccess,   setResumeSuccess]   = useState("");
+
+  async function handleResumeUpload(file) {
+    setResumeUploading(true);
+    setResumeError(""); setResumeSuccess("");
+    try {
+      const token = localStorage.getItem("acadhr_token");
+      const fd    = new FormData();
+      fd.append("resume", file);
+      const res = await fetch(
+        (process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/teacher/upload-resume",
+        { method:"POST", headers:{ Authorization:"Bearer "+token }, body:fd }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setProfile(p => ({ ...p, resume_link: data.resume_link, resume_file_name: data.resume_file_name }));
+      setResumeSuccess(`✅ "${file.name}" uploaded successfully!`);
+    } catch(e) {
+      setResumeError(e.message || "Upload failed. Please try again.");
+    } finally {
+      setResumeUploading(false);
+    }
+  }
   useEffect(() => {
     const token = localStorage.getItem("acadhr_token");
     if (!token) return;
     setAppsLoading(true);
     fetch(
-      (process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api") + "/my-applications",
+      (process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/my-applications",
       { headers: { Authorization: "Bearer " + token } }
     )
     .then(r => r.ok ? r.json() : [])
@@ -100,7 +124,7 @@ function TeacherDashboard({ user, setPage }) {
   useEffect(() => {
     const token = localStorage.getItem("acadhr_token");
     if (!token) { setProfileLoading(false); return; }
-    fetch((process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api") + "/teacher/profile", {
+    fetch((process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/teacher/profile", {
       headers: { Authorization: "Bearer " + token }
     })
     .then(r => r.ok ? r.json() : null)
@@ -162,7 +186,7 @@ function TeacherDashboard({ user, setPage }) {
       const token = localStorage.getItem("acadhr_token");
       const payload = { ...profile, completion_pct: completion };
       const res = await fetch(
-        (process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api") + "/teacher/profile",
+        (process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/teacher/profile",
         {
           method: "PATCH",
           headers: {
@@ -216,7 +240,7 @@ function TeacherDashboard({ user, setPage }) {
 
   // Fetch recent jobs for overview panel
   useEffect(() => {
-    const API = process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api";
+    const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
     fetch(`${API}/jobs`)
       .then(r => r.ok ? r.json() : [])
       .then(data => setRecentJobs(Array.isArray(data) ? data.slice(0, 3) : []))
@@ -256,7 +280,7 @@ function TeacherDashboard({ user, setPage }) {
           <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
             <div style={{ width:46, height:46, borderRadius:"50%", overflow:"hidden", border:"2px solid #BFDBFE", flexShrink:0, background:"#EBF5FF", display:"flex", alignItems:"center", justifyContent:"center" }}>
               {profile.profile_photo
-                ? <img src={(process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api").replace("/api","") + profile.profile_photo} alt="Photo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + profile.profile_photo} alt="Photo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                 : <span style={{ fontSize:20 }}>👤</span>}
             </div>
             <div>
@@ -403,7 +427,7 @@ function TeacherDashboard({ user, setPage }) {
                     {/* Photo */}
                     <div style={{ width:90, height:90, borderRadius:"50%", overflow:"hidden", border:"4px solid rgba(255,255,255,.3)", background:"#1A56DB", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                       {profile.profile_photo
-                        ? <img src={(process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api").replace("/api","") + profile.profile_photo} alt="Profile" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                        ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + profile.profile_photo} alt="Profile" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                         : <span style={{ fontSize:40 }}>👤</span>}
                     </div>
                     <div style={{ flex:1 }}>
@@ -600,7 +624,7 @@ function TeacherDashboard({ user, setPage }) {
                     {profile.resume_file_name
                       ? <span style={{ color:"#1A56DB", fontWeight:600, fontSize:13 }}>📎 {profile.resume_file_name}</span>
                       : profile.resume_link
-                        ? <a href={profile.resume_link} target="_blank" rel="noreferrer" style={{ color:"#1A56DB", fontWeight:600, fontSize:13 }}>🔗 View Resume</a>
+                        ? <a href={profile.resume_link.startsWith("http") ? profile.resume_link : (process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + profile.resume_link} target="_blank" rel="noreferrer" style={{ color:"#1A56DB", fontWeight:600, fontSize:13 }}>🔗 View Resume</a>
                         : <span style={{ color:"#9CA3AF", fontSize:13 }}>No resume uploaded yet</span>}
                   </div>
                   <button className="btn btn-primary btn-sm" onClick={() => setEditMode(true)}>Update Resume</button>
@@ -636,7 +660,7 @@ function TeacherDashboard({ user, setPage }) {
                 <div style={{ display:"flex", alignItems:"center", gap:16, marginTop:6 }}>
                   <div style={{ width:80, height:80, borderRadius:"50%", overflow:"hidden", border:"3px solid #BFDBFE", background:"#EBF5FF", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                     {profile.profile_photo
-                      ? <img src={(process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api").replace("/api","") + profile.profile_photo} alt="Profile" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                      ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + profile.profile_photo} alt="Profile" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                       : <span style={{ fontSize:36 }}>👤</span>}
                   </div>
                   {editMode && (
@@ -650,7 +674,7 @@ function TeacherDashboard({ user, setPage }) {
                           const token = localStorage.getItem("acadhr_token");
                           try {
                             const r = await fetch(
-                              (process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api") + "/teacher/upload-photo",
+                              (process.env.REACT_APP_API_URL||"http://localhost:5000/api") + "/teacher/upload-photo",
                               { method:"POST", headers: token ? { Authorization:"Bearer "+token } : {}, body: fd }
                             );
                             const d = await r.json();
@@ -1098,13 +1122,6 @@ function TeacherDashboard({ user, setPage }) {
               </div>
             </div>
 
-            {editMode && (
-              <div style={{ display:"flex", gap:10, marginBottom:40 }}>
-                <button className="btn btn-ghost" style={{ flex:1, justifyContent:"center" }} onClick={() => { setEditMode(false); setSaved(false); }}>Cancel</button>
-                <button className="btn btn-primary" style={{ flex:2, justifyContent:"center" }} onClick={saveProfile} disabled={saving}>{saving ? "Saving..." : "Save Changes ✓"}</button>
-              </div>
-            )}
-
                 <div style={{ display:"flex", gap:10, marginBottom:20, marginTop:8 }}>
                   <button className="btn btn-ghost" style={{ flex:1, justifyContent:"center" }} onClick={() => { setEditMode(false); setSaved(false); }}>✕ Cancel</button>
                   <button className="btn btn-primary" style={{ flex:2, justifyContent:"center" }} onClick={saveProfile} disabled={saving}>{saving ? "Saving..." : "Save Changes ✓"}</button>
@@ -1217,26 +1234,119 @@ function TeacherDashboard({ user, setPage }) {
         {tab==="resume" && (
           <div className="fadeUp">
             <div className="page-title">Resume & Documents</div>
-            <div className="page-sub">Manage your resume and supporting documents</div>
+            <div className="page-sub">Upload and manage your resume</div>
+
+            {/* Resume card */}
             <div className="card" style={{ padding:28, marginBottom:16 }}>
-              <div style={{ fontWeight:800, fontSize:13, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:18, paddingBottom:8, borderBottom:"2px solid #EBF5FF" }}>📄 Resume</div>
-              <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+              <div style={{ fontWeight:800, fontSize:13, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:18, paddingBottom:8, borderBottom:"2px solid #EBF5FF" }}>
+                📄 Resume / CV
+              </div>
+
+              {/* Current resume status */}
+              <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:20 }}>
                 <div style={{ width:56, height:56, background:"#EBF5FF", borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, flexShrink:0 }}>📄</div>
                 <div style={{ flex:1 }}>
-                  {profile.resume_file_name
-                    ? <><div style={{ fontWeight:700, color:"#111827", marginBottom:4 }}>{profile.resume_file_name}</div><div style={{ fontSize:12, color:"#059669" }}>✓ Resume uploaded</div></>
-                    : profile.resume_link
-                      ? <><div style={{ fontWeight:700, color:"#111827", marginBottom:4 }}>Google Drive Link</div><a href={profile.resume_link} target="_blank" rel="noreferrer" style={{ fontSize:12, color:"#1A56DB" }}>{profile.resume_link.slice(0,50)}...</a></>
-                      : <><div style={{ fontWeight:700, color:"#9CA3AF", marginBottom:4 }}>No resume uploaded</div><div style={{ fontSize:12, color:"#9CA3AF" }}>Upload a PDF/DOC or add a Google Drive link</div></>
-                  }
+                  {profile.resume_file_name ? (
+                    <>
+                      <div style={{ fontWeight:700, color:"#111827", marginBottom:4 }}>📎 {profile.resume_file_name}</div>
+                      <div style={{ fontSize:12, color:"#059669", fontWeight:600 }}>✓ Resume uploaded successfully</div>
+                    </>
+                  ) : profile.resume_link ? (
+                    <>
+                      <div style={{ fontWeight:700, color:"#111827", marginBottom:4 }}>🔗 External Link</div>
+                      <a href={profile.resume_link} target="_blank" rel="noreferrer" style={{ fontSize:12, color:"#1A56DB" }}>
+                        {profile.resume_link.slice(0, 60)}...
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontWeight:700, color:"#9CA3AF", marginBottom:4 }}>No resume uploaded yet</div>
+                      <div style={{ fontSize:12, color:"#9CA3AF" }}>Upload a PDF or DOC file (max 10MB)</div>
+                    </>
+                  )}
                 </div>
-                <button className="btn btn-primary btn-sm" onClick={() => setTab("profile")}>Update Resume</button>
+                {/* View button */}
+                {(profile.resume_link || profile.resume_file_name) && (() => {
+                  const link = profile.resume_link || "";
+                  const BASE = (process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","");
+                  const url  = link.startsWith("http") ? link : link ? BASE + link : null;
+                  return url ? (
+                    <a href={url} target="_blank" rel="noreferrer"
+                      style={{ padding:"8px 18px", borderRadius:9, border:"1.5px solid #BFDBFE", background:"#EBF5FF", color:"#1A56DB", fontWeight:700, fontSize:13, textDecoration:"none", whiteSpace:"nowrap" }}>
+                      👁 View Resume
+                    </a>
+                  ) : null;
+                })()}
+              </div>
+
+              {/* Upload new resume */}
+              <div style={{ background:"#F9FAFB", border:"2px dashed #D1D5DB", borderRadius:12, padding:"24px", textAlign:"center" }}
+                onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor="#1A56DB"; e.currentTarget.style.background="#EBF5FF"; }}
+                onDragLeave={e => { e.currentTarget.style.borderColor="#D1D5DB"; e.currentTarget.style.background="#F9FAFB"; }}
+                onDrop={async e => {
+                  e.preventDefault();
+                  e.currentTarget.style.borderColor="#D1D5DB"; e.currentTarget.style.background="#F9FAFB";
+                  const file = e.dataTransfer.files[0];
+                  if (file) handleResumeUpload(file);
+                }}>
+                <div style={{ fontSize:36, marginBottom:10 }}>📤</div>
+                <div style={{ fontWeight:700, color:"#374151", marginBottom:6 }}>
+                  {resumeUploading ? "Uploading..." : "Drag & drop your resume here"}
+                </div>
+                <div style={{ fontSize:13, color:"#9CA3AF", marginBottom:14 }}>Supports PDF, DOC, DOCX (max 10MB)</div>
+                <label style={{ display:"inline-block", padding:"9px 22px", background:"#1A56DB", color:"#fff", borderRadius:10, cursor:"pointer", fontWeight:700, fontSize:13, fontFamily:"Nunito,sans-serif" }}>
+                  {resumeUploading ? "⏳ Uploading..." : "📂 Browse File"}
+                  <input type="file" accept=".pdf,.doc,.docx" style={{ display:"none" }}
+                    onChange={e => { if (e.target.files[0]) handleResumeUpload(e.target.files[0]); }} />
+                </label>
+              </div>
+
+              {resumeError && <div className="alert a-err" style={{ marginTop:12 }}>❌ {resumeError}</div>}
+              {resumeSuccess && <div className="alert a-ok" style={{ marginTop:12 }}>✅ {resumeSuccess}</div>}
+
+              {/* OR add link */}
+              <div style={{ marginTop:20 }}>
+                <div style={{ fontWeight:700, fontSize:13, color:"#374151", marginBottom:8 }}>Or add a Google Drive / external link:</div>
+                <div style={{ display:"flex", gap:10 }}>
+                  <input className="input" style={{ flex:1 }} placeholder="https://drive.google.com/..."
+                    value={profile.resume_link||""}
+                    onChange={e => setProfile(p => ({...p, resume_link: e.target.value}))} />
+                  <button className="btn btn-primary btn-sm" onClick={async () => {
+                    try {
+                      const token = localStorage.getItem("acadhr_token");
+                      await fetch((process.env.REACT_APP_API_URL||"http://localhost:5000/api") + "/teacher/profile", {
+                        method:"PATCH", headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+                        body: JSON.stringify({ resume_link: profile.resume_link })
+                      });
+                      setResumeSuccess("Link saved successfully!");
+                      setTimeout(() => setResumeSuccess(""), 3000);
+                    } catch { setResumeError("Failed to save link."); }
+                  }}>Save Link</button>
+                </div>
               </div>
             </div>
-            <div className="card" style={{ padding:40, textAlign:"center" }}>
-              <div style={{ fontSize:48, marginBottom:12 }}>📁</div>
-              <h3>Document Vault Coming Soon</h3>
-              <p style={{ color:"#6B7280", fontSize:14, marginTop:8 }}>Upload degree certificates, experience letters, and other documents securely.</p>
+
+            {/* Inline preview */}
+            {profile.resume_link && (profile.resume_link.endsWith(".pdf") || profile.resume_link.includes("/uploads/resumes/")) && (
+              <div className="card" style={{ padding:0, overflow:"hidden" }}>
+                <div style={{ padding:"14px 20px", borderBottom:"1px solid #E5E7EB", fontWeight:700, fontSize:14, color:"#111827" }}>
+                  📄 Resume Preview
+                </div>
+                <iframe
+                  src={profile.resume_link.startsWith("http")
+                    ? profile.resume_link
+                    : (process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + profile.resume_link}
+                  style={{ width:"100%", height:600, border:"none" }}
+                  title="Resume Preview"
+                />
+              </div>
+            )}
+
+            {/* Document vault placeholder */}
+            <div className="card" style={{ padding:32, textAlign:"center", marginTop:16 }}>
+              <div style={{ fontSize:40, marginBottom:12 }}>📁</div>
+              <h3 style={{ marginBottom:8 }}>Document Vault Coming Soon</h3>
+              <p style={{ color:"#6B7280", fontSize:14 }}>Upload degree certificates, experience letters, and other documents securely.</p>
             </div>
           </div>
         )}

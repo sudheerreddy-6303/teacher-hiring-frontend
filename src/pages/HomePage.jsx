@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { MOCK_JOBS } from "../constants";
+
 import { Navbar, HeroSchoolsCarousel, JobCard, Toast, Brand, Divider } from "../components/common/Shared";
 
 function HomePage({ setPage }) {
@@ -165,11 +165,11 @@ function HomePage({ setPage }) {
               <div className="sec-eye">All Positions</div>
               <h2 className="sec-title" style={{ marginBottom:6 }}>Browse All Teaching Jobs</h2>
               <p style={{ color:"#6B7280", fontSize:15 }}>
-                {MOCK_JOBS.length} verified positions across India — updated daily
+                Live teaching positions across India — updated daily
               </p>
             </div>
             <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-              <span style={{ background:"#ECFDF5", color:"#059669", border:"1px solid #A7F3D0", borderRadius:20, padding:"5px 14px", fontSize:12, fontWeight:700 }}>🟢 {MOCK_JOBS.length} Active Jobs</span>
+              <span style={{ background:"#ECFDF5", color:"#059669", border:"1px solid #A7F3D0", borderRadius:20, padding:"5px 14px", fontSize:12, fontWeight:700 }}>🟢 Live Jobs</span>
               <button className="btn btn-primary" onClick={() => setPage("jobs")}>View All & Filter →</button>
             </div>
           </div>
@@ -183,33 +183,7 @@ function HomePage({ setPage }) {
 
           {/* Jobs grid — all 9 */}
           <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20 }}>
-            {MOCK_JOBS.map((job, i) => (
-              <div key={job.id} onClick={() => setPage("jobs")} style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:14, padding:"20px", cursor:"pointer", transition:"all .2s", boxShadow:"0 1px 4px rgba(0,0,0,.06)" }}
-                onMouseEnter={e => { e.currentTarget.style.transform="translateY(-4px)"; e.currentTarget.style.boxShadow="0 10px 28px rgba(26,86,219,.12)"; e.currentTarget.style.borderColor="#93C5FD"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.06)"; e.currentTarget.style.borderColor="#E5E7EB"; }}>
-                {/* Card top row */}
-                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:12 }}>
-                  <div style={{ width:46, height:46, background:"linear-gradient(135deg,#EBF5FF,#E0F2FE)", border:"1px solid #BFDBFE", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>{job.logo}</div>
-                  <span style={{ background: job.type==="Full-Time"?"#EBF5FF": job.type==="Part-Time"?"#E0F2FE":"#FFFBEB", color: job.type==="Full-Time"?"#1A56DB": job.type==="Part-Time"?"#0369A1":"#D97706", border:"1px solid "+ (job.type==="Full-Time"?"#BFDBFE": job.type==="Part-Time"?"#BAE6FD":"#FDE68A"), borderRadius:20, padding:"3px 10px", fontSize:10, fontWeight:700 }}>{job.type}</span>
-                </div>
-                {/* Title & org */}
-                <div style={{ fontFamily:"Playfair Display,serif", fontWeight:700, fontSize:15, color:"#111827", marginBottom:3, lineHeight:1.3 }}>{job.title}</div>
-                <div style={{ fontSize:12, color:"#1A56DB", fontWeight:600, marginBottom:10 }}>{job.institute}</div>
-                {/* Meta pills */}
-                <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:14 }}>
-                  <span style={{ fontSize:11, color:"#6B7280", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:6, padding:"2px 8px" }}>📍 {job.location}</span>
-                  <span style={{ fontSize:11, color:"#6B7280", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:6, padding:"2px 8px" }}>🎓 {job.experience}</span>
-                </div>
-                {/* Footer */}
-                <div style={{ borderTop:"1px solid #F3F4F6", paddingTop:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <span style={{ fontSize:12, fontWeight:700, color:"#059669" }}>{job.salary}</span>
-                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    <span style={{ fontSize:11, color:"#9CA3AF" }}>👥 {job.applicants}</span>
-                    <span style={{ fontSize:11, color:"#9CA3AF" }}>· {job.posted}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+            <div style={{textAlign:"center",padding:"32px 0",color:"#6B7280"}}><button className="btn btn-primary" onClick={()=>setPage("jobs")}>Browse All Jobs →</button></div>
           </div>
 
           {/* Bottom CTA */}
@@ -404,7 +378,7 @@ function HomePage({ setPage }) {
             <button className="btn btn-outline" onClick={() => setPage("jobs")}>View All Positions →</button>
           </div>
           <div className="grid3">
-            {MOCK_JOBS.slice(0,3).map(j => <JobCard key={j.id} job={j} onApply={() => setPage("jobs")} />)}
+            <div style={{textAlign:'center',padding:'32px'}}><button className='btn btn-primary' onClick={()=>setPage('jobs')}>Browse All Jobs →</button></div>
           </div>
         </div>
       </section>

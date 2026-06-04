@@ -20,7 +20,7 @@ function AdminDashboard({ setPage }) {
   const [parents,   setParents]   = useState([]);
   const [loading,   setLoading]   = useState({});
 
-  const API = process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api";
+  const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
   const token = localStorage.getItem("acadhr_token");
   const hdr = token ? { Authorization: "Bearer " + token } : {};
 
@@ -521,7 +521,7 @@ function AdminDashboard({ setPage }) {
                           <td>
                             <div style={{ width:36, height:36, borderRadius:"50%", overflow:"hidden", background:"#EBF5FF", border:"2px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center" }}>
                               {t.profile_photo
-                                ? <img src={(process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api").replace("/api","") + t.profile_photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                                ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + t.profile_photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                                 : <span style={{ fontSize:18 }}>👤</span>}
                             </div>
                           </td>

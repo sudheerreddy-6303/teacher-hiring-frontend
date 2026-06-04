@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { MOCK_JOBS } from "../../constants";
+
 import { Toast, Divider, InlineBrowseJobs } from "../../components/common/Shared";
 import './Tutor.css';
 

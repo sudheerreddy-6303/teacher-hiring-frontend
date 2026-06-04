@@ -12,7 +12,7 @@ export default function BrowseTeachersPage({ setPage }) {
   const [error,    setError]    = useState("");
   const [filter,   setFilter]   = useState({ subject:"All", city:"All", experience:"All", mode:"All", search:"" });
 
-  const API = process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api";
+  const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
   useEffect(() => {
     setLoading(true);
@@ -130,7 +130,7 @@ export default function BrowseTeachersPage({ setPage }) {
                   <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:16 }}>
                     <div style={{ width:54, height:54, borderRadius:"50%", overflow:"hidden", background:"#EBF5FF", border:"2px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>
                       {t.profile_photo
-                        ? <img src={(process.env.REACT_APP_API_URL||"https://teacher-hiring-backend.onrender.com/api").replace("/api","") + t.profile_photo} alt={t.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                        ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + t.profile_photo} alt={t.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                         : "👤"}
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>

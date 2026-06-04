@@ -12,7 +12,7 @@ export default function BrowseTutorsPage({ setPage }) {
   const [error,   setError]   = useState("");
   const [filter,  setFilter]  = useState({ subject:"All", mode:"All", city:"All", experience:"All", search:"" });
 
-  const API = process.env.REACT_APP_API_URL || "https://teacher-hiring-backend.onrender.com/api";
+  const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
   useEffect(() => {
     setLoading(true);
