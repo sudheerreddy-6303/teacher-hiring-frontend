@@ -2,7 +2,8 @@
 // All backend calls go through this file.
 // Token is stored in localStorage under 'acadhr_token'.
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import apiBase from './config/apiBase';
+const BASE_URL = apiBase();
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
 export function getToken()         { return localStorage.getItem('acadhr_token'); }
@@ -23,8 +24,12 @@ async function request(method, path, body = null, authRequired = false) {
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Something went wrong.');
+  let data = {};
+  const text = await res.text();
+  if (text) {
+    try { data = JSON.parse(text); } catch { throw new Error('Invalid response from server.'); }
+  }
+  if (!res.ok) throw new Error(data.message || `Request failed (${res.status}).`);
   return data;
 }
 

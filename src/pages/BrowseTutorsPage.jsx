@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Navbar } from "../components/common/Shared";
+import apiBase from "../config/apiBase";
 
 const SUBJECTS = ["All","Mathematics","Physics","Chemistry","Biology","English","Hindi","Computer Science","Economics","Accountancy","Social Science"];
 const MODES    = ["All","Online","Offline","Both"];
@@ -12,7 +13,7 @@ export default function BrowseTutorsPage({ setPage }) {
   const [error,   setError]   = useState("");
   const [filter,  setFilter]  = useState({ subject:"All", mode:"All", city:"All", experience:"All", search:"" });
 
-  const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  const API = apiBase();
 
   useEffect(() => {
     setLoading(true);

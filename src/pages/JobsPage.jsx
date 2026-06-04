@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Navbar } from "../components/common/Shared";
+import apiBase from "../config/apiBase";
 
 function JobsPage({ setPage }) {
   const { user } = useAuth();
@@ -12,7 +13,7 @@ function JobsPage({ setPage }) {
   const [applied,    setApplied]    = useState([]);
   const [loginAlert, setLoginAlert] = useState(false);
 
-  const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  const API = apiBase();
 
   // ── Fetch from acadhr.jobs ─────────────────────────────────────────────────
   useEffect(() => {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Navbar } from "../components/common/Shared";
+import apiBase from "../config/apiBase";
 
 const SUBJECTS  = ["All","Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit"];
 const CITIES    = ["All","Hyderabad","Delhi","Mumbai","Bangalore","Chennai","Pune","Kolkata","Ahmedabad","Visakhapatnam","Vijayawada"];
@@ -12,7 +13,7 @@ export default function BrowseTeachersPage({ setPage }) {
   const [error,    setError]    = useState("");
   const [filter,   setFilter]   = useState({ subject:"All", city:"All", experience:"All", mode:"All", search:"" });
 
-  const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  const API = apiBase();
 
   useEffect(() => {
     setLoading(true);
