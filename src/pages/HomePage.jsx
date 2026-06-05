@@ -4,6 +4,15 @@ import { useAuth } from "../context/AuthContext";
 import { Navbar, HeroSchoolsCarousel, JobCard, Toast, Brand, Divider } from "../components/common/Shared";
 
 function HomePage({ setPage }) {
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const isMobile = vw <= 640;
+  const isTablet = vw <= 1024;
+
   const FEATURES = [
     { i:"🎯", t:"Smart Job Matching",      d:"Intelligent matching connects teachers with relevant openings based on subject, city, and experience." },
     { i:"🔐", t:"Verified Profiles",       d:"Every teacher is reviewed. Every institute is verified. Hire and apply with complete confidence." },
@@ -26,15 +35,15 @@ function HomePage({ setPage }) {
     <div>
       <Navbar setPage={setPage} />
       {/* ── HERO ───────────────────────────────────────────────────────────── */}
-      <section style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:"#fff", position:"relative", overflow:"hidden", paddingTop:90 }}>
+      <section className="hero-section" style={{ display:"flex", flexDirection:"column", background:"#fff", position:"relative", overflow:"hidden" }}>
 
         {/* Subtle background accents */}
         <div style={{ position:"absolute", width:700, height:700, borderRadius:"50%", background:"radial-gradient(circle,rgba(26,86,219,.05),transparent 65%)", top:-200, right:-150, pointerEvents:"none" }} />
         <div style={{ position:"absolute", width:500, height:500, borderRadius:"50%", background:"radial-gradient(circle,rgba(14,165,233,.05),transparent 65%)", bottom:-100, left:-100, pointerEvents:"none" }} />
         <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(circle,rgba(26,86,219,.04) 1px,transparent 1px)", backgroundSize:"36px 36px", pointerEvents:"none" }} />
 
-        <div style={{ position:"relative", zIndex:1, flex:1, display:"flex", alignItems:"center", paddingTop:40, paddingBottom:60, paddingLeft:60, paddingRight:60, width:"100%", boxSizing:"border-box" }}>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:72, alignItems:"center", width:"100%" }}>
+        <div className="hero-inner" style={{ position:"relative", zIndex:1, flex:1, display:"flex", alignItems:"center", paddingTop:40, paddingBottom:60, paddingLeft:isMobile?16:isTablet?24:60, paddingRight:isMobile?16:isTablet?24:60, width:"100%", boxSizing:"border-box" }}>
+          <div className="hero-grid">
 
             {/* ── LEFT: Copy ── */}
             <div className="fadeUp">
@@ -56,14 +65,16 @@ function HomePage({ setPage }) {
               </p>
 
               {/* Search */}
-              <div style={{ display:"flex", background:"#fff", border:"1.5px solid #D1D5DB", borderRadius:12, overflow:"hidden", boxShadow:"0 4px 20px rgba(26,86,219,.1)", marginBottom:24, maxWidth:480 }}>
-                <span style={{ padding:"0 16px", display:"flex", alignItems:"center", color:"#9CA3AF", fontSize:18 }}>🔍</span>
-                <input
-                  placeholder="Subject, city, or school..."
-                  style={{ flex:1, border:"none", outline:"none", fontSize:14, color:"#111827", fontFamily:"Nunito,sans-serif", padding:"14px 0", background:"transparent" }}
-                  onKeyDown={e => e.key==="Enter" && setPage("jobs")}
-                />
-                <button className="btn btn-primary" style={{ borderRadius:0, borderTopRightRadius:10, borderBottomRightRadius:10, padding:"0 24px", fontSize:14 }} onClick={() => setPage("jobs")}>
+              <div className="hero-search-row">
+                <div className="hero-search-input-wrap">
+                  <span className="hero-search-icon" aria-hidden="true">🔍</span>
+                  <input
+                    className="hero-search-input"
+                    placeholder="Subject, city, or school..."
+                    onKeyDown={e => e.key==="Enter" && setPage("jobs")}
+                  />
+                </div>
+                <button type="button" className="btn btn-primary hero-search-btn" onClick={() => setPage("jobs")}>
                   Search
                 </button>
               </div>
@@ -135,7 +146,7 @@ function HomePage({ setPage }) {
               </div>
 
               {/* Feature pills below card */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop:16 }}>
+              <div className="home-pills-grid" style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:12, marginTop:16 }}>
                 {[
                   { icon:"🎯", t:"Smart Matching",    bg:"#EBF5FF", border:"#BFDBFE", color:"#1E429F" },
                   { icon:"🔐", t:"Verified Profiles", bg:"#ECFDF5", border:"#A7F3D0", color:"#065F46" },
@@ -182,7 +193,7 @@ function HomePage({ setPage }) {
           </div>
 
           {/* Jobs grid — all 9 */}
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20 }}>
+          <div className="home-jobs-grid responsive-grid-3">
             <div style={{textAlign:"center",padding:"32px 0",color:"#6B7280"}}><button className="btn btn-primary" onClick={()=>setPage("jobs")}>Browse All Jobs →</button></div>
           </div>
 
@@ -210,7 +221,7 @@ function HomePage({ setPage }) {
             <p style={{ color:"#6B7280", fontSize:15, marginTop:10 }}>Verified, experienced educators ready to join your institution</p>
           </div>
 
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:22 }}>
+          <div className="home-features-grid responsive-grid-3" style={{ gap:22 }}>
             {[
               { name:"Priya Sharma",   role:"Mathematics Teacher",  exp:"5 Years", city:"Hyderabad", qual:"M.Sc + B.Ed", subjects:["Algebra","Calculus","Statistics"],      emoji:"👩‍🏫", rating:4.9, avail:"Immediate", color:"#EBF5FF", accent:"#1A56DB" },
               { name:"Ravi Kumar",     role:"Physics Teacher",       exp:"3 Years", city:"Bangalore", qual:"M.Sc + B.Ed", subjects:["Mechanics","Optics","Thermodynamics"],  emoji:"👨‍🔬", rating:4.8, avail:"2 Weeks",   color:"#ECFDF5", accent:"#059669" },

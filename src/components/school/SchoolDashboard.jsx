@@ -12,6 +12,11 @@ function SchoolDashboard({ user, setPage }) {
   const [reqIdLoading, setReqIdLoading] = useState(false);
   const [toast, setToast] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [navOpen, setNavOpen] = useState(false);
+  // Collapse the sidebar to an icon rail on small screens for responsiveness
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth <= 900) setSidebarOpen(false);
+  }, []);
   const [form, setForm] = useState({
     // Basic
     institution_name:"", institution_type:"",
@@ -198,7 +203,7 @@ function SchoolDashboard({ user, setPage }) {
   const MENU = [
     { id:"overview",   icon:"🏠",  label:"Overview"         },
     { id:"profile",    icon:"🏫",  label:"My Profile"       },
-    { id:"jobs",       icon:"💼",  label:"My Jobs"          },
+    { id:"jobs",       icon:"💼",  label:"Post A Job"       },
     { id:"applicants", icon:"👥",  label:"Applicants"       },
     { id:"database",   icon:"🗄️",  label:"Teacher Database" },
     { id:"analytics",  icon:"📊",  label:"Analytics"        },
@@ -209,10 +214,13 @@ function SchoolDashboard({ user, setPage }) {
 
 
   return (
-    <div style={{ display:"flex", width:"100vw", minHeight:"100vh", background:"#F7F8FA", fontFamily:"Nunito,sans-serif" }}>
+    <div className="school-layout" style={{ background:"#F7F8FA", fontFamily:"Nunito,sans-serif" }}>
+
+      <button type="button" className="mobile-nav-toggle school-mobile-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
+      <div className={"sidebar-backdrop" + (navOpen ? " show" : "")} onClick={() => setNavOpen(false)} />
 
       {/* Sidebar */}
-      <div style={{ width:sidebarOpen?210:64, flexShrink:0, background:"#fff", borderRight:"1px solid #E5E7EB", display:"flex", flexDirection:"column", transition:"width .2s", overflow:"hidden", position:"fixed", top:0, left:0, bottom:0, zIndex:300 }}>
+      <div className={"school-sidebar" + (navOpen ? " drawer-open" : "")} style={{ width:sidebarOpen?210:64 }} onClick={() => setNavOpen(false)}>
         <div style={{ padding:"14px 16px", borderBottom:"1px solid #E5E7EB", display:"flex", alignItems:"center", justifyContent:"space-between", minHeight:56 }}>
           {sidebarOpen && <div style={{ cursor:"pointer" }} onClick={() => setPage("home")}><img src="/acadhr-logo.png" alt="AcadHr" style={{ height:32, objectFit:"contain" }} /></div>}
           <button onClick={() => setSidebarOpen(o => !o)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, color:"#6B7280", padding:4 }}>{sidebarOpen ? "◀" : "▶"}</button>
@@ -225,6 +233,7 @@ function SchoolDashboard({ user, setPage }) {
           {MENU.map(m => (
             <div key={m.id} onClick={() => {
               setTab(m.id);
+              setNavOpen(false);
               // Auto-minimize sidebar for Teacher Database to give more space
               if (m.id === "database") setSidebarOpen(false);
               else if (!sidebarOpen) setSidebarOpen(true);
@@ -260,13 +269,13 @@ function SchoolDashboard({ user, setPage }) {
       </div>
 
       {/* Main */}
-      <div style={{ marginLeft:sidebarOpen?210:64, flex:1, transition:"margin-left .2s" }}>
+      <div className="school-main" style={{ marginLeft:sidebarOpen?210:64 }}>
         {/* Top bar */}
-        <div style={{ background:"#fff", borderBottom:"1px solid #E5E7EB", padding:"0 28px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:200 }}>
+        <div className="school-topbar" style={{ background:"#fff", borderBottom:"1px solid #E5E7EB", padding:"0 28px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:200 }}>
           <div style={{ fontWeight:700, fontSize:15, color:"#111827" }}>
                 {tab==="overview"?"Overview":tab==="profile"?"My Profile":tab==="jobs"?"My Jobs":tab==="applicants"?"Applicants":tab==="database"?"Teacher Database":tab==="analytics"?"Analytics":tab==="credits"?"Credits":"Settings"}
               </div>
-          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+          <div className="school-topbar-actions">
             <div style={{ display:"flex", alignItems:"center", gap:6, background:"#FFF7ED", border:"1px solid #FDE68A", borderRadius:20, padding:"4px 14px", fontSize:13, fontWeight:700, color:"#D97706" }}><span>🪙</span> 0 +</div>
             <button className="btn btn-primary btn-sm" onClick={async () => {
               setShowPost(true);
@@ -487,7 +496,7 @@ function SchoolDashboard({ user, setPage }) {
                       ["Email",           schoolProfile.email || user.email, "📧"],
                       ["Phone",           schoolProfile.phone,                "📱"],
                       ["Alt. Phone",      schoolProfile.alternate_phone,      "📲"],
-                      ["Contact Person",  schoolProfile.contact_person,       "👤"],
+                      ["Contact Person ",  schoolProfile.contact_person,       "👤"],
                       ["Designation",     schoolProfile.designation,          "💼"],
                       ["Principal",       schoolProfile.principal_name,       "🎓"],
                       ["Address",         schoolProfile.address,              "📍"],
@@ -628,7 +637,7 @@ function SchoolDashboard({ user, setPage }) {
                       <input className="input" type="tel" value={schoolProfile.phone} onChange={e => upProfile("phone",e.target.value)} placeholder="+91 98765 43210" /></div>
                     <div className="fg"><label className="flabel">Alternate Phone</label>
                       <input className="input" type="tel" value={schoolProfile.alternate_phone} onChange={e => upProfile("alternate_phone",e.target.value)} placeholder="+91 98765 43210" /></div>
-                    <div className="fg"><label className="flabel">Contact Person</label>
+                    <div className="fg"><label className="flabel">Contact Person Name</label>
                       <input className="input" value={schoolProfile.contact_person} onChange={e => upProfile("contact_person",e.target.value)} placeholder="e.g. Admissions Head" /></div>
                     <div className="fg"><label className="flabel">Designation</label>
                       <input className="input" value={schoolProfile.designation} onChange={e => upProfile("designation",e.target.value)} placeholder="e.g. HR Manager" /></div>

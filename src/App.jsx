@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./index.css";
+import "./styles/responsive.css";
 import { AuthContext } from "./context/AuthContext";
 
 import HomePage           from "./pages/HomePage";

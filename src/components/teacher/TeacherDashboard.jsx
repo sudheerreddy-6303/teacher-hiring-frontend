@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { SUBS } from "../../constants";
+import { SUBS, INDIA_LOCATIONS } from "../../constants";
 import { Toast, InlineBrowseJobs, FilterBar } from "../common/Shared";
 import './Teacher.css';
 
@@ -44,8 +44,7 @@ function TeacherDashboard({ user, setPage }) {
     teaching_mode:      "",
     // Demo & languages
     demo_available:     "",
-    demo_link:          "",
-    languages:          "",
+    demo_link:          "",    languages:          "",
     certifications:     "",
     // Other
     residential_pref:   "",
@@ -57,9 +56,31 @@ function TeacherDashboard({ user, setPage }) {
     remarks:            "",
     resume_file_name:   "",
     profile_photo:      "",
+    terms_accepted:     "",
   });
 
   function up(k, v) { setProfile(p => ({...p, [k]: v})); }
+
+  // Demo links — up to 3 Google Drive URLs (stored as comma-separated in demo_link)
+  const DEMO_MAX = 3;
+  const [demoLinks, setDemoLinks] = useState([""]);
+  function syncDemoLinks(rows) {
+    setDemoLinks(rows);
+    up("demo_link", rows.map(s => s.trim()).filter(Boolean).join(", "));
+  }
+  function setDemoLinkAt(idx, val) {
+    const rows = [...demoLinks];
+    rows[idx] = val;
+    syncDemoLinks(rows);
+  }
+  function addDemoLink() {
+    if (demoLinks.length >= DEMO_MAX) return;
+    setDemoLinks([...demoLinks, ""]);
+  }
+  function removeDemoLink(idx) {
+    if (demoLinks.length <= 1) return;
+    syncDemoLinks(demoLinks.filter((_, i) => i !== idx));
+  }
 
   const [resumeUploading, setResumeUploading] = useState(false);
   const [resumeError,     setResumeError]     = useState("");
@@ -169,7 +190,9 @@ function TeacherDashboard({ user, setPage }) {
           profile_photo:      data.profile_photo       || "",
           profile_status:     data.profile_status     || "Active",
           remarks:            data.remarks            || "",
+          terms_accepted:     data.terms_accepted     || "",
         }));
+        setDemoLinks((() => { const a = data.demo_link ? data.demo_link.split(",").map(x=>x.trim()).filter(Boolean) : []; return a.length ? a : [""]; })());
         if (data.completion_pct) {
           localStorage.setItem("acadhr_teacher_completion", String(data.completion_pct));
         }
@@ -263,11 +286,16 @@ function TeacherDashboard({ user, setPage }) {
   const BOARDS= ["CBSE","ICSE","State Board","IB","IGCSE","All Boards"];
   const EXAMS = ["NEET","JEE","Olympiad","UPSC","CA Foundation","None"];
 
+  const [navOpen, setNavOpen] = useState(false);
   return (
     <div style={{ display:"flex", width:"100vw", overflowX:"hidden", minHeight:"100vh" }}>
 
+      {/* Mobile nav toggle + backdrop */}
+      <button className="mobile-nav-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
+      <div className={"sidebar-backdrop" + (navOpen ? " show" : "")} onClick={() => setNavOpen(false)} />
+
       {/* Sidebar */}
-      <div className="sidebar">
+      <div className={"sidebar" + (navOpen ? " open" : "")} onClick={() => setNavOpen(false)}>
         <div className="sidebar-header">
           <div className="brand" style={{ cursor:"pointer" }} onClick={() => setPage("home")}>
             <img src="/acadhr-logo.png" alt="AcadHr" style={{ height:52, objectFit:"contain" }} />
@@ -600,7 +628,7 @@ function TeacherDashboard({ user, setPage }) {
                     <div style={{ fontSize:28, marginBottom:8 }}>{profile.demo_available==="Yes"?"🎥":"📵"}</div>
                     <div style={{ fontWeight:700, fontSize:13, color:"#111827" }}>Demo {profile.demo_available||"—"}</div>
                     <div style={{ fontSize:11, color:"#6B7280", marginTop:4 }}>Demo Video</div>
-                    {profile.demo_link && <a href={profile.demo_link} target="_blank" rel="noreferrer" style={{ fontSize:11, color:"#1A56DB", fontWeight:600, marginTop:6, display:"block" }}>Watch Demo →</a>}
+                    {profile.demo_link && <a href={profile.demo_link.split(",")[0].trim()} target="_blank" rel="noreferrer" style={{ fontSize:11, color:"#1A56DB", fontWeight:600, marginTop:6, display:"block" }}>Watch Demo →</a>}
                   </div>
                   {/* Relocation */}
                   <div className="card" style={{ padding:18, textAlign:"center" }}>
@@ -637,6 +665,25 @@ function TeacherDashboard({ user, setPage }) {
                     <p style={{ fontSize:13, color:"#92400E", lineHeight:1.7, margin:0 }}>{profile.remarks}</p>
                   </div>
                 )}
+
+                {/* Terms & Conditions */}
+                <div className="card" style={{ padding:22, marginTop:16 }}>
+                  <div style={{ fontWeight:700, fontSize:12, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>📜 Terms &amp; Conditions</div>
+                  <div style={{ maxHeight:170, overflowY:"auto", padding:"12px 14px", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:10, fontSize:13, color:"#374151", lineHeight:1.7 }}>
+                    <p style={{ marginTop:0 }}>By submitting this profile, the teacher confirms and agrees that:</p>
+                    <ol style={{ paddingLeft:18, margin:0 }}>
+                      <li>All information provided in this profile is true, accurate, and complete.</li>
+                      <li>The documents, demo videos, and links shared (including Google Drive links) are genuine and owned by the teacher.</li>
+                      <li>AcadHr is authorized to share this profile with registered schools, institutions, and recruiters for hiring purposes.</li>
+                      <li>Providing false or misleading information may lead to rejection or removal of the profile.</li>
+                      <li>The teacher agrees to be contacted by AcadHr and prospective employers regarding suitable job opportunities.</li>
+                    </ol>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:12, fontSize:13, fontWeight:700, color: profile.terms_accepted==="Yes" ? "#059669" : "#9CA3AF" }}>
+                    <span>{profile.terms_accepted==="Yes" ? "✅ Accepted" : "⬜ Not accepted yet"}</span>
+                    {profile.terms_accepted!=="Yes" && <button className="btn btn-sm" onClick={() => setEditMode(true)} style={{ marginLeft:"auto" }}>Review &amp; Accept</button>}
+                  </div>
+                </div>
 
                 {/* Edit button at bottom */}
                 <div style={{ marginTop:20, textAlign:"center" }}>
@@ -729,8 +776,36 @@ function TeacherDashboard({ user, setPage }) {
                 <div className="fg"><label className="flabel">Current Location (City) *</label>
                   <input className="input" readOnly={!editMode} value={profile.current_location} onChange={e => up("current_location",e.target.value)} placeholder="e.g. Hyderabad" style={{ background: !editMode?"#F9FAFB":"#fff" }} />
                 </div>
-                <div className="fg"><label className="flabel">Preferred Locations</label>
-                  <input className="input" readOnly={!editMode} value={profile.preferred_locations} onChange={e => up("preferred_locations",e.target.value)} placeholder="e.g. Hyderabad, Bangalore" style={{ background: !editMode?"#F9FAFB":"#fff" }} />
+                <div className="fg"><label className="flabel">Preferred Locations (select multiple cities)</label>
+                  {editMode && (
+                    <select className="input" value="" onChange={e => {
+                      const city = e.target.value;
+                      if (!city) return;
+                      const cur = profile.preferred_locations ? profile.preferred_locations.split(",").map(x=>x.trim()).filter(Boolean) : [];
+                      if (!cur.includes(city)) up("preferred_locations", [...cur, city].join(", "));
+                    }} style={{ background:"#fff" }}>
+                      <option value="">+ Add city (you can select multiple)</option>
+                      {Object.entries(INDIA_LOCATIONS).map(([state, cities]) => (
+                        <optgroup key={state} label={state}>
+                          {cities.map(c => <option key={c} value={c}>{c}</option>)}
+                        </optgroup>
+                      ))}
+                    </select>
+                  )}
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop: editMode?8:0 }}>
+                    {(profile.preferred_locations ? profile.preferred_locations.split(",").map(x=>x.trim()).filter(Boolean) : []).map(c => (
+                      <span key={c} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:20, border:"1.5px solid #1A56DB", background:"#EBF5FF", fontSize:12, fontWeight:700, color:"#1A56DB" }}>
+                        {c}
+                        {editMode && (
+                          <span onClick={() => {
+                            const cur = profile.preferred_locations.split(",").map(x=>x.trim()).filter(Boolean).filter(x=>x!==c);
+                            up("preferred_locations", cur.join(", "));
+                          }} style={{ cursor:"pointer", fontWeight:900 }}>×</span>
+                        )}
+                      </span>
+                    ))}
+                    {!profile.preferred_locations && !editMode && <span style={{ color:"#9CA3AF", fontSize:13 }}>—</span>}
+                  </div>
                 </div>
               </div>
             </div>
@@ -756,11 +831,32 @@ function TeacherDashboard({ user, setPage }) {
 
               {/* Specialization — dropdown */}
               <div className="grid2">
-                <div className="fg"><label className="flabel">Specialization / Subject *</label>
-                  <select className="input" value={profile.specialization} onChange={e => editMode && up("specialization",e.target.value)} style={{ background: !editMode?"#F9FAFB":"#fff", pointerEvents: editMode?"auto":"none" }}>
-                    <option value="">Select subject</option>
-                    {["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Telugu","Kannada","Tamil","History","Geography","Civics","Accountancy","Business Studies"].map(s => <option key={s}>{s}</option>)}
-                  </select>
+                <div className="fg"><label className="flabel">Specialization / Subject * (select at least 3)</label>
+                  {editMode && (
+                    <select className="input" value="" onChange={e => {
+                      const sub = e.target.value;
+                      if (!sub) return;
+                      const cur = profile.specialization ? profile.specialization.split(",").map(x=>x.trim()).filter(Boolean) : [];
+                      if (!cur.includes(sub)) up("specialization", [...cur, sub].join(", "));
+                    }} style={{ background:"#fff" }}>
+                      <option value="">+ Add subject (you can select multiple)</option>
+                      {["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Telugu","Kannada","Tamil","History","Geography","Civics","Accountancy","Business Studies"].map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  )}
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop: editMode?8:0 }}>
+                    {(profile.specialization ? profile.specialization.split(",").map(x=>x.trim()).filter(Boolean) : []).map(s => (
+                      <span key={s} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:20, border:"1.5px solid #1A56DB", background:"#EBF5FF", fontSize:12, fontWeight:700, color:"#1A56DB" }}>
+                        {s}
+                        {editMode && (
+                          <span onClick={() => {
+                            const cur = profile.specialization.split(",").map(x=>x.trim()).filter(Boolean).filter(x=>x!==s);
+                            up("specialization", cur.join(", "));
+                          }} style={{ cursor:"pointer", fontWeight:900 }}>×</span>
+                        )}
+                      </span>
+                    ))}
+                    {!profile.specialization && !editMode && <span style={{ color:"#9CA3AF", fontSize:13 }}>—</span>}
+                  </div>
                 </div>
                 <div className="fg"><label className="flabel">Current Role *</label>
                   <select className="input" value={profile.current_role} onChange={e => editMode && up("current_role",e.target.value)} style={{ background: !editMode?"#F9FAFB":"#fff", pointerEvents: editMode?"auto":"none" }}>
@@ -774,7 +870,7 @@ function TeacherDashboard({ user, setPage }) {
               <div className="fg">
                 <label className="flabel">Total Experience *</label>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
-                  {["Fresher","Less than 1 Year","1–2 Years","2–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years"].map(exp => (
+                  {["Fresher","Less than 1 Year","1–2 Years","2–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years","15+ Years","20+ Years"].map(exp => (
                     <label key={exp} onClick={() => editMode && up("total_experience",exp)}
                       style={{ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${profile.total_experience===exp?"#1A56DB":"#D1D5DB"}`, background:profile.total_experience===exp?"#EBF5FF":"#fff", cursor:editMode?"pointer":"default", fontSize:12, fontWeight:700, color:profile.total_experience===exp?"#1A56DB":"#374151", transition:"all .15s", userSelect:"none" }}>
                       {profile.total_experience===exp?"● ":"○ "}{exp}
@@ -787,7 +883,7 @@ function TeacherDashboard({ user, setPage }) {
               <div className="fg">
                 <label className="flabel">Relevant Teaching Experience *</label>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
-                  {["Fresher","Less than 1 Year","1–2 Years","2–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years"].map(exp => (
+                  {["Fresher","Less than 1 Year","1–2 Years","2–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years","15+ Years","20+ Years"].map(exp => (
                     <label key={exp} onClick={() => editMode && up("relevant_experience",exp)}
                       style={{ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${profile.relevant_experience===exp?"#059669":"#D1D5DB"}`, background:profile.relevant_experience===exp?"#ECFDF5":"#fff", cursor:editMode?"pointer":"default", fontSize:12, fontWeight:700, color:profile.relevant_experience===exp?"#059669":"#374151", transition:"all .15s", userSelect:"none" }}>
                       {profile.relevant_experience===exp?"● ":"○ "}{exp}
@@ -810,17 +906,18 @@ function TeacherDashboard({ user, setPage }) {
                 <div className="fg"><label className="flabel">Current Salary (Monthly)</label>
                   <select className="input" value={profile.current_salary} onChange={e => editMode && up("current_salary",e.target.value)} style={{ background: !editMode?"#F9FAFB":"#fff", pointerEvents: editMode?"auto":"none" }}>
                     <option value="">Select range</option>
-                    <option>Below ₹10,000</option><option>₹10,000–₹15,000</option><option>₹15,000–₹20,000</option>
-                    <option>₹20,000–₹30,000</option><option>₹30,000–₹40,000</option><option>₹40,000–₹50,000</option>
-                    <option>₹50,000–₹70,000</option><option>₹70,000–₹1,00,000</option><option>Above ₹1,00,000</option>
+                    <option>Below ₹20,000</option><option>₹20,000–₹40,000</option><option>₹40,000–₹60,000</option>
+                    <option>₹60,000–₹80,000</option><option>₹80,000–₹100,000</option><option>₹100,000–₹120,000</option>
+                    {/* <option>₹50,000–₹70,000</option><option>₹70,000–₹1,00,000</option><option>Above ₹1,00,000</option> */}
                   </select>
                 </div>
                 <div className="fg"><label className="flabel">Expected Salary (Monthly)</label>
                   <select className="input" value={profile.expected_salary} onChange={e => editMode && up("expected_salary",e.target.value)} style={{ background: !editMode?"#F9FAFB":"#fff", pointerEvents: editMode?"auto":"none" }}>
                     <option value="">Select range</option>
-                    <option>Below ₹10,000</option><option>₹10,000–₹15,000</option><option>₹15,000–₹20,000</option>
-                    <option>₹20,000–₹30,000</option><option>₹30,000–₹40,000</option><option>₹40,000–₹50,000</option>
-                    <option>₹50,000–₹70,000</option><option>₹70,000–₹1,00,000</option><option>Above ₹1,00,000</option>
+                    <option>Below ₹20,000</option><option>₹20,000–₹40,000</option><option>₹40,000–₹60,000</option>
+                    <option>₹60,000–₹80,000</option><option>₹80,000–₹100,000</option><option>₹100,000–₹120,000</option>
+                    <option>₹120,000–₹140,000</option><option>₹140,000–₹160,000</option><option>₹160,000–₹180,000</option>
+                    <option>₹180,000–₹200,000</option><option>Above ₹2,00,000</option><option>Above ₹3,00,000</option><option>Above ₹4,00,000</option><option>Above ₹5,00,000</option><option>Above ₹6,00,000</option>
                   </select>
                 </div>
               </div>
@@ -966,7 +1063,7 @@ function TeacherDashboard({ user, setPage }) {
               <div className="fg">
                 <label className="flabel">Competitive Exams Handled</label>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
-                  {["JEE (Mains)","JEE (Advanced)","NEET","EAMCET","Olympiad","NTSE","NDA","UPSC","CA Foundation","None"].map(ex => {
+                  {["JEE (Mains)","JEE (Advanced)","NEET","EAMCET","Olympiad","NTSE","NDA","UPSC","CA Foundation","State SET"].map(ex => {
                     const sel = profile.competitive_exams.includes(ex);
                     return (
                       <label key={ex} onClick={() => {
@@ -1044,7 +1141,41 @@ function TeacherDashboard({ user, setPage }) {
               </div>
 
               <div className="fg"><label className="flabel">Demo Link (Video URL)</label>
-                <input className="input" readOnly={!editMode} value={profile.demo_link} onChange={e => up("demo_link",e.target.value)} placeholder="https://youtube.com/watch?v=..." style={{ background: !editMode?"#F9FAFB":"#fff" }} />
+                <div style={{ fontSize:12, color:"#6B7280", marginTop:2, marginBottom:8, lineHeight:1.6 }}>
+                  📁 Paste your demo video as a <strong>Google Drive</strong> link (e.g. <span style={{ color:"#1A56DB" }}>https://drive.google.com/file/d/.../view</span>). You can add a minimum of 1 and a maximum of 3 links.
+                </div>
+                {editMode ? (
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {demoLinks.map((link, idx) => {
+                      const invalid = link.trim() !== "" && !link.includes("drive.google.com");
+                      return (
+                        <div key={idx}>
+                          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                            <input className="input" value={link} onChange={e => setDemoLinkAt(idx, e.target.value)} placeholder="https://drive.google.com/file/d/.../view?usp=sharing" style={{ background:"#fff", flex:1 }} />
+                            {demoLinks.length > 1 && (
+                              <button type="button" onClick={() => removeDemoLink(idx)} title="Remove this link"
+                                style={{ flexShrink:0, width:38, height:38, borderRadius:8, border:"1.5px solid #FCA5A5", background:"#FEF2F2", color:"#DC2626", fontWeight:900, fontSize:16, cursor:"pointer" }}>×</button>
+                            )}
+                          </div>
+                          {invalid && <div style={{ fontSize:11, color:"#DC2626", marginTop:4 }}>⚠️ This doesn't look like a Google Drive link.</div>}
+                        </div>
+                      );
+                    })}
+                    {demoLinks.length < DEMO_MAX && (
+                      <button type="button" onClick={addDemoLink}
+                        style={{ alignSelf:"flex-start", padding:"8px 16px", borderRadius:8, border:"1.5px dashed #1A56DB", background:"#EBF5FF", color:"#1A56DB", fontWeight:700, fontSize:13, cursor:"pointer" }}>
+                        + Add another link ({demoLinks.length}/{DEMO_MAX})
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                    {(profile.demo_link ? profile.demo_link.split(",").map(x=>x.trim()).filter(Boolean) : []).map((link, idx) => (
+                      <a key={idx} href={link} target="_blank" rel="noreferrer" style={{ fontSize:13, color:"#1A56DB", fontWeight:600 }}>🔗 Demo Link {idx+1}</a>
+                    ))}
+                    {!profile.demo_link && <span style={{ color:"#9CA3AF", fontSize:13 }}>No demo link added yet</span>}
+                  </div>
+                )}
               </div>
 
               {/* Yes/No radio group for 4 fields */}
@@ -1120,6 +1251,30 @@ function TeacherDashboard({ user, setPage }) {
               <div className="fg"><label className="flabel">Remarks / Notes</label>
                 <textarea className="input" readOnly={!editMode} rows={3} value={profile.remarks} onChange={e => up("remarks",e.target.value)} placeholder="Any additional information..." style={{ background: !editMode?"#F9FAFB":"#fff" }} />
               </div>
+            </div>
+
+            {/* ── Section 5: Terms & Conditions ── */}
+            <div className="card" style={{ padding:28, marginBottom:20 }}>
+              <div style={{ fontWeight:800, fontSize:13, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:18, paddingBottom:8, borderBottom:"2px solid #EBF5FF" }}>
+                📜 Terms & Conditions
+              </div>
+              <div style={{ maxHeight:200, overflowY:"auto", padding:"14px 16px", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:10, fontSize:13, color:"#374151", lineHeight:1.7 }}>
+                <p style={{ marginTop:0 }}>By submitting this profile, I confirm and agree that:</p>
+                <ol style={{ paddingLeft:18, margin:0 }}>
+                  <li>All information provided in this profile is true, accurate, and complete to the best of my knowledge.</li>
+                  <li>The documents, demo videos, and links I share (including Google Drive links) are genuine and belong to me.</li>
+                  <li>I authorize AcadHr to share my profile with registered schools, institutions, and recruiters for hiring purposes.</li>
+                  <li>I understand that providing false or misleading information may lead to rejection or removal of my profile.</li>
+                  <li>I agree to be contacted by AcadHr and prospective employers regarding suitable job opportunities.</li>
+                </ol>
+              </div>
+              <label onClick={() => editMode && up("terms_accepted", profile.terms_accepted==="Yes" ? "No" : "Yes")}
+                style={{ display:"flex", alignItems:"center", gap:10, marginTop:14, cursor:editMode?"pointer":"default", userSelect:"none" }}>
+                <div style={{ width:20, height:20, borderRadius:5, border:`2px solid ${profile.terms_accepted==="Yes"?"#059669":"#9CA3AF"}`, background:profile.terms_accepted==="Yes"?"#059669":"#fff", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13, fontWeight:900, flexShrink:0 }}>
+                  {profile.terms_accepted==="Yes" ? "✓" : ""}
+                </div>
+                <span style={{ fontSize:13, fontWeight:700, color:"#111827" }}>I have read and accept the Terms &amp; Conditions</span>
+              </label>
             </div>
 
                 <div style={{ display:"flex", gap:10, marginBottom:20, marginTop:8 }}>

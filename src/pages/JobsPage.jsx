@@ -79,7 +79,7 @@ function JobsPage({ setPage }) {
       {/* Header */}
       <div style={{ background:"#fff", borderBottom:"1px solid #E5E7EB", padding:"40px 0 0" }}>
         <div className="container">
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:16 }}>
+          <div className="page-header-row" style={{ marginBottom:16 }}>
             <div>
               <h1 style={{ fontSize:30, fontWeight:900, color:"#111827", marginBottom:5 }}>Browse Teaching Jobs</h1>
               <p style={{ color:"#6B7280", fontSize:14 }}>
@@ -98,7 +98,7 @@ function JobsPage({ setPage }) {
           </div>
 
           {/* Filters */}
-          <div style={{ display:"flex", gap:10, flexWrap:"wrap", paddingBottom:24 }}>
+          <div className="filter-bar" style={{ paddingBottom:24 }}>
             <div style={{ position:"relative", flex:1, minWidth:220 }}>
               <span style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", color:"#9CA3AF", pointerEvents:"none" }}>🔍</span>
               <input className="input" style={{ paddingLeft:38 }} placeholder="Title, school or keyword..."

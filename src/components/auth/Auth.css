@@ -8,3 +8,15 @@
 .otp-input { width: 48px; height: 56px; text-align: center; font-size: 22px; font-weight: 800; border-radius: 10px; outline: none; font-family: Nunito, sans-serif; transition: all 0.15s; }
 .role-card { padding: 14px 10px; border-radius: 10px; cursor: pointer; border: 2px solid #E5E7EB; background: #F9FAFB; text-align: center; font-size: 12px; font-weight: 700; color: #6B7280; transition: all 0.15s; }
 .role-card.selected { border-color: #1A56DB; background: #EBF5FF; color: #1A56DB; }
+
+@media (max-width: 900px) {
+  .auth-card { padding: 28px 22px; max-width: 100%; }
+  .auth-step { font-size: 11px; padding: 6px 2px; }
+  .role-card { padding: 12px 8px; font-size: 11px; }
+}
+
+@media (max-width: 640px) {
+  .auth-card { padding: 22px 16px; border-radius: 14px; }
+  .otp-input { width: 42px; height: 50px; font-size: 18px; }
+  .auth-step-bar { margin-bottom: 20px; }
+}

@@ -6,3 +6,13 @@
 .admin-table td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid #F3F4F6; }
 .admin-filter-bar { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; display: flex; flex-wrap: wrap; gap: 10px; }
 .admin-modal-header { background: linear-gradient(135deg,#1E429F,#1A56DB); padding: 24px 28px; border-radius: 20px 20px 0 0; }
+
+@media (max-width: 900px) {
+  .admin-filter-bar { flex-direction: column; align-items: stretch; }
+  .admin-stat-card { padding: 16px 14px; }
+}
+
+@media (max-width: 640px) {
+  .admin-table th, .admin-table td { padding: 8px 10px; font-size: 12px; }
+  .admin-modal-header { padding: 18px 16px; }
+}

@@ -78,9 +78,13 @@ function ParentDashboard({ user, setPage }) {
     { id:"tutors",       icon:"🧑‍🎓", label:"Find Tutors" },
   ];
 
+  const [navOpen, setNavOpen] = useState(false);
   return (
     <div style={{ display:"flex", width:"100vw", minHeight:"100vh" }}>
-      <div className="sidebar">
+      {/* Mobile nav toggle + backdrop */}
+      <button className="mobile-nav-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
+      <div className={"sidebar-backdrop" + (navOpen ? " show" : "")} onClick={() => setNavOpen(false)} />
+      <div className={"sidebar" + (navOpen ? " open" : "")} onClick={() => setNavOpen(false)}>
         <div className="sidebar-header">
           <div style={{ cursor:"pointer" }} onClick={() => setPage("home")}>
             <img src="/acadhr-logo.png" alt="AcadHr" style={{ height:48, objectFit:"contain" }} />

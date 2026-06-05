@@ -7,3 +7,12 @@
 .teacher-pill.selected { background: #EBF5FF; border-color: #1A56DB; color: #1A56DB; }
 .teacher-pill.unselected { background: #fff; border: 1.5px solid #D1D5DB; color: #374151; }
 .teacher-section-head { font-weight: 800; font-size: 13px; color: #1A56DB; text-transform: uppercase; letter-spacing: 1px; padding-bottom: 8px; border-bottom: 2px solid #EBF5FF; margin-bottom: 18px; }
+
+@media (max-width: 900px) {
+  .teacher-profile-photo { width: 64px; height: 64px; }
+  .teacher-pill { font-size: 11px; padding: 5px 12px; }
+}
+
+@media (max-width: 640px) {
+  .teacher-section-head { font-size: 12px; }
+}

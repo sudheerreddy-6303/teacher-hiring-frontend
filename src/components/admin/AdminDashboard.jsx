@@ -110,10 +110,14 @@ function AdminDashboard({ setPage }) {
     </span>;
   }
 
+  const [navOpen, setNavOpen] = useState(false);
   return (
     <div style={{ display:"flex", width:"100vw", minHeight:"100vh" }}>
+      {/* Mobile nav toggle + backdrop */}
+      <button className="mobile-nav-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
+      <div className={"sidebar-backdrop" + (navOpen ? " show" : "")} onClick={() => setNavOpen(false)} />
       {/* ── Sidebar ── */}
-      <div className="sidebar">
+      <div className={"sidebar" + (navOpen ? " open" : "")} onClick={() => setNavOpen(false)}>
         <div className="sidebar-header">
           <div style={{ cursor:"pointer" }} onClick={() => setPage("home")}>
             <img src="/acadhr-logo.png" alt="AcadHr" style={{ height:48, objectFit:"contain" }} />

@@ -17,26 +17,33 @@ function Brand({ size, onClick }) {
 
 function Navbar({ setPage }) {
   const { user, logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const go = (p) => { setMenuOpen(false); setPage(p); };
   return (
-    <nav className="nav">
+    <nav className={"nav" + (menuOpen ? " nav-menu-open" : "")}>
       <div className="container nav-inner">
-        <Brand onClick={() => setPage("home")} />
-        <div style={{ display:"flex", gap:24, alignItems:"center" }}>
-          <span className="nav-link" onClick={() => setPage("jobs")}>Browse Jobs</span>
-          <span className="nav-link" onClick={() => setPage("teachers")}>Browse Teachers</span>
-          <span className="nav-link" onClick={() => setPage("tutors")}>Browse Tutors</span>
-          <span className="nav-link" onClick={() => setPage("howitworks")}>How It Works</span>
-          <span className="nav-link" onClick={() => setPage("faq")}>FAQ</span>
-          <span className="nav-link" onClick={() => setPage("pricing")} style={{ color:"#1A56DB", fontWeight:700 }}>Pricing</span>
+        <div className="nav-top">
+          <Brand onClick={() => go("home")} />
+          <button type="button" className="nav-burger" aria-label="Toggle menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(o => !o)}>
+            {menuOpen ? "✕" : "☰"}
+          </button>
+        </div>
+        <div className={"nav-actions" + (menuOpen ? " open" : "")}>
+          <span className="nav-link" onClick={() => go("jobs")}>Browse Jobs</span>
+          <span className="nav-link" onClick={() => go("teachers")}>Browse Teachers</span>
+          <span className="nav-link" onClick={() => go("tutors")}>Browse Tutors</span>
+          <span className="nav-link" onClick={() => go("howitworks")}>How It Works</span>
+          <span className="nav-link" onClick={() => go("faq")}>FAQ</span>
+          <span className="nav-link" onClick={() => go("pricing")} style={{ color:"#1A56DB", fontWeight:700 }}>Pricing</span>
           {user ? (
             <>
-              <button className="btn btn-ghost btn-sm" onClick={() => setPage("dashboard")}>Dashboard</button>
-              <button className="btn btn-sm" style={{ background:"#FEF2F2", color:"#DC2626", border:"1px solid #FECACA" }} onClick={logout}>Sign Out</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => go("dashboard")}>Dashboard</button>
+              <button className="btn btn-sm" style={{ background:"#FEF2F2", color:"#DC2626", border:"1px solid #FECACA" }} onClick={() => { setMenuOpen(false); logout(); }}>Sign Out</button>
             </>
           ) : (
             <>
-              <button className="btn btn-outline btn-sm" onClick={() => setPage("login")}>Log In</button>
-              <button className="btn btn-primary btn-sm" onClick={() => setPage("signup")}>Get Started</button>
+              <button className="btn btn-outline btn-sm" onClick={() => go("login")}>Log In</button>
+              <button className="btn btn-primary btn-sm" onClick={() => go("signup")}>Get Started</button>
             </>
           )}
         </div>
@@ -160,6 +167,16 @@ function JobCard({ job, onApply }) {
    HOME PAGE
 ════════════════════════════════════════════════════════════════════════════ */
 function HomePage({ setPage }) {
+  // Track viewport width so the inline-styled hero/grids respond on every device
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const isMobile = vw <= 768;
+  const isTablet = vw <= 1024;
+
   const FEATURES = [
     { i:"🎯", t:"Smart Job Matching",      d:"Intelligent matching connects teachers with relevant openings based on subject, city, and experience." },
     { i:"🔐", t:"Verified Profiles",       d:"Every teacher is reviewed. Every institute is verified. Hire and apply with complete confidence." },
@@ -188,8 +205,8 @@ function HomePage({ setPage }) {
         <div style={{ position:"absolute", width:500, height:500, borderRadius:"50%", background:"radial-gradient(circle,rgba(14,165,233,.05),transparent 65%)", bottom:-100, left:-100, pointerEvents:"none" }} />
         <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(circle,rgba(26,86,219,.04) 1px,transparent 1px)", backgroundSize:"36px 36px", pointerEvents:"none" }} />
 
-        <div style={{ position:"relative", zIndex:1, flex:1, display:"flex", alignItems:"center", paddingTop:40, paddingBottom:60, paddingLeft:60, paddingRight:60, width:"100%", boxSizing:"border-box" }}>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:72, alignItems:"center", width:"100%" }}>
+        <div style={{ position:"relative", zIndex:1, flex:1, display:"flex", alignItems:"center", paddingTop: isMobile?24:40, paddingBottom: isMobile?40:60, paddingLeft: isMobile?16:60, paddingRight: isMobile?16:60, width:"100%", boxSizing:"border-box" }}>
+          <div style={{ display:"grid", gridTemplateColumns: vw<=900?"1fr":"1fr 1fr", gap: isMobile?32:(isTablet?48:72), alignItems:"center", width:"100%" }}>
 
             {/* ── LEFT: Copy ── */}
             <div className="fadeUp">
@@ -355,7 +372,7 @@ function HomePage({ setPage }) {
             <p style={{ color:"#6B7280", fontSize:15, marginTop:10 }}>Verified, experienced educators ready to join your institution</p>
           </div>
 
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:22 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr":(isTablet?"repeat(2,1fr)":"repeat(3,1fr)"), gap:22 }}>
             {[
               { name:"Priya Sharma",   role:"Mathematics Teacher",  exp:"5 Years", city:"Hyderabad", qual:"M.Sc + B.Ed", subjects:["Algebra","Calculus","Statistics"],      emoji:"👩‍🏫", rating:4.9, avail:"Immediate", color:"#EBF5FF", accent:"#1A56DB" },
               { name:"Ravi Kumar",     role:"Physics Teacher",       exp:"3 Years", city:"Bangalore", qual:"M.Sc + B.Ed", subjects:["Mechanics","Optics","Thermodynamics"],  emoji:"👨‍🔬", rating:4.8, avail:"2 Weeks",   color:"#ECFDF5", accent:"#059669" },
@@ -415,7 +432,7 @@ function HomePage({ setPage }) {
       {/* STATS */}
       <div className="stats-strip">
         <div className="container">
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)" }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile?"repeat(2,1fr)":"repeat(4,1fr)" }}>
             {[["12,400+","Active Teachers","#1A56DB"],["3,200+","Institutes Hiring","#0EA5E9"],["48,000+","Jobs Placed","#059669"],["94%","Placement Rate","#D97706"]].map(([n,l,c]) => (
               <div key={l} className="stat-item">
                 <div className="stat-num" style={{ color:c }}>{n}</div>
@@ -885,10 +902,11 @@ function JobsPage({ setPage }) {
 // ── OTP Boxes (defined outside AuthPage to prevent re-mount on each keystroke) ──
 function OtpBoxes({ arr, setter, prefix, disabled, onChangeFn, onKeyDownFn }) {
   return (
-    <div style={{ display:"flex", gap:10, justifyContent:"center", marginBottom:8 }}>
+    <div className="otp-row" style={{ marginBottom:8 }}>
       {arr.map((val, idx) => (
         <input
           key={idx}
+          className="otp-input"
           id={`otp-${prefix}-${idx}`}
           type="text"
           inputMode="numeric"

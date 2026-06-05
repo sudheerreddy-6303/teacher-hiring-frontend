@@ -182,10 +182,10 @@ function AuthPage({ mode, setPage }) {
 
 
   return (
-    <div style={{ minHeight:"100vh", display:"flex" }}>
+    <div className="auth-layout">
 
       {/* ── Left panel ── */}
-      <div style={{ flex:"0 0 420px", background:"linear-gradient(160deg,#1E429F 0%,#1A56DB 100%)", display:"flex", flexDirection:"column", justifyContent:"center", padding:"60px 52px" }}>
+      <div className="auth-panel-left" style={{ background:"linear-gradient(160deg,#1E429F 0%,#1A56DB 100%)", display:"flex", flexDirection:"column", justifyContent:"center", padding:"60px 52px" }}>
         <div className="brand" style={{ cursor:"pointer", background:"#fff", display:"inline-block", padding:"10px 18px", borderRadius:12 }} onClick={() => setPage("home")}>
           <img src="/acadhr-logo.png" alt="AcadHr" style={{ height:64, objectFit:"contain", display:"block" }} />
         </div>
@@ -211,8 +211,8 @@ function AuthPage({ mode, setPage }) {
       </div>
 
       {/* ── Right form panel ── */}
-      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:"60px 52px", background:"#F9FAFB", overflowY:"auto" }}>
-        <div style={{ width:"100%", maxWidth:420, background:"#fff", borderRadius:16, padding:36, boxShadow:"var(--shadow)" }}>
+      <div className="auth-panel-right" style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:"60px 52px", background:"#F9FAFB", overflowY:"auto" }}>
+        <div className="auth-card-inner" style={{ maxWidth:420 }}>
 
           {/* Back button */}
           <button
