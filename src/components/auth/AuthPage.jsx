@@ -201,11 +201,11 @@ function AuthPage({ mode, setPage }) {
           ))}
         </div>
         {mode==="login" && (
-          <div style={{ marginTop:40, background:"rgba(255,255,255,.1)", border:"1px solid rgba(255,255,255,.2)", borderRadius:12, padding:18, fontSize:12, color:"#BFDBFE", lineHeight:2 }}>
-            <div style={{ fontWeight:800, marginBottom:5, color:"#fff", fontSize:13 }}>Demo Accounts</div>
+          <div style={{  }}>
+            {/* <div style={{ fontWeight:800, marginBottom:5, color:"#fff", fontSize:13 }}>Demo Accounts</div>
             {[["admin@acadhr.com","admin123"],["teacher@test.com","test123"],["tutor@test.com","test123"],["school@test.com","test123"]].map(([e,p]) => (
               <div key={e}><span style={{ fontFamily:"Fira Code,monospace", color:"#93C5FD", fontWeight:500 }}>{e}</span> / {p}</div>
-            ))}
+            ))} */}
           </div>
         )}
       </div>
