@@ -18,9 +18,11 @@ function AdminDashboard({ setPage }) {
   const [pending,   setPending]   = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [parents,   setParents]   = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
   const [loading,   setLoading]   = useState({});
 
   const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  const API_ORIGIN = API.replace(/\/api\/?$/, "");
   const token = localStorage.getItem("acadhr_token");
   const hdr = token ? { Authorization: "Bearer " + token } : {};
 
@@ -49,6 +51,7 @@ function AdminDashboard({ setPage }) {
     if (tab === "jobs"      && allJobs.length   === 0) fetchData("jobs",      "/admin/all-jobs",  setAllJobs);
     if (tab === "analytics" && !analytics)             fetchData("analytics", "/admin/analytics", setAnalytics);
     if (tab === "parents"   && parents.length   === 0) fetchData("parents",   "/admin/parents",   setParents);
+    if (tab === "feedbacks" && feedbacks.length === 0) fetchData("feedbacks", "/feedback",        setFeedbacks);
   }, [tab]);
 
   async function approveJob(job) {
@@ -81,6 +84,10 @@ function AdminDashboard({ setPage }) {
   const [parentFilters,  setParentFilters]  = useState({ name:"", email:"", student_class:"", board:"", subject:"", status:"" });
   const [jobFilters,     setJobFilters]     = useState({ title:"", institute_name:"", subject:"", location_city:"", status:"", requirement_type:"" });
   const [selectedJob, setSelectedJob] = useState(null);
+  const [selectedTeacher, setSelectedTeacher] = useState(null);
+  const [selectedSchool,  setSelectedSchool]  = useState(null);
+  const [selectedTutor,   setSelectedTutor]   = useState(null);
+  const [selectedParent,  setSelectedParent]  = useState(null);
 
   const MENU = [
     { id:"overview",   icon:"📊", label:"Overview" },
@@ -92,6 +99,7 @@ function AdminDashboard({ setPage }) {
     { id:"parents",    icon:"👨‍👩‍👧", label:"Parents" },
     { id:"payments",   icon:"💳", label:"Payments" },
     { id:"analytics",  icon:"📈", label:"Analytics" },
+    { id:"feedbacks",  icon:"💬", label:"Feedbacks" },
   ];
 
   function Loader() {
@@ -465,8 +473,8 @@ function AdminDashboard({ setPage }) {
                         return filtered.length === 0 ? (
                           <tr><td colSpan={11} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No institutions match filters</td></tr>
                         ) : filtered.map(s => (
-                        <tr key={s.id}>
-                          <td><strong style={{ color:"#111827" }}>{s.name}</strong></td>
+                        <tr key={s.id} onClick={() => setSelectedSchool(s)} style={{ cursor:"pointer" }}>
+                          <td><strong style={{ color:"#1A56DB", textDecoration:"underline" }}>{s.name}</strong></td>
                           <td style={{ fontSize:12, color:"#6B7280" }}>{s.email}</td>
                           <td>{s.institute_type||"—"}</td>
                           <td>📍 {s.city||"—"}</td>
@@ -476,7 +484,7 @@ function AdminDashboard({ setPage }) {
                           <td>{s.total_jobs||0}</td>
                           <td style={{ fontSize:11, color:"#9CA3AF" }}>{new Date(s.created_at).toLocaleDateString()}</td>
                           <td><StatusBadge active={s.is_active} /></td>
-                          <td><button className={"btn btn-sm "+(s.is_active?"btn-danger":"btn-success")} onClick={() => toggleUser(s.id)}>{s.is_active?"Deactivate":"Activate"}</button></td>
+                          <td><button className={"btn btn-sm "+(s.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(s.id); }}>{s.is_active?"Deactivate":"Activate"}</button></td>
                         </tr>
                       ))})()}
                     </tbody>
@@ -521,7 +529,7 @@ function AdminDashboard({ setPage }) {
                         return filtered.length === 0 ? (
                           <tr><td colSpan={11} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No teachers match filters</td></tr>
                         ) : filtered.map(t => (
-                        <tr key={t.id}>
+                        <tr key={t.id} onClick={() => setSelectedTeacher(t)} style={{ cursor:"pointer" }}>
                           <td>
                             <div style={{ width:36, height:36, borderRadius:"50%", overflow:"hidden", background:"#EBF5FF", border:"2px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center" }}>
                               {t.profile_photo
@@ -529,7 +537,7 @@ function AdminDashboard({ setPage }) {
                                 : <span style={{ fontSize:18 }}>👤</span>}
                             </div>
                           </td>
-                          <td><strong style={{ color:"#111827" }}>{t.name}</strong></td>
+                          <td><strong style={{ color:"#1A56DB", textDecoration:"underline" }}>{t.name}</strong></td>
                           <td style={{ fontSize:12, color:"#6B7280" }}>{t.email}</td>
                           <td>{t.phone||"—"}</td>
                           <td>{t.specialization||"—"}</td>
@@ -545,7 +553,7 @@ function AdminDashboard({ setPage }) {
                           </td>
                           <td style={{ fontSize:11, color:"#9CA3AF" }}>{new Date(t.created_at).toLocaleDateString()}</td>
                           <td><StatusBadge active={t.is_active} /></td>
-                          <td><button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={() => toggleUser(t.id)}>{t.is_active?"Deactivate":"Activate"}</button></td>
+                          <td><button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(t.id); }}>{t.is_active?"Deactivate":"Activate"}</button></td>
                         </tr>
                       ))})()}
                     </tbody>
@@ -555,6 +563,85 @@ function AdminDashboard({ setPage }) {
             )}
           </div>
         )}
+
+        {/* ══ TEACHER PROFILE DETAIL ══ */}
+        {selectedTeacher && (() => {
+          const t = selectedTeacher;
+          const photo = t.profile_photo ? API_ORIGIN + t.profile_photo : null;
+          const resumeUrl = t.resume_link ? (t.resume_link.startsWith("http") ? t.resume_link : API_ORIGIN + t.resume_link) : null;
+          const Field = ({ label, value, full }) => !value ? null : (
+            <div style={{ background:"#F9FAFB", borderRadius:8, padding:"10px 14px", gridColumn: full?"1/-1":"auto" }}>
+              <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>{label}</div>
+              <div style={{ fontSize:13.5, color:"#111827", fontWeight:600 }}>{value}</div>
+            </div>
+          );
+          return (
+          <div className="overlay" onClick={() => setSelectedTeacher(null)}>
+            <div onClick={e => e.stopPropagation()}
+              style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+
+              {/* Header */}
+              <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"24px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:16, minWidth:0 }}>
+                    <div style={{ width:64, height:64, borderRadius:"50%", overflow:"hidden", background:"rgba(255,255,255,.15)", border:"2px solid rgba(255,255,255,.5)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                      {photo ? <img src={photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : <span style={{ fontSize:30 }}>👤</span>}
+                    </div>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ color:"#BFDBFE", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>👩‍🏫 Teacher Profile</div>
+                      <div style={{ color:"#fff", fontSize:20, fontWeight:800, marginBottom:2 }}>{t.name}</div>
+                      <div style={{ color:"#93C5FD", fontSize:13 }}>{t.specialization || t.current_role || "Teacher"}{t.city ? ` · 📍 ${t.city}` : ""}</div>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedTeacher(null)} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
+                </div>
+                {/* Actions */}
+                <div style={{ display:"flex", gap:10, marginTop:18, flexWrap:"wrap" }}>
+                  {resumeUrl ? (
+                    <a href={resumeUrl} target="_blank" rel="noopener noreferrer" download
+                      className="btn btn-sm" style={{ flex:1, justifyContent:"center", background:"#059669", color:"#fff", textDecoration:"none", minWidth:160 }}>
+                      ⬇️ Download Resume{t.resume_file_name ? ` (${t.resume_file_name})` : ""}
+                    </a>
+                  ) : (
+                    <span style={{ flex:1, textAlign:"center", color:"#BFDBFE", fontSize:13, fontWeight:600, alignSelf:"center", minWidth:160 }}>No resume uploaded</span>
+                  )}
+                  <button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")}
+                    onClick={() => { toggleUser(t.id); setSelectedTeacher(s => s ? {...s, is_active: s.is_active ? 0 : 1} : s); }}>
+                    {t.is_active ? "Deactivate" : "Activate"}
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setSelectedTeacher(null)}>Close</button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding:"24px 28px" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16, flexWrap:"wrap" }}>
+                  <StatusBadge active={t.is_active} />
+                  {t.profile_status && <span style={{ background:"#EBF5FF", color:"#1A56DB", border:"1px solid #BFDBFE", borderRadius:20, padding:"3px 12px", fontSize:11, fontWeight:700 }}>{t.profile_status}</span>}
+                  <span style={{ fontSize:12, color:"#6B7280", fontWeight:600 }}>Profile {t.completion_pct||0}% complete</span>
+                </div>
+
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                  <Field label="Email" value={t.email} />
+                  <Field label="Phone" value={t.phone || t.mobile} />
+                  <Field label="Specialization" value={t.specialization} />
+                  <Field label="Experience" value={t.total_experience} />
+                  <Field label="Qualification" value={t.qualification} />
+                  <Field label="Current Role" value={t.current_role} />
+                  <Field label="City" value={t.city || t.current_location} />
+                  <Field label="Work Mode" value={t.work_mode} />
+                  <Field label="Gender" value={t.gender} />
+                  <Field label="Languages" value={t.languages} />
+                  <Field label="Subjects" value={t.subjects} full />
+                  <Field label="Grades Handling" value={t.grades_handling} full />
+                  <Field label="Boards Handled" value={t.boards_handled} full />
+                  <Field label="Joined" value={t.created_at ? new Date(t.created_at).toLocaleString() : null} />
+                </div>
+              </div>
+            </div>
+          </div>
+          );
+        })()}
 
         {/* ══ TUTORS ══ */}
         {tab==="tutors" && (
@@ -590,8 +677,8 @@ function AdminDashboard({ setPage }) {
                         return filtered.length === 0 ? (
                           <tr><td colSpan={10} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No tutors match filters</td></tr>
                         ) : filtered.map(t => (
-                        <tr key={t.id}>
-                          <td><strong style={{ color:"#111827" }}>{t.name}</strong></td>
+                        <tr key={t.id} onClick={() => setSelectedTutor(t)} style={{ cursor:"pointer" }}>
+                          <td><strong style={{ color:"#6D28D9", textDecoration:"underline" }}>{t.name}</strong></td>
                           <td style={{ fontSize:12, color:"#6B7280" }}>{t.email}</td>
                           <td>{t.phone||"—"}</td>
                           <td>{t.subject||"—"}</td>
@@ -600,7 +687,7 @@ function AdminDashboard({ setPage }) {
                           <td>📍 {t.city||"—"}</td>
                           <td style={{ fontSize:11, color:"#9CA3AF" }}>{new Date(t.created_at).toLocaleDateString()}</td>
                           <td><StatusBadge active={t.is_active} /></td>
-                          <td><button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={() => toggleUser(t.id)}>{t.is_active?"Deactivate":"Activate"}</button></td>
+                          <td><button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(t.id); }}>{t.is_active?"Deactivate":"Activate"}</button></td>
                         </tr>
                       ))})()}
                     </tbody>
@@ -647,8 +734,8 @@ function AdminDashboard({ setPage }) {
                           return filtered.length === 0
                             ? <tr><td colSpan={15} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No parents match filters</td></tr>
                             : filtered.map(p => (
-                              <tr key={p.id}>
-                                <td><strong style={{ color:"#111827" }}>{p.name}</strong></td>
+                              <tr key={p.id} onClick={() => setSelectedParent(p)} style={{ cursor:"pointer" }}>
+                                <td><strong style={{ color:"#059669", textDecoration:"underline" }}>{p.name}</strong></td>
                                 <td style={{ fontSize:12, color:"#6B7280" }}>{p.email}</td>
                                 <td>{p.phone||"—"}</td>
                                 <td style={{ fontWeight:600, color:"#1A56DB" }}>{p.student_name||"—"}</td>
@@ -662,7 +749,7 @@ function AdminDashboard({ setPage }) {
                                 <td>{p.tutor_gender_pref||"Any"}</td>
                                 <td>{p.experience_req||"Any"}</td>
                                 <td><span className={"badge "+(p.status==="Assigned"?"bgreen":"bamber")}>{p.status||"Open"}</span></td>
-                                <td><button className={"btn btn-sm "+(p.is_active?"btn-danger":"btn-success")} onClick={() => toggleUser(p.id)}>{p.is_active?"Deactivate":"Activate"}</button></td>
+                                <td><button className={"btn btn-sm "+(p.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(p.id); }}>{p.is_active?"Deactivate":"Activate"}</button></td>
                               </tr>
                             ));
                         })()}
@@ -693,6 +780,208 @@ function AdminDashboard({ setPage }) {
               <h3 style={{ fontSize:20, marginBottom:8 }}>Payment Gateway Coming Soon</h3>
               <p style={{ color:"#6B7280", fontSize:14 }}>Credit purchases, premium job boosts, and subscription management will appear here.</p>
             </div>
+          </div>
+        )}
+
+        {/* ══ SCHOOL PROFILE DETAIL ══ */}
+        {selectedSchool && (() => {
+          const s = selectedSchool;
+          const Field = ({ label, value, full }) => !value && value !== 0 ? null : (
+            <div style={{ background:"#F9FAFB", borderRadius:8, padding:"10px 14px", gridColumn: full?"1/-1":"auto" }}>
+              <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>{label}</div>
+              <div style={{ fontSize:13.5, color:"#111827", fontWeight:600 }}>{value}</div>
+            </div>
+          );
+          return (
+          <div className="overlay" onClick={() => setSelectedSchool(null)}>
+            <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+              <div style={{ background:"linear-gradient(135deg,#0369A1,#0EA5E9)", padding:"24px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:16, minWidth:0 }}>
+                    <div style={{ width:64, height:64, borderRadius:16, background:"rgba(255,255,255,.15)", border:"2px solid rgba(255,255,255,.5)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:30 }}>🏫</div>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ color:"#BAE6FD", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>🏫 Institution Profile</div>
+                      <div style={{ color:"#fff", fontSize:20, fontWeight:800, marginBottom:2 }}>{s.name}</div>
+                      <div style={{ color:"#E0F2FE", fontSize:13 }}>{s.institute_type || "Institution"}{s.city ? ` · 📍 ${s.city}` : ""}</div>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedSchool(null)} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
+                </div>
+                <div style={{ display:"flex", gap:10, marginTop:18, flexWrap:"wrap" }}>
+                  {s.website && <a href={s.website.startsWith("http")?s.website:`https://${s.website}`} target="_blank" rel="noopener noreferrer" className="btn btn-sm" style={{ flex:1, justifyContent:"center", background:"#fff", color:"#0369A1", textDecoration:"none", minWidth:140 }}>🌐 Visit Website</a>}
+                  <button className={"btn btn-sm "+(s.is_active?"btn-danger":"btn-success")} onClick={() => { toggleUser(s.id); setSelectedSchool(x => x ? {...x, is_active: x.is_active ? 0 : 1} : x); }}>{s.is_active?"Deactivate":"Activate"}</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setSelectedSchool(null)}>Close</button>
+                </div>
+              </div>
+              <div style={{ padding:"24px 28px" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}><StatusBadge active={s.is_active} /></div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                  <Field label="Email" value={s.email} />
+                  <Field label="Phone" value={s.phone} />
+                  <Field label="Institution Type" value={s.institute_type} />
+                  <Field label="City" value={s.city} />
+                  <Field label="Website" value={s.website} />
+                  <Field label="Total Jobs Posted" value={s.total_jobs ?? 0} />
+                  <Field label="Live Jobs" value={s.live_jobs ?? 0} />
+                  <Field label="Pending Jobs" value={s.pending_jobs ?? 0} />
+                  <Field label="Joined" value={s.created_at ? new Date(s.created_at).toLocaleString() : null} full />
+                </div>
+              </div>
+            </div>
+          </div>
+          );
+        })()}
+
+        {/* ══ TUTOR PROFILE DETAIL ══ */}
+        {selectedTutor && (() => {
+          const t = selectedTutor;
+          const Field = ({ label, value, full }) => !value ? null : (
+            <div style={{ background:"#F9FAFB", borderRadius:8, padding:"10px 14px", gridColumn: full?"1/-1":"auto" }}>
+              <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>{label}</div>
+              <div style={{ fontSize:13.5, color:"#111827", fontWeight:600 }}>{value}</div>
+            </div>
+          );
+          return (
+          <div className="overlay" onClick={() => setSelectedTutor(null)}>
+            <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+              <div style={{ background:"linear-gradient(135deg,#4C1D95,#6D28D9)", padding:"24px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:16, minWidth:0 }}>
+                    <div style={{ width:64, height:64, borderRadius:"50%", background:"rgba(255,255,255,.15)", border:"2px solid rgba(255,255,255,.5)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:30 }}>🧑‍🎓</div>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ color:"#DDD6FE", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>🧑‍🎓 Tutor Profile</div>
+                      <div style={{ color:"#fff", fontSize:20, fontWeight:800, marginBottom:2 }}>{t.name}</div>
+                      <div style={{ color:"#C4B5FD", fontSize:13 }}>{t.subject || "Tutor"}{t.city ? ` · 📍 ${t.city}` : ""}</div>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedTutor(null)} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
+                </div>
+                <div style={{ display:"flex", gap:10, marginTop:18, flexWrap:"wrap" }}>
+                  <button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={() => { toggleUser(t.id); setSelectedTutor(x => x ? {...x, is_active: x.is_active ? 0 : 1} : x); }}>{t.is_active?"Deactivate":"Activate"}</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setSelectedTutor(null)}>Close</button>
+                </div>
+              </div>
+              <div style={{ padding:"24px 28px" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}><StatusBadge active={t.is_active} /></div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                  <Field label="Email" value={t.email} />
+                  <Field label="Phone" value={t.phone} />
+                  <Field label="Subject" value={t.subject} />
+                  <Field label="Experience" value={t.experience} />
+                  <Field label="Qualification" value={t.qualification} />
+                  <Field label="Teaching Mode" value={t.teaching_mode} />
+                  <Field label="Hourly Rate" value={t.hourly_rate} />
+                  <Field label="City" value={t.city} />
+                  <Field label="Joined" value={t.created_at ? new Date(t.created_at).toLocaleString() : null} full />
+                </div>
+              </div>
+            </div>
+          </div>
+          );
+        })()}
+
+        {/* ══ PARENT PROFILE DETAIL ══ */}
+        {selectedParent && (() => {
+          const p = selectedParent;
+          const Field = ({ label, value, full }) => !value ? null : (
+            <div style={{ background:"#F9FAFB", borderRadius:8, padding:"10px 14px", gridColumn: full?"1/-1":"auto" }}>
+              <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>{label}</div>
+              <div style={{ fontSize:13.5, color:"#111827", fontWeight:600 }}>{value}</div>
+            </div>
+          );
+          return (
+          <div className="overlay" onClick={() => setSelectedParent(null)}>
+            <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+              <div style={{ background:"linear-gradient(135deg,#065F46,#059669)", padding:"24px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:16, minWidth:0 }}>
+                    <div style={{ width:64, height:64, borderRadius:"50%", background:"rgba(255,255,255,.15)", border:"2px solid rgba(255,255,255,.5)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:30 }}>👨‍👩‍👧</div>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ color:"#A7F3D0", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>👨‍👩‍👧 Parent Profile</div>
+                      <div style={{ color:"#fff", fontSize:20, fontWeight:800, marginBottom:2 }}>{p.name}</div>
+                      <div style={{ color:"#A7F3D0", fontSize:13 }}>{p.student_name ? `Student: ${p.student_name}` : "Parent / Guardian"}{(p.location||p.city) ? ` · 📍 ${p.location||p.city}` : ""}</div>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedParent(null)} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
+                </div>
+                <div style={{ display:"flex", gap:10, marginTop:18, flexWrap:"wrap" }}>
+                  <button className={"btn btn-sm "+(p.is_active?"btn-danger":"btn-success")} onClick={() => { toggleUser(p.id); setSelectedParent(x => x ? {...x, is_active: x.is_active ? 0 : 1} : x); }}>{p.is_active?"Deactivate":"Activate"}</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setSelectedParent(null)}>Close</button>
+                </div>
+              </div>
+              <div style={{ padding:"24px 28px" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16, flexWrap:"wrap" }}>
+                  <StatusBadge active={p.is_active} />
+                  <span style={{ background: p.status==="Assigned"?"#ECFDF5":"#FFFBEB", color: p.status==="Assigned"?"#059669":"#D97706", border:`1px solid ${p.status==="Assigned"?"#A7F3D0":"#FDE68A"}`, borderRadius:20, padding:"3px 12px", fontSize:11, fontWeight:700 }}>{p.status||"Open"}</span>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                  <Field label="Email" value={p.email} />
+                  <Field label="Phone" value={p.phone} />
+                  <Field label="Student Name" value={p.student_name} />
+                  <Field label="Student Class" value={p.student_class} />
+                  <Field label="Board" value={p.board} />
+                  <Field label="Subject(s)" value={p.subject} />
+                  <Field label="Location" value={p.location || p.city} />
+                  <Field label="Mode" value={p.mode} />
+                  <Field label="Preferred Time" value={p.preferred_time} />
+                  <Field label="Budget" value={p.budget} />
+                  <Field label="Tutor Gender Preference" value={p.tutor_gender_pref} />
+                  <Field label="Experience Required" value={p.experience_req} />
+                  <Field label="Assigned Tutor" value={p.assigned_tutor} />
+                  <Field label="Joined" value={p.created_at ? new Date(p.created_at).toLocaleString() : null} />
+                </div>
+              </div>
+            </div>
+          </div>
+          );
+        })()}
+
+        {/* ══ FEEDBACKS ══ */}
+        {tab==="feedbacks" && (
+          <div className="fadeUp">
+            <div className="page-title">Feedbacks</div>
+            <div className="page-sub">User feedback and error reports — from database</div>
+            {loading.feedbacks ? <Loader /> : feedbacks.length === 0 ? (
+              <div className="card" style={{ padding:48, textAlign:"center", color:"#9CA3AF" }}>
+                <div style={{ fontSize:48, marginBottom:12 }}>💬</div>
+                <h3 style={{ fontSize:18, color:"#111827", marginBottom:6 }}>No feedback yet</h3>
+                <p style={{ fontSize:14 }}>Submissions from the feedback widget will appear here.</p>
+              </div>
+            ) : (
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:18 }}>
+                {feedbacks.map(f => (
+                  <div key={f.id} className="card" style={{ padding:20, display:"flex", flexDirection:"column", gap:10 }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                      <span style={{ background:"#EBF5FF", color:"#1A56DB", border:"1px solid #BFDBFE", borderRadius:20, padding:"3px 12px", fontSize:11, fontWeight:700 }}>
+                        {f.category || "Feedback"}
+                      </span>
+                      <span style={{ fontSize:11, color:"#9CA3AF", fontWeight:600 }}>
+                        {f.created_at ? new Date(f.created_at).toLocaleString() : ""}
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize:14, color:"#111827", lineHeight:1.55, margin:0, whiteSpace:"pre-wrap" }}>{f.message}</p>
+
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:8, fontSize:12.5, color:"#374151" }}>
+                      {f.name  && <span>👤 {f.name}</span>}
+                      {f.phone && <span>📞 {f.phone}</span>}
+                      {f.email && <span>✉️ {f.email}</span>}
+                    </div>
+
+                    {f.page && <div style={{ fontSize:11, color:"#6B7280" }}>📄 Page: {f.page}</div>}
+
+                    {f.screenshot && (
+                      <a href={`${API_ORIGIN}${f.screenshot}`} target="_blank" rel="noopener noreferrer"
+                        style={{ display:"block", marginTop:2 }}>
+                        <img src={`${API_ORIGIN}${f.screenshot}`} alt="screenshot"
+                          style={{ width:"100%", maxHeight:180, objectFit:"cover", borderRadius:10, border:"1px solid #E5E7EB" }} />
+                        <span style={{ fontSize:11, color:"#1A56DB", fontWeight:700 }}>🖼️ Open screenshot</span>
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

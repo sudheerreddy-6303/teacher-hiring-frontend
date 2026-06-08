@@ -8,6 +8,7 @@ import HowItWorksPage     from "./pages/HowItWorksPage";
 import JobsPage           from "./pages/JobsPage";
 import BrowseTeachersPage from "./pages/BrowseTeachersPage";
 import BrowseTutorsPage   from "./pages/BrowseTutorsPage";
+import BrowseTuitionsPage from "./pages/BrowseTuitionsPage";
 import PricingPage        from "./pages/PricingPage";
 import FaqPage            from "./pages/FaqPage";
 import AuthPage           from "./components/auth/AuthPage";
@@ -16,6 +17,7 @@ import TeacherDashboard   from "./components/teacher/TeacherDashboard";
 import TutorDashboard     from "./components/tutor/TutorDashboard";
 import ParentDashboard    from "./components/parent/ParentDashboard";
 import SchoolDashboard    from "./components/school/SchoolDashboard";
+import FeedbackWidget     from "./components/common/FeedbackWidget";
 
 export default function App() {
   const [user, setUser]   = useState(null);
@@ -78,11 +80,15 @@ export default function App() {
       {page === "jobs"       && <JobsPage           setPage={setPage} />}
       {page === "teachers"   && <BrowseTeachersPage setPage={setPage} />}
       {page === "tutors"     && <BrowseTutorsPage   setPage={setPage} />}
+      {page === "tuitions"   && <BrowseTuitionsPage setPage={setPage} />}
       {page === "pricing"    && <PricingPage        setPage={setPage} />}
       {page === "faq"        && <FaqPage            setPage={setPage} />}
       {page === "login"      && <AuthPage           mode="login"  setPage={setPage} />}
       {page === "signup"     && <AuthPage           mode="signup" setPage={setPage} />}
       {page === "dashboard"  && <DashboardRouter />}
+
+      {/* Floating feedback widget — shown on every page */}
+      <FeedbackWidget page={page} />
       {/* ── Welcome Role Selection Popup ── */}
       {showWelcome && !user && (
         <div style={{

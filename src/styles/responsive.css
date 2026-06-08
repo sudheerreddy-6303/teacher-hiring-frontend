@@ -8,6 +8,21 @@
   .container { max-width: 1320px; padding-left: 48px; padding-right: 48px; }
 }
 
+/* ── Home page: span the full viewport width (no centered side gaps on laptops/desktops) ──
+   Scoped to .home-page only, so other pages keep their centered max-width.
+   Gutters match the hero (60px desktop · 24px tablet · 16px mobile). */
+.home-page .container {
+  max-width: 100%;
+  padding-left: 60px;
+  padding-right: 60px;
+}
+@media (max-width: 1024px) {
+  .home-page .container { padding-left: 24px; padding-right: 24px; }
+}
+@media (max-width: 640px) {
+  .home-page .container { padding-left: 16px; padding-right: 16px; }
+}
+
 /* ── Auth split layout ── */
 .auth-layout { min-height: 100vh; display: flex; width: 100%; }
 .auth-panel-left {

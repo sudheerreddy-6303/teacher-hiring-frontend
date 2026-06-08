@@ -32,6 +32,7 @@ function Navbar({ setPage }) {
           <span className="nav-link" onClick={() => go("jobs")}>Browse Jobs</span>
           <span className="nav-link" onClick={() => go("teachers")}>Browse Teachers</span>
           <span className="nav-link" onClick={() => go("tutors")}>Browse Tutors</span>
+          <span className="nav-link" onClick={() => go("tuitions")}>Browse Tuitions</span>
           <span className="nav-link" onClick={() => go("howitworks")}>How It Works</span>
           <span className="nav-link" onClick={() => go("faq")}>FAQ</span>
           <span className="nav-link" onClick={() => go("pricing")} style={{ color:"#1A56DB", fontWeight:700 }}>Pricing</span>
