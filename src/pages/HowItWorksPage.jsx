@@ -27,7 +27,7 @@ function HowItWorksPage({ setPage }) {
   const [openFaq, setOpenFaq] = useState(null);
 
   return (
-    <div style={{ paddingTop:90 }}>
+    <div className="fw-page" style={{ paddingTop:90 }}>
       <Navbar setPage={setPage} />
 
       {/* ── Hero banner ── */}

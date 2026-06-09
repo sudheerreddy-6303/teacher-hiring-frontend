@@ -73,7 +73,7 @@ function JobsPage({ setPage }) {
   }
 
   return (
-    <div style={{ paddingTop:66, minHeight:"100vh", background:"#F9FAFB" }}>
+    <div className="browse-page" style={{ paddingTop:66, minHeight:"100vh", background:"#F9FAFB" }}>
       <Navbar setPage={setPage} />
 
       {/* Header */}

@@ -65,7 +65,7 @@ export default function FeedbackWidget({ page }) {
           }}
           onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; }}
           onMouseLeave={e => { e.currentTarget.style.transform="none"; }}>
-          💬 Feedback
+          💬 Support
         </button>
       )}
 

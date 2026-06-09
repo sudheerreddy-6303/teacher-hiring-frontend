@@ -38,9 +38,9 @@ export default function FaqPage({ setPage }) {
   const section = FAQ_SECTIONS.find(s => s.id === activeTab);
 
   return (
-    <div style={{ minHeight:"100vh", background:"#F9FAFB" }}>
+    <div className="fw-page" style={{ minHeight:"100vh", background:"#F9FAFB" }}>
       <Navbar setPage={setPage} />
-      <div className="container" style={{ maxWidth:800, paddingTop:100, paddingBottom:60 }}>
+      <div className="container" style={{ paddingTop:100, paddingBottom:60 }}>
 
         {/* Header */}
         <div style={{ textAlign:"center", marginBottom:40 }}>

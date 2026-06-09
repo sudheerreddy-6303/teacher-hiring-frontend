@@ -465,7 +465,7 @@ export default function PricingPage({ setPage }) {
   const [openFaq, setOpenFaq] = useState(null);
 
   return (
-    <div style={{ minHeight:"100vh", background:"#F9FAFB" }}>
+    <div className="fw-page" style={{ minHeight:"100vh", background:"#F9FAFB" }}>
       <Navbar setPage={setPage} />
       <div style={{ paddingTop:90 }}>
 

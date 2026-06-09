@@ -63,7 +63,7 @@ export default function BrowseTuitionsPage({ setPage }) {
   );
 
   return (
-    <div style={{ minHeight:"100vh", background:"#F9FAFB" }}>
+    <div className="browse-page" style={{ minHeight:"100vh", background:"#F9FAFB" }}>
       <Navbar setPage={setPage} />
       <div style={{ paddingTop:90 }}>
 

@@ -62,6 +62,7 @@ function CIc({ name, size = 16, stroke = 1.7, style }) {
     pin:      <><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z" /><circle cx="12" cy="11" r="2.2" /></>,
     cap:      <><path d="M3 9l9-4 9 4-9 4-9-4z" /><path d="M7 11.5V16c0 1 2.4 2.4 5 2.4s5-1.4 5-2.4v-4.5" /></>,
     tag:      <><path d="M3 12l8.5-8.5a1 1 0 0 1 .7-.3H20a1 1 0 0 1 1 1v7.8a1 1 0 0 1-.3.7L12 21z" /><circle cx="16.5" cy="7.5" r="1.3" fill="currentColor" stroke="none" /></>,
+    check:    <path d="M5 12.5l4 4 10-10" />,
     left:     <path d="M14.5 6l-6 6 6 6" />,
     right:    <path d="M9.5 6l6 6-6 6" />,
     arrow:    <><path d="M5 12h13" /><path d="M12.5 6l6 6-6 6" /></>,
@@ -106,7 +107,10 @@ function HeroSchoolsCarousel({ setPage, dark }) {
 
             <div style={{ flex:1, minWidth:0 }}>
               {/* Tag */}
-              <div style={{ fontSize:10.5, fontWeight:800, color:"#1A56DB", textTransform:"uppercase", letterSpacing:.7, marginBottom:5 }}>{String(sc.tag || "").replace(/^[^A-Za-z]+/, "")}</div>
+              <div style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:10.5, fontWeight:800, color:"#1A56DB", textTransform:"uppercase", letterSpacing:.7, marginBottom:5 }}>
+                <CIc name="check" size={13} stroke={2.4} style={{ color:"#059669" }} />
+                {String(sc.tag || "").replace(/^[^A-Za-z]+/, "")}
+              </div>
               {/* Name */}
               <div style={{ fontSize:17.5, fontWeight:800, color:"#0F172A", marginBottom:7, lineHeight:1.2 }}>{sc.name}</div>
               {/* Meta */}
@@ -119,8 +123,8 @@ function HeroSchoolsCarousel({ setPage, dark }) {
 
             {/* Open count */}
             <div style={{ textAlign:"right", flexShrink:0 }}>
-              <div style={{ fontSize:34, fontWeight:800, color:"#1A56DB", lineHeight:1, fontFamily:"Playfair Display,serif" }}>{sc.open}</div>
-              <div style={{ fontSize:10.5, color:"#94A3B8", fontWeight:700, marginTop:4, textTransform:"uppercase", letterSpacing:.4 }}>open roles</div>
+              <div style={{ fontSize:34, fontWeight:800, color:"#059669", lineHeight:1, fontFamily:"Playfair Display,serif" }}>{sc.open}</div>
+              <div style={{ fontSize:10.5, color:"#64748B", fontWeight:700, marginTop:4 }}>Open Roles</div>
             </div>
           </div>
         </div>
@@ -148,7 +152,7 @@ function HeroSchoolsCarousel({ setPage, dark }) {
               style={{ width:30, height:30, borderRadius:"50%", border:"1px solid #E2E8F0", background:"#fff", cursor:"pointer", color:"#64748B", display:"flex", alignItems:"center", justifyContent:"center" }}><CIc name="left" size={15} /></button>
             <button aria-label="Next" onClick={() => goTo(sv => (sv+1)%total)}
               style={{ width:30, height:30, borderRadius:"50%", border:"1px solid #E2E8F0", background:"#fff", cursor:"pointer", color:"#64748B", display:"flex", alignItems:"center", justifyContent:"center" }}><CIc name="right" size={15} /></button>
-            <button className="btn btn-primary btn-sm" onClick={() => setPage("institutes")}>View all <CIc name="arrow" size={14} style={{ marginLeft:2 }} /></button>
+            <button className="btn btn-primary btn-sm" onClick={() => setPage("institutes")}>View All Jobs</button>
           </div>
         </div>
 

@@ -23,6 +23,22 @@
   .home-page .container { padding-left: 16px; padding-right: 16px; }
 }
 
+/* ── Browse pages (Jobs/Teachers/Tutors/Tuitions): full-width, same gutters as home ── */
+.browse-page .container,
+.fw-page .container {
+  max-width: 100%;
+  padding-left: 60px;
+  padding-right: 60px;
+}
+@media (max-width: 1024px) {
+  .browse-page .container,
+  .fw-page .container { padding-left: 24px; padding-right: 24px; }
+}
+@media (max-width: 640px) {
+  .browse-page .container,
+  .fw-page .container { padding-left: 16px; padding-right: 16px; }
+}
+
 /* ── Auth split layout ── */
 .auth-layout { min-height: 100vh; display: flex; width: 100%; }
 .auth-panel-left {
@@ -43,6 +59,10 @@
   gap: 72px;
   align-items: center;
   width: 100%;
+}
+.hero-grid.hero-wide { grid-template-columns: 1.22fr 0.95fr; gap: 52px; }
+@media (max-width: 1024px) {
+  .hero-grid.hero-wide { grid-template-columns: 1fr; gap: 40px; }
 }
 .hero-search-row {
   display: flex;

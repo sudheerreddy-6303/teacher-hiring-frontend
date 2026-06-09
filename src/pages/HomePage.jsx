@@ -486,6 +486,10 @@ function Ic({ name, size = 20, stroke = 1.7, style }) {
     shield:   <><path d="M12 3l7 3v5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6l7-3z" /><path d="M9 12l2 2 4-4" /></>,
     bell:     <><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z" /><path d="M10 20a2 2 0 0 0 4 0" /></>,
     activity: <path d="M3 12h4l2.5-6 4 12 2.5-6H20" />,
+    crown:    <><path d="M4 18.5h16" /><path d="M4 9l4 3 4-6 4 6 4-3-1.6 8.5H5.6L4 9z" /></>,
+    users:    <><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" /><path d="M16 6.2a3 3 0 0 1 0 5.6" /><path d="M16.8 14.2c2.3.5 3.9 2.4 3.9 4.8" /></>,
+    star:     <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />,
+    down:     <path d="M6 9l6 6 6-6" />,
     arrow:    <><path d="M5 12h13" /><path d="M12.5 6l6 6-6 6" /></>,
     left:     <path d="M14.5 6l-6 6 6 6" />,
     right:    <path d="M9.5 6l6 6-6 6" />,
@@ -494,6 +498,100 @@ function Ic({ name, size = 20, stroke = 1.7, style }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style} aria-hidden="true">
       {p}
+    </svg>
+  );
+}
+
+/* Hero illustration — school, laptop dashboard, books, pencils, plant (line art) */
+function HeroArt() {
+  return (
+    <svg viewBox="0 0 560 430" width="100%" style={{ maxWidth:560, height:"auto", display:"block" }} role="img" aria-label="Educators connecting with schools" xmlns="http://www.w3.org/2000/svg">
+      {/* soft backdrop */}
+      <ellipse cx="300" cy="190" rx="240" ry="160" fill="#EFF5FF" />
+      <path d="M120 120c-26 0-40 26-22 40-18 8-10 34 12 32h150c20 0 24-26 6-34 12-16-4-40-24-32-6-18-34-18-40 0-10-8-24-4-28 8-8-12-30-12-32-2 0 0 8-12 0-12z" fill="#FFFFFF" opacity=".75" />
+
+      {/* paper plane */}
+      <g stroke="#1A56DB" strokeWidth="2.2" strokeLinejoin="round" fill="none">
+        <path d="M470 70l44 -16 -16 44 -12 -16 -16 -12z" fill="#DBEAFE" />
+        <path d="M514 54l-28 28" />
+      </g>
+      {/* sparkles */}
+      <g stroke="#93C5FD" strokeWidth="2.2" strokeLinecap="round">
+        <path d="M150 70v10M145 75h10" />
+        <path d="M430 150v8M426 154h8" />
+      </g>
+
+      {/* school building */}
+      <g stroke="#1A56DB" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" fill="none">
+        {/* tower */}
+        <path d="M250 80l30 -26 30 26z" fill="#DBEAFE" />
+        <path d="M280 36v18" /><circle cx="280" cy="34" r="3" fill="#1A56DB" />
+        <rect x="262" y="80" width="36" height="40" fill="#FFFFFF" />
+        <circle cx="280" cy="98" r="7" fill="#EFF5FF" />
+        {/* main body */}
+        <rect x="196" y="120" width="168" height="86" rx="3" fill="#FFFFFF" />
+        {/* columns */}
+        <path d="M214 132v62M236 132v62M324 132v62M346 132v62" stroke="#BFDBFE" strokeWidth="6" />
+        {/* windows row */}
+        <rect x="262" y="138" width="16" height="20" rx="2" fill="#EFF5FF" />
+        <rect x="282" y="138" width="16" height="20" rx="2" fill="#EFF5FF" />
+        {/* door */}
+        <path d="M270 206v-26a10 10 0 0 1 20 0v26" fill="#DBEAFE" />
+        {/* roof line + steps */}
+        <path d="M188 120h184" strokeWidth="3" />
+        <path d="M182 206h196M174 214h212" strokeWidth="3" />
+      </g>
+
+      {/* books stack */}
+      <g strokeLinejoin="round" strokeWidth="2.2">
+        <rect x="86" y="300" width="120" height="22" rx="4" fill="#1E3A8A" stroke="#1E3A8A" />
+        <rect x="78" y="278" width="120" height="22" rx="4" fill="#1A56DB" stroke="#1A56DB" />
+        <rect x="92" y="256" width="120" height="22" rx="4" fill="#93C5FD" stroke="#60A5FA" />
+        <path d="M86 311h120M78 289h120M92 267h120" stroke="#FFFFFF" strokeOpacity=".5" strokeWidth="1.5" />
+      </g>
+      {/* pencil cup */}
+      <g strokeLinejoin="round" strokeLinecap="round" strokeWidth="2.2">
+        <path d="M118 256v-40M132 256v-46M146 256v-40" stroke="#F59E0B" />
+        <path d="M118 216l-3 -8 6 0z M132 210l-3 -8 6 0z M146 216l-3 -8 6 0z" fill="#FBBF24" stroke="#F59E0B" />
+        <path d="M104 232h56l-6 24h-44z" fill="#DBEAFE" stroke="#1A56DB" />
+      </g>
+
+      {/* laptop with dashboard */}
+      <g strokeLinejoin="round" strokeLinecap="round">
+        <rect x="240" y="214" width="180" height="120" rx="8" fill="#FFFFFF" stroke="#1A56DB" strokeWidth="2.6" />
+        <rect x="252" y="226" width="156" height="96" rx="4" fill="#F4F8FF" stroke="#BFDBFE" strokeWidth="1.6" />
+        {/* dashboard content */}
+        <rect x="260" y="234" width="140" height="14" rx="3" fill="#1E3A8A" />
+        <circle cx="270" cy="241" r="4" fill="#60A5FA" />
+        <rect x="280" y="238" width="40" height="6" rx="3" fill="#93C5FD" />
+        <g fill="#FFFFFF" stroke="#BFDBFE" strokeWidth="1.4">
+          <rect x="260" y="256" width="140" height="16" rx="3" />
+          <rect x="260" y="276" width="140" height="16" rx="3" />
+          <rect x="260" y="296" width="140" height="16" rx="3" />
+        </g>
+        <g fill="#1A56DB">
+          <circle cx="270" cy="264" r="4" /><circle cx="270" cy="284" r="4" /><circle cx="270" cy="304" r="4" />
+        </g>
+        <g fill="#DBEAFE">
+          <rect x="282" y="261" width="64" height="6" rx="3" /><rect x="282" y="281" width="74" height="6" rx="3" /><rect x="282" y="301" width="54" height="6" rx="3" />
+        </g>
+        <g fill="#34D399">
+          <rect x="372" y="259" width="20" height="10" rx="5" opacity=".9" /><rect x="372" y="279" width="20" height="10" rx="5" opacity=".9" /><rect x="372" y="299" width="20" height="10" rx="5" opacity=".9" />
+        </g>
+        {/* base */}
+        <path d="M224 334h212l-12 12H236z" fill="#DBEAFE" stroke="#1A56DB" strokeWidth="2.6" />
+      </g>
+
+      {/* potted plant */}
+      <g strokeLinejoin="round" strokeLinecap="round" strokeWidth="2.2" fill="none">
+        <path d="M470 300c-4 -20 6 -34 22 -38" stroke="#16A34A" />
+        <path d="M486 300c2 -18 -4 -32 -16 -40" stroke="#16A34A" />
+        <path d="M492 262c10 -4 20 0 24 10 -12 4 -22 0 -24 -10z" fill="#86EFAC" stroke="#16A34A" />
+        <path d="M470 252c-10 -6 -12 -18 -6 -28 10 6 12 18 6 28z" fill="#86EFAC" stroke="#16A34A" />
+        <path d="M488 254c0 -14 8 -24 20 -26 0 14 -8 24 -20 26z" fill="#4ADE80" stroke="#16A34A" />
+        <path d="M462 300h54l-8 36h-38z" fill="#FFFFFF" stroke="#1A56DB" strokeWidth="2.6" />
+        <path d="M462 310h54" stroke="#BFDBFE" />
+      </g>
     </svg>
   );
 }
@@ -533,6 +631,8 @@ function HomePage({ setPage }) {
   const HOW = [
     { step:"01", who:"Teachers",  icon:"👩‍🏫", items:["Create your free profile","List subjects and experience","Browse verified job listings","Apply in one click","Get hired and start teaching"] },
     { step:"02", who:"Institutes",icon:"🏫",   items:["Register your institution","Post a vacancy for review","Admin approves and publishes","Receive qualified applications","Shortlist, interview, hire"] },
+    { step:"03", who:"Tutors",    icon:"📚",   items:["Create your tutor profile","List subjects and availability","Set your mode and rates","Receive student requests","Start tutoring and earn"] },
+    { step:"04", who:"Parents",   icon:"👪",   items:["Post your tuition requirement","Specify class, board and subjects","Browse verified tutors","Connect and compare profiles","Hire the right tutor"] },
   ];
 
   const GROUPS = [
@@ -574,175 +674,173 @@ function HomePage({ setPage }) {
     <div className="home-page">
       <Navbar setPage={setPage} />
       {/* ── HERO ───────────────────────────────────────────────────────────── */}
-      <section className="hero-section" style={{ display:"flex", flexDirection:"column", background:"#fff", position:"relative", overflow:"hidden", borderBottom:"1px solid #EEF1F5" }}>
+      <section className="hero-section" style={{ display:"flex", flexDirection:"column", background:"#fff", position:"relative", overflow:"hidden", minHeight:"auto" }}>
 
-        {/* Single, restrained background wash */}
-        <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg,#FBFCFE 0%,#FFFFFF 55%)", pointerEvents:"none" }} />
-        <div style={{ position:"absolute", width:620, height:620, borderRadius:"50%", background:"radial-gradient(circle,rgba(26,86,219,.06),transparent 62%)", top:-220, right:-160, pointerEvents:"none" }} />
+        {/* Background wash */}
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg,#FBFCFE 0%,#FFFFFF 60%)", pointerEvents:"none" }} />
+        <div style={{ position:"absolute", width:680, height:680, borderRadius:"50%", background:"radial-gradient(circle,rgba(26,86,219,.06),transparent 62%)", top:-260, left:"38%", pointerEvents:"none" }} />
 
-        <div className="hero-inner" style={{ position:"relative", zIndex:1, flex:1, display:"flex", alignItems:"center", paddingTop:40, paddingBottom:60, paddingLeft:isMobile?16:isTablet?24:60, paddingRight:isMobile?16:isTablet?24:60, width:"100%", boxSizing:"border-box" }}>
-          <div className="hero-grid">
+        <div className="hero-inner" style={{ position:"relative", zIndex:1, flex:1, display:"flex", alignItems:"flex-start", paddingTop:12, paddingBottom:48, paddingLeft:isMobile?16:isTablet?24:60, paddingRight:isMobile?16:isTablet?24:60, width:"100%", boxSizing:"border-box" }}>
+          <div className="hero-grid hero-wide" style={{ alignItems:"start" }}>
 
-            {/* ── LEFT: Copy ── */}
+            {/* ── LEFT: Copy + illustration ── */}
             <div className="fadeUp">
-              {/* Eyebrow badge */}
-              <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"#fff", border:"1px solid #E2E8F0", borderRadius:30, padding:"6px 14px", marginBottom:26, boxShadow:"0 1px 2px rgba(15,23,42,.04)" }}>
-                <span style={{ width:7, height:7, borderRadius:"50%", background:"#059669", display:"inline-block" }} />
-                <span style={{ fontSize:12, fontWeight:800, color:"#334155", letterSpacing:.4 }}>Live teaching jobs across India</span>
+
+              {/* Headline + illustration */}
+              <div style={{ display:"grid", gridTemplateColumns: isTablet ? "1fr" : "minmax(0,0.82fr) minmax(0,1fr)", gap: isTablet?12:26, alignItems: isTablet?"center":"start", marginBottom: isMobile?28:30 }}>
+                {/* Copy */}
+                <div>
+                  {/* Eyebrow */}
+                  <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"#fff", border:"1px solid #E2E8F0", borderRadius:30, padding:"7px 15px", marginBottom:22, boxShadow:"0 1px 2px rgba(15,23,42,.05)" }}>
+                    <span style={{ width:7, height:7, borderRadius:"50%", background:"#059669", display:"inline-block" }} />
+                    <span style={{ fontSize:12, fontWeight:800, color:"#334155", letterSpacing:.3 }}>LIVE · 3,200+ Schools Hiring Now</span>
+                  </div>
+
+                  {/* Headline with quotes */}
+                  <div style={{ position:"relative" }}>
+                    <span aria-hidden="true" style={{ position:"absolute", top:-32, left:-4, fontFamily:"Playfair Display,serif", fontSize:62, lineHeight:1, color:"#1A56DB", fontWeight:800 }}>&ldquo;</span>
+                    <h1 style={{ fontFamily:"Nunito,sans-serif", fontSize:"clamp(60px,2.9vw,40px)", fontWeight:800, lineHeight:1.18, letterSpacing:"-0.015em", color:"#0F172A", margin:0, paddingTop:8 }}>
+                      Great teachers<br />
+                      <span style={{ fontFamily:"Playfair Display,serif", color:"#1A56DB", fontStyle:"italic", fontWeight:700 }}>change lives.</span><br />
+                      We help schools<br />
+                      find them.<span aria-hidden="true" style={{ fontFamily:"Playfair Display,serif", color:"#1A56DB", fontWeight:800, fontSize:"1.2em", verticalAlign:"-0.15em", marginLeft:2 }}>&rdquo;</span>
+                    </h1>
+                  </div>
+                  <div style={{ marginTop:18 }}>
+                    <span style={{ fontSize:14, fontWeight:700, color:"#64748B" }}>&mdash; Every Student, Every Day</span>
+                    <div style={{ width:54, height:2, background:"#1A56DB", borderRadius:2, marginTop:8 }} />
+                  </div>
+                </div>
+
+                {/* Illustration */}
+                <div style={{ order: isTablet ? 2 : 0, justifySelf:"center", width:"100%" }}>
+                  <HeroArt />
+                </div>
               </div>
 
-              {/* Headline */}
-              <h1 style={{ fontFamily:"Playfair Display,serif", fontSize:"clamp(36px,4.4vw,60px)", fontWeight:800, lineHeight:1.12, letterSpacing:"-0.01em", color:"#0F172A", marginBottom:20 }}>
-                Where India&rsquo;s teachers<br />
-                find their <span style={{ color:"#1A56DB" }}>next role</span>.
-              </h1>
-
-              <p style={{ fontSize:16.5, color:"#475569", lineHeight:1.75, maxWidth:460, marginBottom:34 }}>
-                AcadHr connects educators with schools, colleges and coaching institutes across India. Search verified openings, apply in one click, and get hired faster.
-              </p>
-
               {/* Search */}
-              <div className="hero-search-row">
+              <div className="hero-search-row" style={{ maxWidth:420 }}>
                 <div className="hero-search-input-wrap">
                   <span className="hero-search-icon" aria-hidden="true"><Ic name="search" size={18} /></span>
                   <input
                     className="hero-search-input"
-                    placeholder="Subject, city, or school…"
+                    placeholder="Search by subject, skill or school name…"
                     onKeyDown={e => e.key==="Enter" && setPage("jobs")}
                   />
                 </div>
                 <button type="button" className="btn btn-primary hero-search-btn" onClick={() => setPage("jobs")}>
-                  Search jobs
+                  Search
                 </button>
               </div>
 
-              {/* Subject tag pills */}
-              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:36 }}>
-                {["Mathematics","Physics","English","CS","Chemistry","Biology"].map(s => (
-                  <span key={s} onClick={() => setPage("jobs")} style={{ padding:"6px 14px", borderRadius:8, fontSize:12.5, fontWeight:700, cursor:"pointer", background:"#fff", color:"#475569", border:"1px solid #E2E8F0", transition:"all .15s" }}
-                    onMouseEnter={e => { e.currentTarget.style.background="#1A56DB"; e.currentTarget.style.color="#fff"; e.currentTarget.style.borderColor="#1A56DB"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background="#fff"; e.currentTarget.style.color="#475569"; e.currentTarget.style.borderColor="#E2E8F0"; }}>
+              {/* Subject chips + More */}
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:28 }}>
+                {["Mathematics","Physics","English","Chemistry","Biology"].map(s => (
+                  <span key={s} onClick={() => setPage("jobs")} style={{ display:"inline-flex", alignItems:"center", gap:7, padding:"6px 13px", borderRadius:20, fontSize:12.5, fontWeight:700, cursor:"pointer", background:"#fff", color:"#475569", border:"1px solid #E2E8F0", transition:"all .15s" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor="#1A56DB"; e.currentTarget.style.color="#1A56DB"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor="#E2E8F0"; e.currentTarget.style.color="#475569"; }}>
+                    <span style={{ width:6, height:6, borderRadius:"50%", background:"#1A56DB", display:"inline-block" }} />
                     {s}
                   </span>
                 ))}
+                <span onClick={() => setPage("jobs")} style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"6px 13px", borderRadius:20, fontSize:12.5, fontWeight:700, cursor:"pointer", background:"#F8FAFC", color:"#334155", border:"1px solid #E2E8F0" }}>
+                  More <Ic name="down" size={14} />
+                </span>
               </div>
 
-              {/* CTA row */}
-              <div style={{ display:"flex", gap:12, alignItems:"center", flexWrap:"wrap", marginBottom:34 }}>
+              {/* CTAs */}
+              <div style={{ display:"flex", gap:12, alignItems:"center", flexWrap:"wrap", marginBottom:30 }}>
                 <button className="btn btn-primary btn-lg" onClick={() => setPage("signup")} style={{ fontSize:15 }}>
-                  Get started &mdash; it&rsquo;s free <Ic name="arrow" size={17} style={{ marginLeft:2 }} />
+                  Get Started Free <Ic name="arrow" size={17} style={{ marginLeft:2 }} />
                 </button>
-                <button onClick={() => setPage("jobs")} style={{ background:"#fff", border:"1.5px solid #CBD5E1", color:"#334155", borderRadius:10, padding:"13px 26px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .18s" }}
+                <button onClick={() => setPage("jobs")} style={{ display:"inline-flex", alignItems:"center", gap:8, background:"#fff", border:"1.5px solid #CBD5E1", color:"#334155", borderRadius:10, padding:"13px 24px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .18s" }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor="#1A56DB"; e.currentTarget.style.color="#1A56DB"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor="#CBD5E1"; e.currentTarget.style.color="#334155"; }}>
-                  Browse jobs
+                  <Ic name="building" size={16} /> Browse Jobs
                 </button>
               </div>
 
-              {/* Trust row — plain, honest signals (no emoji avatars) */}
-              <div style={{ display:"flex", gap:20, flexWrap:"wrap", alignItems:"center" }}>
-                {["Free for teachers","Verified institutions","Apply in one click"].map(t => (
-                  <span key={t} style={{ display:"inline-flex", alignItems:"center", gap:7, fontSize:13, fontWeight:700, color:"#475569" }}>
-                    <Ic name="check" size={16} stroke={2.2} style={{ color:"#059669" }} />
-                    {t}
-                  </span>
-                ))}
+              {/* Trust row — initials avatars */}
+              <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+                <div style={{ display:"flex", alignItems:"center" }}>
+                  {[["AS","#1A56DB"],["RK","#0EA5E9"],["PM","#7C3AED"],["SN","#059669"]].map(([ini,bg],i) => (
+                    <span key={ini} style={{ width:34, height:34, borderRadius:"50%", background:bg, color:"#fff", border:"2px solid #fff", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:11.5, fontWeight:800, marginLeft: i===0?0:-10, zIndex:10-i }}>{ini}</span>
+                  ))}
+                  <span style={{ width:34, height:34, borderRadius:"50%", background:"#F59E0B", color:"#fff", border:"2px solid #fff", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, marginLeft:-10, zIndex:5 }}>+2k</span>
+                </div>
+                <span style={{ fontSize:13, fontWeight:700, color:"#475569" }}>Join 25,000+ teachers already using AcadHr</span>
               </div>
             </div>
 
-            {/* ── RIGHT: App Showcase Card ── */}
+            {/* ── RIGHT: Schools card + features ── */}
             <div className="fadeUp" style={{ animationDelay:".15s" }}>
-              {/* Main card */}
-              <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:20, overflow:"hidden", boxShadow:"0 24px 56px -22px rgba(15,23,42,.22)" }}>
-                {/* Card topbar */}
-                <div style={{ background:"#1E3A8A", padding:"15px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:11 }}>
-                    <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:30, height:30, borderRadius:8, background:"rgba(255,255,255,.14)", color:"#fff" }}>
-                      <Ic name="building" size={17} />
-                    </span>
-                    <span style={{ color:"#fff", fontWeight:800, fontSize:14.5, letterSpacing:.2 }}>Top hiring schools</span>
-                  </div>
-                  <span style={{ display:"inline-flex", alignItems:"center", gap:6, color:"#BFDBFE", fontSize:11.5, fontWeight:700 }}>
-                    <span style={{ width:7, height:7, borderRadius:"50%", background:"#34D399", display:"inline-block" }} />
-                    Live
+              {/* Schools card */}
+              <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:18, overflow:"hidden", boxShadow:"0 24px 56px -22px rgba(15,23,42,.22)" }}>
+                {/* Topbar */}
+                <div style={{ background:"linear-gradient(135deg,#1E3A8A,#1A56DB)", padding:"15px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <span style={{ display:"inline-flex", alignItems:"center", gap:10, color:"#fff", fontWeight:800, fontSize:14.5 }}>
+                    <Ic name="crown" size={18} style={{ color:"#FBBF24" }} /> Top Hiring Schools
+                  </span>
+                  <span onClick={() => setPage("institutes")} style={{ display:"inline-flex", alignItems:"center", gap:5, color:"#DBEAFE", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                    View All Schools <Ic name="arrow" size={14} />
                   </span>
                 </div>
 
-                {/* Schools carousel */}
+                {/* Carousel */}
                 <HeroSchoolsCarousel setPage={setPage} />
               </div>
 
-              {/* Feature cards below — one consistent treatment, line icons */}
-              <div className="home-pills-grid" style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:12, marginTop:14 }}>
+              {/* Feature cards 2x2 */}
+              <div className="home-pills-grid" style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:14, marginTop:16 }}>
                 {[
-                  { icon:"target",   t:"Smart matching",    d:"By subject, city & experience" },
-                  { icon:"shield",   t:"Verified profiles", d:"Schools and teachers reviewed" },
-                  { icon:"bell",     t:"Instant alerts",    d:"New openings in real time" },
-                  { icon:"activity", t:"Live dashboard",    d:"Track every application" },
+                  { icon:"target",   t:"Smart Matching",    d:"AI matches you with the best teaching jobs.",                bg:"#EFF5FF", bd:"#DBEAFE", c:"#1E429F" },
+                  { icon:"shield",   t:"Verified Profiles", d:"100% verified schools and institutions.",                   bg:"#ECFDF5", bd:"#A7F3D0", c:"#065F46" },
+                  { icon:"bell",     t:"Instant Alerts",    d:"Get notified instantly about new job openings.",            bg:"#FFFBEB", bd:"#FDE68A", c:"#92400E" },
+                  { icon:"activity", t:"Live Dashboard",    d:"Track applications, responses and job updates in real-time.", bg:"#F5F3FF", bd:"#DDD6FE", c:"#5B21B6" },
                 ].map(f => (
-                  <div key={f.t} style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:14, padding:"14px 15px", display:"flex", alignItems:"flex-start", gap:11, transition:"transform .18s, box-shadow .18s, border-color .18s" }}
-                    onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 10px 22px -12px rgba(15,23,42,.22)"; e.currentTarget.style.borderColor="#BFDBFE"; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform="none"; e.currentTarget.style.boxShadow="none"; e.currentTarget.style.borderColor="#E2E8F0"; }}>
-                    <span style={{ flexShrink:0, display:"inline-flex", alignItems:"center", justifyContent:"center", width:34, height:34, borderRadius:9, background:"#EBF2FE", color:"#1A56DB" }}>
+                  <div key={f.t} style={{ background:f.bg, border:`1px solid ${f.bd}`, borderRadius:14, padding:"16px 16px", transition:"transform .18s, box-shadow .18s" }}
+                    onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 12px 24px -14px rgba(15,23,42,.25)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform="none"; e.currentTarget.style.boxShadow="none"; }}>
+                    <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:34, height:34, borderRadius:9, background:"#fff", border:`1px solid ${f.bd}`, color:f.c, marginBottom:10 }}>
                       <Ic name={f.icon} size={18} />
                     </span>
-                    <span>
-                      <span style={{ display:"block", fontSize:13, fontWeight:800, color:"#0F172A" }}>{f.t}</span>
-                      <span style={{ display:"block", fontSize:11.5, color:"#64748B", marginTop:2, lineHeight:1.4 }}>{f.d}</span>
-                    </span>
+                    <div style={{ fontSize:13.5, fontWeight:800, color:f.c, marginBottom:4 }}>{f.t}</div>
+                    <div style={{ fontSize:12, color:"#64748B", lineHeight:1.5 }}>{f.d}</div>
                   </div>
                 ))}
               </div>
             </div>
 
+          </div>
+        </div>
+      </section>
+
+      {/* ── VALUE BAND ─────────────────────────────────────────────────────── */}
+      <section style={{ background:"#F9FBFF", padding: isMobile?"0 0 40px":"0 0 56px" }}>
+        <div className="container">
+          <div style={{ background:"#fff", border:"1px solid #E8EDF4", borderRadius:18, boxShadow:"0 16px 40px -24px rgba(15,23,42,.18)", marginTop:-28, padding: isMobile?"28px 18px":"36px 28px" }}>
+            <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr 1fr":(isTablet?"1fr 1fr":"repeat(4,1fr)"), gap: isMobile?"28px 16px":32 }}>
+              {[
+                { icon:"cap",    t:"Built for Educators", d:"Designed to make your job search simple and effective." },
+                { icon:"shield", t:"Trusted by Schools",  d:"Schools trust us to connect them with the right teaching talent." },
+                { icon:"users",  t:"Growing Community",   d:"A community of passionate educators and institutions." },
+                { icon:"star",   t:"Quality First",       d:"We focus on quality matches that create lasting impact." },
+              ].map(v => (
+                <div key={v.t} style={{ textAlign:"center", padding:"0 4px" }}>
+                  <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:62, height:62, borderRadius:"50%", background:"#EBF2FE", color:"#1A56DB", marginBottom:14 }}>
+                    <Ic name={v.icon} size={26} stroke={1.8} />
+                  </span>
+                  <div style={{ fontSize:16, fontWeight:800, color:"#0F172A", marginBottom:7 }}>{v.t}</div>
+                  <div style={{ fontSize:13, color:"#64748B", lineHeight:1.6, maxWidth:230, margin:"0 auto" }}>{v.d}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* ALL JOBS SECTION */}
-      <section style={{ background:"#F9FAFB", borderTop:"1px solid #E5E7EB", padding:"72px 0" }}>
-        <div className="container">
-          {/* Section header */}
-          <div className="flexb" style={{ marginBottom:36, flexWrap:"wrap", gap:16 }}>
-            <div>
-              <div className="sec-eye">All Positions</div>
-              <h2 className="sec-title" style={{ marginBottom:6 }}>Browse All Teaching Jobs</h2>
-              <p style={{ color:"#6B7280", fontSize:15 }}>
-                Live teaching positions across India — updated daily
-              </p>
-            </div>
-            <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-              <span style={{ background:"#ECFDF5", color:"#059669", border:"1px solid #A7F3D0", borderRadius:20, padding:"5px 14px", fontSize:12, fontWeight:700 }}>🟢 Live Jobs</span>
-              <button className="btn btn-primary" onClick={() => setPage("jobs")}>View All & Filter →</button>
-            </div>
-          </div>
-
-          {/* Filter chips */}
-          <div style={{ display:"flex", gap:8, marginBottom:32, flexWrap:"wrap" }}>
-            {["All","Full-Time","Part-Time","Home Tuition"].map((t,i) => (
-              <span key={t} style={{ padding:"6px 16px", borderRadius:20, fontSize:13, fontWeight:700, cursor:"pointer", background: i===0 ? "#1A56DB" : "#fff", color: i===0 ? "#fff" : "#374151", border: i===0 ? "none" : "1px solid #D1D5DB", boxShadow:"0 1px 3px rgba(0,0,0,.06)" }}>{t}</span>
-            ))}
-          </div>
-
-          {/* Jobs grid — all 9 */}
-          <div className="home-jobs-grid responsive-grid-3">
-            <div style={{textAlign:"center",padding:"32px 0",color:"#6B7280"}}><button className="btn btn-primary" onClick={()=>setPage("jobs")}>Browse All Jobs →</button></div>
-          </div>
-
-          {/* Bottom CTA */}
-          <div style={{ textAlign:"center", marginTop:44 }}>
-            <div style={{ background:"linear-gradient(135deg,#EBF5FF,#E0F2FE)", border:"1px solid #BFDBFE", borderRadius:16, padding:"32px 40px", display:"inline-block", maxWidth:560 }}>
-              <div style={{ fontSize:20, marginBottom:8 }}>🎓</div>
-              <h3 style={{ fontSize:20, marginBottom:8 }}>Can't find the right position?</h3>
-              <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>Create a free profile and let schools come to you. Over 3,200 institutes are actively hiring on AcadHr.</p>
-              <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
-                <button className="btn btn-primary" onClick={() => setPage("signup")}>Create Free Profile</button>
-                <button className="btn btn-outline" onClick={() => setPage("jobs")}>Browse with Filters</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+  
 
       {/* FEATURED TEACHERS */}
       <section className="section" style={{ background:"#fff", borderTop:"1px solid #E5E7EB" }}>
@@ -836,33 +934,31 @@ function HomePage({ setPage }) {
             <div className="sec-eye" style={{ justifyContent:"center" }}>Who Is It For</div>
             <h2 className="sec-title">Designed for Every Education Professional</h2>
           </div>
-          <div className="grid2">
-            <div className="card" style={{ padding:42, borderTop:"4px solid #1A56DB" }}>
-              <div style={{ fontSize:48, marginBottom:18 }}>👩‍🏫</div>
-              <h2 style={{ fontSize:26, marginBottom:10 }}>Are You a Teacher?</h2>
-              <p style={{ color:"#6B7280", lineHeight:1.8, marginBottom:26, fontSize:15 }}>Build your verified profile, showcase qualifications, and apply to hundreds of teaching positions across India. Free for all educators.</p>
-              <ul style={{ listStyle:"none", marginBottom:30 }}>
-                {["Free profile — always","Apply to unlimited jobs","Get discovered by top schools","Track all applications live"].map(f => (
-                  <li key={f} style={{ color:"#374151", padding:"7px 0", fontSize:14, borderBottom:"1px solid #F3F4F6", display:"flex", gap:10, alignItems:"center" }}>
-                    <span style={{ color:"#1A56DB", fontWeight:800, fontSize:16 }}>✓</span>{f}
-                  </li>
-                ))}
-              </ul>
-              <button className="btn btn-primary btn-lg" onClick={() => setPage("signup")}>Join as Educator →</button>
-            </div>
-            <div className="card" style={{ padding:42, borderTop:"4px solid #0EA5E9" }}>
-              <div style={{ fontSize:48, marginBottom:18 }}>🏫</div>
-              <h2 style={{ fontSize:26, marginBottom:10 }}>Hiring for Your Institute?</h2>
-              <p style={{ color:"#6B7280", lineHeight:1.8, marginBottom:26, fontSize:15 }}>Post vacancies, review vetted applications, and find the perfect educators for your school, college, or coaching institute.</p>
-              <ul style={{ listStyle:"none", marginBottom:30 }}>
-                {["Post unlimited vacancies","Access verified teacher profiles","Manage all applications","Moderated and trusted listings"].map(f => (
-                  <li key={f} style={{ color:"#374151", padding:"7px 0", fontSize:14, borderBottom:"1px solid #F3F4F6", display:"flex", gap:10, alignItems:"center" }}>
-                    <span style={{ color:"#0EA5E9", fontWeight:800, fontSize:16 }}>✓</span>{f}
-                  </li>
-                ))}
-              </ul>
-              <button className="btn btn-sky btn-lg" onClick={() => setPage("signup")}>Register Institute →</button>
-            </div>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : (isTablet ? "1fr 1fr" : "repeat(4,1fr)"), gap: isMobile?16:20, alignItems:"stretch" }}>
+            {[
+              { icon:"👩‍🏫", title:"Are You a Teacher?",     desc:"Build your verified profile, showcase qualifications, and apply to teaching positions across India. Free for all educators.", items:["Free profile — always","Apply to unlimited jobs","Get discovered by top schools","Track all applications live"], cta:"Join as Educator", accent:"#1A56DB", hover:"#1E429F" },
+              { icon:"🏫",   title:"Hiring for Your Institute?", desc:"Post vacancies, review vetted applications, and find the perfect educators for your school, college, or coaching institute.", items:["Post unlimited vacancies","Access verified teacher profiles","Manage all applications","Moderated, trusted listings"], cta:"Register Institute", accent:"#0EA5E9", hover:"#0284C7" },
+              { icon:"📚",   title:"Are You a Tutor?",        desc:"Offer home or online tuitions, set your own subjects and rates, and connect with students and parents who need you.", items:["List subjects & availability","Choose home or online","Get student requests","Grow your tuition income"], cta:"Join as Tutor", accent:"#059669", hover:"#047857" },
+              { icon:"👪",   title:"Looking for a Tutor?",    desc:"Post your requirement, browse verified tutors by subject and board, and find the right match for your child.", items:["Post your requirement free","Browse verified tutors","Compare and connect","Hire with confidence"], cta:"Find a Tutor", accent:"#7C3AED", hover:"#6D28D9" },
+            ].map(c => (
+              <div key={c.title} className="card" style={{ padding:26, borderTop:`4px solid ${c.accent}`, display:"flex", flexDirection:"column" }}>
+                <div style={{ fontSize:40, marginBottom:14 }}>{c.icon}</div>
+                <h3 style={{ fontSize:19, marginBottom:9, lineHeight:1.25 }}>{c.title}</h3>
+                <p style={{ color:"#6B7280", lineHeight:1.7, marginBottom:18, fontSize:13.5 }}>{c.desc}</p>
+                <ul style={{ listStyle:"none", marginBottom:22 }}>
+                  {c.items.map(f => (
+                    <li key={f} style={{ color:"#374151", padding:"7px 0", fontSize:13, borderBottom:"1px solid #F3F4F6", display:"flex", gap:9, alignItems:"flex-start" }}>
+                      <span style={{ color:c.accent, fontWeight:800, fontSize:15, lineHeight:1.3 }}>✓</span>{f}
+                    </li>
+                  ))}
+                </ul>
+                <button onClick={() => setPage("signup")} style={{ marginTop:"auto", width:"100%", background:c.accent, color:"#fff", border:"none", borderRadius:10, padding:"13px 18px", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"background .18s" }}
+                  onMouseEnter={e => { e.currentTarget.style.background=c.hover; }}
+                  onMouseLeave={e => { e.currentTarget.style.background=c.accent; }}>
+                  {c.cta} →
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -875,19 +971,19 @@ function HomePage({ setPage }) {
             <h2 className="sec-title">How <em style={{ color:"#1A56DB" }}>AcadHr</em> Works</h2>
             <p className="sec-sub" style={{ margin:"0 auto" }}>A streamlined hiring process built for education professionals.</p>
           </div>
-          <div className="grid2">
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : (isTablet ? "1fr 1fr" : "repeat(4,1fr)"), gap: isMobile?16:20, alignItems:"stretch" }}>
             {HOW.map(h => (
-              <div key={h.who} className="card" style={{ padding:36 }}>
-                <div style={{ display:"flex", gap:16, alignItems:"center", marginBottom:24 }}>
-                  <div style={{ width:56, height:56, borderRadius:14, background:"#EBF5FF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, flexShrink:0 }}>{h.icon}</div>
+              <div key={h.who} className="card" style={{ padding:24 }}>
+                <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:18 }}>
+                  <div style={{ width:48, height:48, borderRadius:12, background:"#EBF5FF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>{h.icon}</div>
                   <div>
-                    <div style={{ fontSize:11, color:"#1A56DB", fontWeight:800, textTransform:"uppercase", letterSpacing:2 }}>Step {h.step}</div>
-                    <h3 style={{ fontSize:20, marginTop:2 }}>For {h.who}</h3>
+                    <div style={{ fontSize:10.5, color:"#1A56DB", fontWeight:800, textTransform:"uppercase", letterSpacing:1.5 }}>Step {h.step}</div>
+                    <h3 style={{ fontSize:18, marginTop:2 }}>For {h.who}</h3>
                   </div>
                 </div>
-                <ol style={{ paddingLeft:20 }}>
+                <ol style={{ paddingLeft:18 }}>
                   {h.items.map((item,i) => (
-                    <li key={i} style={{ color:"#374151", padding:"8px 0", fontSize:14, borderBottom:i < h.items.length - 1 ? "1px solid #F3F4F6" : "none" }}>{item}</li>
+                    <li key={i} style={{ color:"#374151", padding:"7px 0", fontSize:13, lineHeight:1.4, borderBottom:i < h.items.length - 1 ? "1px solid #F3F4F6" : "none" }}>{item}</li>
                   ))}
                 </ol>
               </div>
@@ -957,6 +1053,52 @@ function HomePage({ setPage }) {
           </div>
         </div>
       </section>
+
+    <section style={{ background:"#F9FAFB", borderTop:"1px solid #E5E7EB", padding:"72px 0" }}>
+        <div className="container">
+          {/* Section header */}
+          <div className="flexb" style={{ marginBottom:36, flexWrap:"wrap", gap:16 }}>
+            <div>
+              <div className="sec-eye">All Positions</div>
+              <h2 className="sec-title" style={{ marginBottom:6 }}>Browse All Teaching Jobs</h2>
+              <p style={{ color:"#6B7280", fontSize:15 }}>
+                Live teaching positions across India — updated daily
+              </p>
+            </div>
+            <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+              <span style={{ background:"#ECFDF5", color:"#059669", border:"1px solid #A7F3D0", borderRadius:20, padding:"5px 14px", fontSize:12, fontWeight:700 }}>🟢 Live Jobs</span>
+              <button className="btn btn-primary" onClick={() => setPage("jobs")}>View All & Filter →</button>
+            </div>
+          </div>
+
+          {/* Filter chips */}
+          <div style={{ display:"flex", gap:8, marginBottom:32, flexWrap:"wrap" }}>
+            {["All","Full-Time","Part-Time","Home Tuition"].map((t,i) => (
+              <span key={t} style={{ padding:"6px 16px", borderRadius:20, fontSize:13, fontWeight:700, cursor:"pointer", background: i===0 ? "#1A56DB" : "#fff", color: i===0 ? "#fff" : "#374151", border: i===0 ? "none" : "1px solid #D1D5DB", boxShadow:"0 1px 3px rgba(0,0,0,.06)" }}>{t}</span>
+            ))}
+          </div>
+
+          {/* Jobs grid — all 9 */}
+          <div className="home-jobs-grid responsive-grid-3">
+            <div style={{textAlign:"center",padding:"32px 0",color:"#6B7280"}}><button className="btn btn-primary" onClick={()=>setPage("jobs")}>Browse All Jobs →</button></div>
+          </div>
+
+          {/* Bottom CTA */}
+          <div style={{ textAlign:"center", marginTop:44 }}>
+            <div style={{ background:"linear-gradient(135deg,#EBF5FF,#E0F2FE)", border:"1px solid #BFDBFE", borderRadius:16, padding:"32px 40px", display:"inline-block", maxWidth:560 }}>
+              <div style={{ fontSize:20, marginBottom:8 }}>🎓</div>
+              <h3 style={{ fontSize:20, marginBottom:8 }}>Can't find the right position?</h3>
+              <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>Create a free profile and let schools come to you. Over 3,200 institutes are actively hiring on AcadHr.</p>
+              <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
+                <button className="btn btn-primary" onClick={() => setPage("signup")}>Create Free Profile</button>
+                <button className="btn btn-outline" onClick={() => setPage("jobs")}>Browse with Filters</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
 
       {/* Tuition Requirements (posted by parents — fetched from DB) */}
       {homeTuitions.length > 0 && (
