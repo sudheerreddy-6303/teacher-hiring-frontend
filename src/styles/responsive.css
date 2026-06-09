@@ -48,12 +48,17 @@
   display: flex;
   align-items: stretch;
   background: #fff;
-  border: 1.5px solid #D1D5DB;
+  border: 1.5px solid #E2E8F0;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(26, 86, 219, 0.1);
+  box-shadow: 0 6px 22px -10px rgba(15, 23, 42, 0.18);
   margin-bottom: 24px;
   max-width: 480px;
+  transition: border-color .18s, box-shadow .18s;
+}
+.hero-search-row:focus-within {
+  border-color: #1A56DB;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
 }
 .hero-search-input-wrap {
   display: flex;

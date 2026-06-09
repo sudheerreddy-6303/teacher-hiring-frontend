@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
-import { MOCK_JOBS, SUBS } from "../constants";
-import { Toast, InlineBrowseJobs, FilterBar } from "../components/Shared";
+import { useAuth } from "../../context/AuthContext";
+import { SUBS, INDIA_LOCATIONS } from "../../constants";
+import { Toast, InlineBrowseJobs, FilterBar } from "../common/Shared";
+import './Teacher.css';
 
 function TeacherDashboard({ user, setPage }) {
   const { logout } = useAuth();
@@ -43,8 +44,7 @@ function TeacherDashboard({ user, setPage }) {
     teaching_mode:      "",
     // Demo & languages
     demo_available:     "",
-    demo_link:          "",
-    languages:          "",
+    demo_link:          "",    languages:          "",
     certifications:     "",
     // Other
     residential_pref:   "",
@@ -56,9 +56,90 @@ function TeacherDashboard({ user, setPage }) {
     remarks:            "",
     resume_file_name:   "",
     profile_photo:      "",
+    terms_accepted:     "",
   });
 
   function up(k, v) { setProfile(p => ({...p, [k]: v})); }
+
+  // Demo links — up to 3 Google Drive URLs (stored as comma-separated in demo_link)
+  const DEMO_MAX = 3;
+  const [demoLinks, setDemoLinks] = useState([""]);
+  function syncDemoLinks(rows) {
+    setDemoLinks(rows);
+    up("demo_link", rows.map(s => s.trim()).filter(Boolean).join(", "));
+  }
+  function setDemoLinkAt(idx, val) {
+    const rows = [...demoLinks];
+    rows[idx] = val;
+    syncDemoLinks(rows);
+  }
+  function addDemoLink() {
+    if (demoLinks.length >= DEMO_MAX) return;
+    setDemoLinks([...demoLinks, ""]);
+  }
+  function removeDemoLink(idx) {
+    if (demoLinks.length <= 1) return;
+    syncDemoLinks(demoLinks.filter((_, i) => i !== idx));
+  }
+
+  const [resumeUploading, setResumeUploading] = useState(false);
+  const [resumeError,     setResumeError]     = useState("");
+  const [resumeSuccess,   setResumeSuccess]   = useState("");
+
+  async function handleResumeUpload(file) {
+    setResumeUploading(true);
+    setResumeError(""); setResumeSuccess("");
+    try {
+      const token = localStorage.getItem("acadhr_token");
+      const fd    = new FormData();
+      fd.append("resume", file);
+      const res = await fetch(
+        (process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/teacher/upload-resume",
+        { method:"POST", headers:{ Authorization:"Bearer "+token }, body:fd }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setProfile(p => ({ ...p, resume_link: data.resume_link, resume_file_name: data.resume_file_name }));
+      setResumeSuccess(`✅ "${file.name}" uploaded successfully!`);
+    } catch(e) {
+      setResumeError(e.message || "Upload failed. Please try again.");
+    } finally {
+      setResumeUploading(false);
+    }
+  }
+  useEffect(() => {
+    const token = localStorage.getItem("acadhr_token");
+    if (!token) return;
+    setAppsLoading(true);
+    fetch(
+      (process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/my-applications",
+      { headers: { Authorization: "Bearer " + token } }
+    )
+    .then(r => r.ok ? r.json() : [])
+    .then(data => {
+      if (Array.isArray(data)) {
+        setApplications(data.map(a => ({
+          id:       a.id,
+          job:      a.title,
+          school:   a.institution_name || a.school_name,
+          date:     new Date(a.created_at).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}),
+          status:   a.status === "shortlisted" ? "Shortlisted"
+                  : a.status === "rejected"    ? "Not Selected"
+                  : "Under Review",
+          sClass:   a.status === "shortlisted" ? "bgreen"
+                  : a.status === "rejected"    ? "bred"
+                  : "bamber",
+          location: a.location_city || "",
+          subject:  a.subject       || "",
+          salary:   a.salary_min && a.salary_max
+                      ? `₹${Number(a.salary_min).toLocaleString("en-IN")}–₹${Number(a.salary_max).toLocaleString("en-IN")}/mo`
+                      : "",
+        })));
+      }
+    })
+    .catch(e => console.error("Applications fetch error:", e))
+    .finally(() => setAppsLoading(false));
+  }, []);
 
   // Load profile from backend on mount
   useEffect(() => {
@@ -109,7 +190,9 @@ function TeacherDashboard({ user, setPage }) {
           profile_photo:      data.profile_photo       || "",
           profile_status:     data.profile_status     || "Active",
           remarks:            data.remarks            || "",
+          terms_accepted:     data.terms_accepted     || "",
         }));
+        setDemoLinks((() => { const a = data.demo_link ? data.demo_link.split(",").map(x=>x.trim()).filter(Boolean) : []; return a.length ? a : [""]; })());
         if (data.completion_pct) {
           localStorage.setItem("acadhr_teacher_completion", String(data.completion_pct));
         }
@@ -173,17 +256,28 @@ function TeacherDashboard({ user, setPage }) {
   const canApply     = completion >= 70;
   const progressColor = completion >= 70 ? "#059669" : completion >= 40 ? "#D97706" : "#DC2626";
 
-  const applications = [
-    { job:"Senior Mathematics Teacher", school:"Delhi Public School", status:"Shortlisted",  sClass:"bgreen", date:"May 15, 2026" },
-    { job:"Math Tutor (Grade 9-10)",    school:"Narayana Classes",    status:"Under Review", sClass:"bamber", date:"May 12, 2026" },
-    { job:"Physics Teacher",            school:"St. Mary's School",   status:"Not Selected", sClass:"bred",   date:"May 8, 2026" },
-  ];
+  const [applications, setApplications] = useState([]);
+  const [appsLoading, setAppsLoading]   = useState(false);
+  const [appFilterT, setAppFilterT]     = useState({ job:"", school:"", status:"" });
+  const [recentJobs,  setRecentJobs]    = useState([]);
+
+  // Fetch recent jobs for overview panel
+  useEffect(() => {
+    const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+    fetch(`${API}/jobs`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setRecentJobs(Array.isArray(data) ? data.slice(0, 3) : []))
+      .catch(() => {});
+  }, []);
 
   const MENU = [
-    { id:"overview",     icon:"🏠", label:"Overview" },
+    { id:"overview",     icon:"🏠", label:"Home" },
     { id:"profile",      icon:"👤", label:"My Profile" },
-    { id:"applications", icon:"📋", label:"Applications" },
     { id:"browse",       icon:"🔍", label:"Browse Jobs" },
+    { id:"applications", icon:"📋", label:"My Applications" },
+    { id:"analytics",    icon:"📊", label:"Analytics" },
+    { id:"resume",       icon:"📄", label:"Resume & Docs" },
+    { id:"settings",     icon:"⚙️",  label:"Settings" },
   ];
 
   const SUBS  = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit"];
@@ -192,11 +286,16 @@ function TeacherDashboard({ user, setPage }) {
   const BOARDS= ["CBSE","ICSE","State Board","IB","IGCSE","All Boards"];
   const EXAMS = ["NEET","JEE","Olympiad","UPSC","CA Foundation","None"];
 
+  const [navOpen, setNavOpen] = useState(false);
   return (
     <div style={{ display:"flex", width:"100vw", overflowX:"hidden", minHeight:"100vh" }}>
 
+      {/* Mobile nav toggle + backdrop */}
+      <button className="mobile-nav-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
+      <div className={"sidebar-backdrop" + (navOpen ? " show" : "")} onClick={() => setNavOpen(false)} />
+
       {/* Sidebar */}
-      <div className="sidebar">
+      <div className={"sidebar" + (navOpen ? " open" : "")} onClick={() => setNavOpen(false)}>
         <div className="sidebar-header">
           <div className="brand" style={{ cursor:"pointer" }} onClick={() => setPage("home")}>
             <img src="/acadhr-logo.png" alt="AcadHr" style={{ height:52, objectFit:"contain" }} />
@@ -310,18 +409,20 @@ function TeacherDashboard({ user, setPage }) {
 
               <div className="card" style={{ padding:24, borderTop:"3px solid #1A56DB" }}>
                 <h3 style={{ fontSize:17, marginBottom:6 }}>🔥 Recommended For You</h3>
-                <p style={{ color:"#9CA3AF", fontSize:12, marginBottom:16 }}>Based on your {profile.specialization||user.subject||"subject"} profile:</p>
-                {MOCK_JOBS.slice(0,3).map(j => (
+                <p style={{ color:"#9CA3AF", fontSize:12, marginBottom:16 }}>Latest jobs from the database:</p>
+                {recentJobs.length === 0 ? (
+                  <div style={{ color:"#9CA3AF", fontSize:13, textAlign:"center", padding:"20px 0" }}>No jobs yet — check back soon</div>
+                ) : recentJobs.map(j => (
                   <div key={j.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:"1px solid #F3F4F6" }}>
                     <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                      <span style={{ fontSize:18 }}>{j.logo}</span>
+                      <span style={{ fontSize:18 }}>🏫</span>
                       <div>
                         <div style={{ fontWeight:600, fontSize:12, color:"#111827" }}>{j.title}</div>
-                        <div style={{ fontSize:11, color:"#9CA3AF" }}>{j.institute}</div>
+                        <div style={{ fontSize:11, color:"#9CA3AF" }}>{j.institution_name || j.posted_by_name || "School"}</div>
                       </div>
                     </div>
                     {canApply
-                      ? <button className="btn btn-primary btn-sm" onClick={() => setPage("jobs")}>Apply</button>
+                      ? <button className="btn btn-primary btn-sm" onClick={() => setTab("browse")}>Apply</button>
                       : <button className="btn btn-ghost btn-sm" title="Complete 70% profile to apply"
                           onClick={() => setTab("profile")} style={{ color:"#DC2626", borderColor:"#FECACA" }}>
                           🔒 {completion}%
@@ -335,61 +436,266 @@ function TeacherDashboard({ user, setPage }) {
         )}
 
         {/* ══ FULL PROFILE FORM ══ */}
+        {/* ══ MY PROFILE ══ */}
         {tab==="profile" && (
           <div className="fadeUp">
-            {profileLoading && (
+            {profileLoading ? (
               <div style={{ textAlign:"center", padding:"60px 0", color:"#6B7280" }}>
                 <div style={{ width:40, height:40, border:"3px solid #E5E7EB", borderTopColor:"#1A56DB", borderRadius:"50%", animation:"spin .8s linear infinite", margin:"0 auto 16px" }} />
                 <div style={{ fontWeight:600 }}>Loading your profile...</div>
               </div>
-            )}
-            {!profileLoading && <>
-            <div className="flexb" style={{ marginBottom:24 }}>
-              <div>
-                <div className="page-title">My Profile</div>
-                <div className="page-sub" style={{ marginBottom:0 }}>
-                  Complete your profile to unlock job applications
-                  <span style={{ marginLeft:12, fontWeight:800, color:progressColor }}>{completion}% complete</span>
+            ) : !editMode ? (
+              /* ── VIEW MODE: Beautiful profile card ── */
+              <>
+                {/* Profile Hero Card */}
+                <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", borderRadius:20, padding:"32px 36px", marginBottom:20, position:"relative", overflow:"hidden" }}>
+                  <div style={{ position:"absolute", top:-40, right:-40, width:200, height:200, borderRadius:"50%", background:"rgba(255,255,255,.05)" }} />
+                  <div style={{ position:"absolute", bottom:-60, right:60, width:150, height:150, borderRadius:"50%", background:"rgba(255,255,255,.04)" }} />
+                  <div style={{ display:"flex", alignItems:"center", gap:24, position:"relative", zIndex:1 }}>
+                    {/* Photo */}
+                    <div style={{ width:90, height:90, borderRadius:"50%", overflow:"hidden", border:"4px solid rgba(255,255,255,.3)", background:"#1A56DB", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                      {profile.profile_photo
+                        ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + profile.profile_photo} alt="Profile" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                        : <span style={{ fontSize:40 }}>👤</span>}
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:24, fontWeight:800, color:"#fff", marginBottom:4 }}>{profile.full_name || user.name}</div>
+                      <div style={{ color:"#93C5FD", fontSize:15, fontWeight:600, marginBottom:8 }}>
+                        {profile.current_role || "Educator"}{profile.specialization ? ` · ${profile.specialization}` : ""}
+                      </div>
+                      <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                        {profile.current_location && <span style={{ color:"#BFDBFE", fontSize:13 }}>📍 {profile.current_location}</span>}
+                        {profile.total_experience  && <span style={{ color:"#BFDBFE", fontSize:13 }}>⏳ {profile.total_experience}</span>}
+                        {profile.teaching_mode     && <span style={{ color:"#BFDBFE", fontSize:13 }}>🖥 {profile.teaching_mode}</span>}
+                      </div>
+                    </div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:8, alignItems:"flex-end" }}>
+                      <button className="btn btn-sm" onClick={() => setEditMode(true)}
+                        style={{ background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"#fff", backdropFilter:"blur(4px)" }}>
+                        ✏️ Edit Profile
+                      </button>
+                      <div style={{ background:"rgba(255,255,255,.12)", borderRadius:20, padding:"4px 14px", fontSize:12, color:"#fff", fontWeight:700 }}>
+                        {completion}% Complete
+                      </div>
+                    </div>
+                  </div>
+                  {/* Progress bar inside hero */}
+                  <div style={{ marginTop:20, position:"relative", zIndex:1 }}>
+                    <div style={{ height:6, background:"rgba(255,255,255,.2)", borderRadius:3, overflow:"hidden" }}>
+                      <div style={{ height:6, borderRadius:3, background: completion>=70?"#34D399":completion>=40?"#FBBF24":"#F87171", width:`${completion}%`, transition:"width .5s" }} />
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginTop:6, fontSize:11, color:"rgba(255,255,255,.6)" }}>
+                      <span>0%</span>
+                      <span style={{ color: completion>=70?"#34D399":"rgba(255,255,255,.6)" }}>70% — Can Apply</span>
+                      <span style={{ color: completion>=100?"#34D399":"rgba(255,255,255,.6)" }}>100%</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div style={{ display:"flex", gap:10 }}>
-                <button className="btn btn-outline btn-sm" onClick={() => { setEditMode(e => !e); setSaved(false); }}>
-                  {editMode ? "✕ Cancel" : "✏️ Edit Profile"}
-                </button>
-                {editMode && (
-                  <button className="btn btn-primary btn-sm" onClick={saveProfile} disabled={saving}>
-                    {saving ? "Saving..." : "Save Changes ✓"}
-                  </button>
+
+                {saved && <div className="alert a-ok" style={{ marginBottom:16 }}>✅ Profile saved! {completion}%{canApply?" — You can now apply for jobs 🎉":""}</div>}
+
+                {/* Info cards grid */}
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
+
+                  {/* About */}
+                  <div className="card" style={{ padding:22 }}>
+                    <div style={{ fontWeight:800, fontSize:12, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:14, paddingBottom:8, borderBottom:"2px solid #EBF5FF" }}>👤 Personal Info</div>
+                    {[
+                      ["Full Name",    profile.full_name     || user.name, "👤"],
+                      ["Email",        user.email,                         "📧"],
+                      ["Phone",        profile.mobile,                     "📱"],
+                      ["Gender",       profile.gender,                     "⚥"],
+                      ["Date of Birth",profile.dob ? new Date(profile.dob).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : null, "🎂"],
+                      ["Location",     profile.current_location,           "📍"],
+                      ["Preferred Cities", profile.preferred_locations,    "🗺️"],
+                    ].filter(([,v]) => v).map(([label, value, icon]) => (
+                      <div key={label} style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:10 }}>
+                        <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>{icon}</span>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:10, fontWeight:700, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.5, marginBottom:1 }}>{label}</div>
+                          <div style={{ fontSize:13, fontWeight:600, color:"#111827", wordBreak:"break-word" }}>{value}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Qualifications */}
+                  <div className="card" style={{ padding:22 }}>
+                    <div style={{ fontWeight:800, fontSize:12, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:14, paddingBottom:8, borderBottom:"2px solid #EBF5FF" }}>🎓 Qualifications</div>
+                    {[
+                      ["Qualification",    profile.qualification,       "🎓"],
+                      ["Specialization",   profile.specialization,      "📚"],
+                      ["Certifications",   profile.certifications,      "📜"],
+                      ["Total Experience", profile.total_experience,    "⏳"],
+                      ["Teaching Exp",     profile.relevant_experience, "🏫"],
+                      ["Current Role",     profile.current_role,        "💼"],
+                      ["Organization",     profile.current_org,         "🏢"],
+                    ].filter(([,v]) => v).map(([label, value, icon]) => (
+                      <div key={label} style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:10 }}>
+                        <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>{icon}</span>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:10, fontWeight:700, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.5, marginBottom:1 }}>{label}</div>
+                          <div style={{ fontSize:13, fontWeight:600, color:"#111827", wordBreak:"break-word" }}>{value}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Salary & Availability */}
+                  <div className="card" style={{ padding:22 }}>
+                    <div style={{ fontWeight:800, fontSize:12, color:"#059669", textTransform:"uppercase", letterSpacing:1, marginBottom:14, paddingBottom:8, borderBottom:"2px solid #ECFDF5" }}>💰 Salary & Availability</div>
+                    {[
+                      ["Current Salary",  profile.current_salary,  "💵"],
+                      ["Expected Salary", profile.expected_salary, "💰"],
+                      ["Notice Period",   profile.notice_period,   "📅"],
+                      ["Available From",  profile.available_from ? new Date(profile.available_from).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : null, "🗓️"],
+                      ["Work Mode",       profile.work_mode,       "🖥"],
+                      ["Tutor Type",      profile.tutor_type,      "🧑‍🏫"],
+                    ].filter(([,v]) => v).map(([label, value, icon]) => (
+                      <div key={label} style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:10 }}>
+                        <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>{icon}</span>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:10, fontWeight:700, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.5, marginBottom:1 }}>{label}</div>
+                          <div style={{ fontSize:13, fontWeight:600, color:"#111827" }}>{value}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Teaching Preferences */}
+                  <div className="card" style={{ padding:22 }}>
+                    <div style={{ fontWeight:800, fontSize:12, color:"#6D28D9", textTransform:"uppercase", letterSpacing:1, marginBottom:14, paddingBottom:8, borderBottom:"2px solid #F5F3FF" }}>📚 Teaching Preferences</div>
+                    {profile.subjects && (
+                      <div style={{ marginBottom:12 }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.5, marginBottom:6 }}>Subjects</div>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                          {profile.subjects.split(",").map(s => s.trim()).filter(Boolean).map(s => (
+                            <span key={s} style={{ background:"#EBF5FF", color:"#1A56DB", borderRadius:20, padding:"3px 10px", fontSize:12, fontWeight:600 }}>{s}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {profile.grades_handling && (
+                      <div style={{ marginBottom:12 }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.5, marginBottom:6 }}>Grades</div>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                          {profile.grades_handling.split(",").map(s => s.trim()).filter(Boolean).map(s => (
+                            <span key={s} style={{ background:"#F5F3FF", color:"#6D28D9", borderRadius:20, padding:"3px 10px", fontSize:12, fontWeight:600 }}>{s}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {profile.boards_handled && (
+                      <div style={{ marginBottom:12 }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.5, marginBottom:6 }}>Boards</div>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                          {profile.boards_handled.split(",").map(s => s.trim()).filter(Boolean).map(s => (
+                            <span key={s} style={{ background:"#ECFDF5", color:"#059669", borderRadius:20, padding:"3px 10px", fontSize:12, fontWeight:600 }}>{s}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {profile.languages && (
+                      <div style={{ marginBottom:12 }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.5, marginBottom:6 }}>Languages</div>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                          {profile.languages.split(",").map(s => s.trim()).filter(Boolean).map(s => (
+                            <span key={s} style={{ background:"#FFFBEB", color:"#D97706", borderRadius:20, padding:"3px 10px", fontSize:12, fontWeight:600 }}>{s}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {profile.competitive_exams && (
+                      <div>
+                        <div style={{ fontSize:10, fontWeight:700, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.5, marginBottom:6 }}>Competitive Exams</div>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                          {profile.competitive_exams.split(",").map(s => s.trim()).filter(Boolean).map(s => (
+                            <span key={s} style={{ background:"#FEF2F2", color:"#DC2626", borderRadius:20, padding:"3px 10px", fontSize:12, fontWeight:600 }}>{s}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {!profile.subjects && !profile.grades_handling && !profile.boards_handled && (
+                      <div style={{ color:"#9CA3AF", fontSize:13 }}>No teaching preferences added yet.</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Additional details row */}
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16, marginBottom:16 }}>
+                  {/* Demo */}
+                  <div className="card" style={{ padding:18, textAlign:"center" }}>
+                    <div style={{ fontSize:28, marginBottom:8 }}>{profile.demo_available==="Yes"?"🎥":"📵"}</div>
+                    <div style={{ fontWeight:700, fontSize:13, color:"#111827" }}>Demo {profile.demo_available||"—"}</div>
+                    <div style={{ fontSize:11, color:"#6B7280", marginTop:4 }}>Demo Video</div>
+                    {profile.demo_link && <a href={profile.demo_link.split(",")[0].trim()} target="_blank" rel="noreferrer" style={{ fontSize:11, color:"#1A56DB", fontWeight:600, marginTop:6, display:"block" }}>Watch Demo →</a>}
+                  </div>
+                  {/* Relocation */}
+                  <div className="card" style={{ padding:18, textAlign:"center" }}>
+                    <div style={{ fontSize:28, marginBottom:8 }}>{profile.relocation_ready==="Yes"?"✈️":"🏠"}</div>
+                    <div style={{ fontWeight:700, fontSize:13, color:"#111827" }}>Relocation: {profile.relocation_ready||"—"}</div>
+                    <div style={{ fontSize:11, color:"#6B7280", marginTop:4 }}>Residential: {profile.residential_pref||"—"}</div>
+                  </div>
+                  {/* Aadhaar */}
+                  <div className="card" style={{ padding:18, textAlign:"center" }}>
+                    <div style={{ fontSize:28, marginBottom:8 }}>{profile.aadhaar_verified==="Yes"?"✅":"⏳"}</div>
+                    <div style={{ fontWeight:700, fontSize:13, color:"#111827" }}>ID {profile.aadhaar_verified==="Yes"?"Verified":"Not Verified"}</div>
+                    <div style={{ fontSize:11, color:"#6B7280", marginTop:4 }}>Aadhaar / ID Status</div>
+                  </div>
+                </div>
+
+                {/* Resume */}
+                <div className="card" style={{ padding:22, marginBottom:16, display:"flex", alignItems:"center", gap:16 }}>
+                  <div style={{ width:48, height:48, background:"#EBF5FF", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>📄</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:700, fontSize:14, color:"#111827", marginBottom:2 }}>Resume / CV</div>
+                    {profile.resume_link
+                      ? <a href={profile.resume_link.startsWith("http") ? profile.resume_link : (process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + profile.resume_link} target="_blank" rel="noreferrer" style={{ color:"#1A56DB", fontWeight:600, fontSize:13 }}>📎 {profile.resume_file_name ? `${profile.resume_file_name} — View Resume 🔗` : "View Resume 🔗"}</a>
+                      : profile.resume_file_name
+                        ? <span style={{ color:"#1A56DB", fontWeight:600, fontSize:13 }}>📎 {profile.resume_file_name}</span>
+                        : <span style={{ color:"#9CA3AF", fontSize:13 }}>No resume uploaded yet</span>}
+                  </div>
+                  <button className="btn btn-primary btn-sm" onClick={() => setEditMode(true)}>Update Resume</button>
+                </div>
+
+                {/* Remarks */}
+                {profile.remarks && (
+                  <div className="card" style={{ padding:22, background:"#FFFBEB", border:"1px solid #FDE68A" }}>
+                    <div style={{ fontWeight:700, fontSize:12, color:"#D97706", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>📝 Notes</div>
+                    <p style={{ fontSize:13, color:"#92400E", lineHeight:1.7, margin:0 }}>{profile.remarks}</p>
+                  </div>
                 )}
-              </div>
-            </div>
 
-            {saved && <div className="alert a-ok" style={{ marginBottom:20 }}>✅ Profile saved to database! Completion: {completion}%{canApply?" — You can now apply for jobs! 🎉":""}</div>}
-            {saveError && <div className="alert a-err" style={{ marginBottom:20 }}>❌ Save failed: {saveError}</div>}
-            {!editMode && (
-              <div className="alert a-info" style={{ marginBottom:16, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                <span>👁 View mode — click <strong>Edit Profile</strong> to make changes</span>
-                <button className="btn btn-primary btn-sm" onClick={() => setEditMode(true)}>✏️ Edit Profile</button>
-              </div>
-            )}
+                {/* Terms & Conditions */}
+                <div className="card" style={{ padding:22, marginTop:16 }}>
+                  <div style={{ fontWeight:700, fontSize:12, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>📜 Terms &amp; Conditions</div>
+                  <div style={{ maxHeight:170, overflowY:"auto", padding:"12px 14px", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:10, fontSize:13, color:"#374151", lineHeight:1.7 }}>
+                    <p style={{ marginTop:0 }}>By submitting this profile, the teacher confirms and agrees that:</p>
+                    <ol style={{ paddingLeft:18, margin:0 }}>
+                      <li>All information provided in this profile is true, accurate, and complete.</li>
+                      <li>The documents, demo videos, and links shared (including Google Drive links) are genuine and owned by the teacher.</li>
+                      <li>AcadHr is authorized to share this profile with registered schools, institutions, and recruiters for hiring purposes.</li>
+                      <li>Providing false or misleading information may lead to rejection or removal of the profile.</li>
+                      <li>The teacher agrees to be contacted by AcadHr and prospective employers regarding suitable job opportunities.</li>
+                    </ol>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:12, fontSize:13, fontWeight:700, color: profile.terms_accepted==="Yes" ? "#059669" : "#9CA3AF" }}>
+                    <span>{profile.terms_accepted==="Yes" ? "✅ Accepted" : "⬜ Not accepted yet"}</span>
+                    {profile.terms_accepted!=="Yes" && <button className="btn btn-sm" onClick={() => setEditMode(true)} style={{ marginLeft:"auto" }}>Review &amp; Accept</button>}
+                  </div>
+                </div>
 
-            {/* Completion bar */}
-            <div style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:14, padding:"20px 24px", marginBottom:22 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8, fontWeight:700 }}>
-                <span style={{ color:"#111827" }}>Profile Completion</span>
-                <span style={{ color:progressColor, fontSize:18 }}>{completion}%</span>
-              </div>
-              <div style={{ height:12, background:"#F3F4F6", borderRadius:6, overflow:"hidden", marginBottom:8 }}>
-                <div style={{ height:12, borderRadius:6, background: completion>=70?"linear-gradient(90deg,#059669,#34D399)":completion>=40?"linear-gradient(90deg,#D97706,#FBBF24)":"linear-gradient(90deg,#DC2626,#F87171)", width:`${completion}%`, transition:"width .5s" }} />
-              </div>
-              <div style={{ display:"flex", gap:16, fontSize:12, color:"#6B7280" }}>
-                <span style={{ color: completion>=70?"#059669":"#9CA3AF" }}>🟢 70% — Apply for jobs</span>
-                <span style={{ color: completion>=90?"#059669":"#9CA3AF" }}>⭐ 90% — Featured profile</span>
-                <span style={{ color: completion>=100?"#059669":"#9CA3AF" }}>🏆 100% — Top candidate</span>
-              </div>
-            </div>
-
-            {/* ── Section 1: Basic Info ── */}
+                {/* Edit button at bottom */}
+                <div style={{ marginTop:20, textAlign:"center" }}>
+                  <button className="btn btn-primary" style={{ justifyContent:"center", minWidth:200 }} onClick={() => setEditMode(true)}>
+                    ✏️ Edit Profile
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* ── EDIT MODE: Form ── */
+              <>
+{/* ── Section 1: Basic Info ── */}
             <div className="card" style={{ padding:28, marginBottom:20 }}>
               <div style={{ fontWeight:800, fontSize:13, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:18, paddingBottom:8, borderBottom:"2px solid #EBF5FF" }}>
                 👤 Basic Information
@@ -470,8 +776,36 @@ function TeacherDashboard({ user, setPage }) {
                 <div className="fg"><label className="flabel">Current Location (City) *</label>
                   <input className="input" readOnly={!editMode} value={profile.current_location} onChange={e => up("current_location",e.target.value)} placeholder="e.g. Hyderabad" style={{ background: !editMode?"#F9FAFB":"#fff" }} />
                 </div>
-                <div className="fg"><label className="flabel">Preferred Locations</label>
-                  <input className="input" readOnly={!editMode} value={profile.preferred_locations} onChange={e => up("preferred_locations",e.target.value)} placeholder="e.g. Hyderabad, Bangalore" style={{ background: !editMode?"#F9FAFB":"#fff" }} />
+                <div className="fg"><label className="flabel">Preferred Locations (select multiple cities)</label>
+                  {editMode && (
+                    <select className="input" value="" onChange={e => {
+                      const city = e.target.value;
+                      if (!city) return;
+                      const cur = profile.preferred_locations ? profile.preferred_locations.split(",").map(x=>x.trim()).filter(Boolean) : [];
+                      if (!cur.includes(city)) up("preferred_locations", [...cur, city].join(", "));
+                    }} style={{ background:"#fff" }}>
+                      <option value="">+ Add city (you can select multiple)</option>
+                      {Object.entries(INDIA_LOCATIONS).map(([state, cities]) => (
+                        <optgroup key={state} label={state}>
+                          {cities.map(c => <option key={c} value={c}>{c}</option>)}
+                        </optgroup>
+                      ))}
+                    </select>
+                  )}
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop: editMode?8:0 }}>
+                    {(profile.preferred_locations ? profile.preferred_locations.split(",").map(x=>x.trim()).filter(Boolean) : []).map(c => (
+                      <span key={c} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:20, border:"1.5px solid #1A56DB", background:"#EBF5FF", fontSize:12, fontWeight:700, color:"#1A56DB" }}>
+                        {c}
+                        {editMode && (
+                          <span onClick={() => {
+                            const cur = profile.preferred_locations.split(",").map(x=>x.trim()).filter(Boolean).filter(x=>x!==c);
+                            up("preferred_locations", cur.join(", "));
+                          }} style={{ cursor:"pointer", fontWeight:900 }}>×</span>
+                        )}
+                      </span>
+                    ))}
+                    {!profile.preferred_locations && !editMode && <span style={{ color:"#9CA3AF", fontSize:13 }}>—</span>}
+                  </div>
                 </div>
               </div>
             </div>
@@ -497,11 +831,32 @@ function TeacherDashboard({ user, setPage }) {
 
               {/* Specialization — dropdown */}
               <div className="grid2">
-                <div className="fg"><label className="flabel">Specialization / Subject *</label>
-                  <select className="input" value={profile.specialization} onChange={e => editMode && up("specialization",e.target.value)} style={{ background: !editMode?"#F9FAFB":"#fff", pointerEvents: editMode?"auto":"none" }}>
-                    <option value="">Select subject</option>
-                    {["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Telugu","Kannada","Tamil","History","Geography","Civics","Accountancy","Business Studies"].map(s => <option key={s}>{s}</option>)}
-                  </select>
+                <div className="fg"><label className="flabel">Specialization / Subject * (select at least 3)</label>
+                  {editMode && (
+                    <select className="input" value="" onChange={e => {
+                      const sub = e.target.value;
+                      if (!sub) return;
+                      const cur = profile.specialization ? profile.specialization.split(",").map(x=>x.trim()).filter(Boolean) : [];
+                      if (!cur.includes(sub)) up("specialization", [...cur, sub].join(", "));
+                    }} style={{ background:"#fff" }}>
+                      <option value="">+ Add subject (you can select multiple)</option>
+                      {["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Telugu","Kannada","Tamil","History","Geography","Civics","Accountancy","Business Studies"].map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  )}
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop: editMode?8:0 }}>
+                    {(profile.specialization ? profile.specialization.split(",").map(x=>x.trim()).filter(Boolean) : []).map(s => (
+                      <span key={s} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:20, border:"1.5px solid #1A56DB", background:"#EBF5FF", fontSize:12, fontWeight:700, color:"#1A56DB" }}>
+                        {s}
+                        {editMode && (
+                          <span onClick={() => {
+                            const cur = profile.specialization.split(",").map(x=>x.trim()).filter(Boolean).filter(x=>x!==s);
+                            up("specialization", cur.join(", "));
+                          }} style={{ cursor:"pointer", fontWeight:900 }}>×</span>
+                        )}
+                      </span>
+                    ))}
+                    {!profile.specialization && !editMode && <span style={{ color:"#9CA3AF", fontSize:13 }}>—</span>}
+                  </div>
                 </div>
                 <div className="fg"><label className="flabel">Current Role *</label>
                   <select className="input" value={profile.current_role} onChange={e => editMode && up("current_role",e.target.value)} style={{ background: !editMode?"#F9FAFB":"#fff", pointerEvents: editMode?"auto":"none" }}>
@@ -515,7 +870,7 @@ function TeacherDashboard({ user, setPage }) {
               <div className="fg">
                 <label className="flabel">Total Experience *</label>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
-                  {["Fresher","Less than 1 Year","1–2 Years","2–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years"].map(exp => (
+                  {["Fresher","Less than 1 Year","1–2 Years","2–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years","15+ Years","20+ Years"].map(exp => (
                     <label key={exp} onClick={() => editMode && up("total_experience",exp)}
                       style={{ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${profile.total_experience===exp?"#1A56DB":"#D1D5DB"}`, background:profile.total_experience===exp?"#EBF5FF":"#fff", cursor:editMode?"pointer":"default", fontSize:12, fontWeight:700, color:profile.total_experience===exp?"#1A56DB":"#374151", transition:"all .15s", userSelect:"none" }}>
                       {profile.total_experience===exp?"● ":"○ "}{exp}
@@ -528,7 +883,7 @@ function TeacherDashboard({ user, setPage }) {
               <div className="fg">
                 <label className="flabel">Relevant Teaching Experience *</label>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
-                  {["Fresher","Less than 1 Year","1–2 Years","2–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years"].map(exp => (
+                  {["Fresher","Less than 1 Year","1–2 Years","2–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years","15+ Years","20+ Years"].map(exp => (
                     <label key={exp} onClick={() => editMode && up("relevant_experience",exp)}
                       style={{ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${profile.relevant_experience===exp?"#059669":"#D1D5DB"}`, background:profile.relevant_experience===exp?"#ECFDF5":"#fff", cursor:editMode?"pointer":"default", fontSize:12, fontWeight:700, color:profile.relevant_experience===exp?"#059669":"#374151", transition:"all .15s", userSelect:"none" }}>
                       {profile.relevant_experience===exp?"● ":"○ "}{exp}
@@ -551,17 +906,18 @@ function TeacherDashboard({ user, setPage }) {
                 <div className="fg"><label className="flabel">Current Salary (Monthly)</label>
                   <select className="input" value={profile.current_salary} onChange={e => editMode && up("current_salary",e.target.value)} style={{ background: !editMode?"#F9FAFB":"#fff", pointerEvents: editMode?"auto":"none" }}>
                     <option value="">Select range</option>
-                    <option>Below ₹10,000</option><option>₹10,000–₹15,000</option><option>₹15,000–₹20,000</option>
-                    <option>₹20,000–₹30,000</option><option>₹30,000–₹40,000</option><option>₹40,000–₹50,000</option>
-                    <option>₹50,000–₹70,000</option><option>₹70,000–₹1,00,000</option><option>Above ₹1,00,000</option>
+                    <option>Below ₹20,000</option><option>₹20,000–₹40,000</option><option>₹40,000–₹60,000</option>
+                    <option>₹60,000–₹80,000</option><option>₹80,000–₹100,000</option><option>₹100,000–₹120,000</option>
+                    {/* <option>₹50,000–₹70,000</option><option>₹70,000–₹1,00,000</option><option>Above ₹1,00,000</option> */}
                   </select>
                 </div>
                 <div className="fg"><label className="flabel">Expected Salary (Monthly)</label>
                   <select className="input" value={profile.expected_salary} onChange={e => editMode && up("expected_salary",e.target.value)} style={{ background: !editMode?"#F9FAFB":"#fff", pointerEvents: editMode?"auto":"none" }}>
                     <option value="">Select range</option>
-                    <option>Below ₹10,000</option><option>₹10,000–₹15,000</option><option>₹15,000–₹20,000</option>
-                    <option>₹20,000–₹30,000</option><option>₹30,000–₹40,000</option><option>₹40,000–₹50,000</option>
-                    <option>₹50,000–₹70,000</option><option>₹70,000–₹1,00,000</option><option>Above ₹1,00,000</option>
+                    <option>Below ₹20,000</option><option>₹20,000–₹40,000</option><option>₹40,000–₹60,000</option>
+                    <option>₹60,000–₹80,000</option><option>₹80,000–₹100,000</option><option>₹100,000–₹120,000</option>
+                    <option>₹120,000–₹140,000</option><option>₹140,000–₹160,000</option><option>₹160,000–₹180,000</option>
+                    <option>₹180,000–₹200,000</option><option>Above ₹2,00,000</option><option>Above ₹3,00,000</option><option>Above ₹4,00,000</option><option>Above ₹5,00,000</option><option>Above ₹6,00,000</option>
                   </select>
                 </div>
               </div>
@@ -707,7 +1063,7 @@ function TeacherDashboard({ user, setPage }) {
               <div className="fg">
                 <label className="flabel">Competitive Exams Handled</label>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
-                  {["JEE (Mains)","JEE (Advanced)","NEET","EAMCET","Olympiad","NTSE","NDA","UPSC","CA Foundation","None"].map(ex => {
+                  {["JEE (Mains)","JEE (Advanced)","NEET","EAMCET","Olympiad","NTSE","NDA","UPSC","CA Foundation","State SET"].map(ex => {
                     const sel = profile.competitive_exams.includes(ex);
                     return (
                       <label key={ex} onClick={() => {
@@ -785,7 +1141,41 @@ function TeacherDashboard({ user, setPage }) {
               </div>
 
               <div className="fg"><label className="flabel">Demo Link (Video URL)</label>
-                <input className="input" readOnly={!editMode} value={profile.demo_link} onChange={e => up("demo_link",e.target.value)} placeholder="https://youtube.com/watch?v=..." style={{ background: !editMode?"#F9FAFB":"#fff" }} />
+                <div style={{ fontSize:12, color:"#6B7280", marginTop:2, marginBottom:8, lineHeight:1.6 }}>
+                  📁 Paste your demo video as a <strong>Google Drive</strong> link (e.g. <span style={{ color:"#1A56DB" }}>https://drive.google.com/file/d/.../view</span>). You can add a minimum of 1 and a maximum of 3 links.
+                </div>
+                {editMode ? (
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {demoLinks.map((link, idx) => {
+                      const invalid = link.trim() !== "" && !link.includes("drive.google.com");
+                      return (
+                        <div key={idx}>
+                          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                            <input className="input" value={link} onChange={e => setDemoLinkAt(idx, e.target.value)} placeholder="https://drive.google.com/file/d/.../view?usp=sharing" style={{ background:"#fff", flex:1 }} />
+                            {demoLinks.length > 1 && (
+                              <button type="button" onClick={() => removeDemoLink(idx)} title="Remove this link"
+                                style={{ flexShrink:0, width:38, height:38, borderRadius:8, border:"1.5px solid #FCA5A5", background:"#FEF2F2", color:"#DC2626", fontWeight:900, fontSize:16, cursor:"pointer" }}>×</button>
+                            )}
+                          </div>
+                          {invalid && <div style={{ fontSize:11, color:"#DC2626", marginTop:4 }}>⚠️ This doesn't look like a Google Drive link.</div>}
+                        </div>
+                      );
+                    })}
+                    {demoLinks.length < DEMO_MAX && (
+                      <button type="button" onClick={addDemoLink}
+                        style={{ alignSelf:"flex-start", padding:"8px 16px", borderRadius:8, border:"1.5px dashed #1A56DB", background:"#EBF5FF", color:"#1A56DB", fontWeight:700, fontSize:13, cursor:"pointer" }}>
+                        + Add another link ({demoLinks.length}/{DEMO_MAX})
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                    {(profile.demo_link ? profile.demo_link.split(",").map(x=>x.trim()).filter(Boolean) : []).map((link, idx) => (
+                      <a key={idx} href={link} target="_blank" rel="noreferrer" style={{ fontSize:13, color:"#1A56DB", fontWeight:600 }}>🔗 Demo Link {idx+1}</a>
+                    ))}
+                    {!profile.demo_link && <span style={{ color:"#9CA3AF", fontSize:13 }}>No demo link added yet</span>}
+                  </div>
+                )}
               </div>
 
               {/* Yes/No radio group for 4 fields */}
@@ -863,13 +1253,36 @@ function TeacherDashboard({ user, setPage }) {
               </div>
             </div>
 
-            {editMode && (
-              <div style={{ display:"flex", gap:10, marginBottom:40 }}>
-                <button className="btn btn-ghost" style={{ flex:1, justifyContent:"center" }} onClick={() => { setEditMode(false); setSaved(false); }}>Cancel</button>
-                <button className="btn btn-primary" style={{ flex:2, justifyContent:"center" }} onClick={saveProfile} disabled={saving}>{saving ? "Saving..." : "Save Changes ✓"}</button>
+            {/* ── Section 5: Terms & Conditions ── */}
+            <div className="card" style={{ padding:28, marginBottom:20 }}>
+              <div style={{ fontWeight:800, fontSize:13, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:18, paddingBottom:8, borderBottom:"2px solid #EBF5FF" }}>
+                📜 Terms & Conditions
               </div>
+              <div style={{ maxHeight:200, overflowY:"auto", padding:"14px 16px", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:10, fontSize:13, color:"#374151", lineHeight:1.7 }}>
+                <p style={{ marginTop:0 }}>By submitting this profile, I confirm and agree that:</p>
+                <ol style={{ paddingLeft:18, margin:0 }}>
+                  <li>All information provided in this profile is true, accurate, and complete to the best of my knowledge.</li>
+                  <li>The documents, demo videos, and links I share (including Google Drive links) are genuine and belong to me.</li>
+                  <li>I authorize AcadHr to share my profile with registered schools, institutions, and recruiters for hiring purposes.</li>
+                  <li>I understand that providing false or misleading information may lead to rejection or removal of my profile.</li>
+                  <li>I agree to be contacted by AcadHr and prospective employers regarding suitable job opportunities.</li>
+                </ol>
+              </div>
+              <label onClick={() => editMode && up("terms_accepted", profile.terms_accepted==="Yes" ? "No" : "Yes")}
+                style={{ display:"flex", alignItems:"center", gap:10, marginTop:14, cursor:editMode?"pointer":"default", userSelect:"none" }}>
+                <div style={{ width:20, height:20, borderRadius:5, border:`2px solid ${profile.terms_accepted==="Yes"?"#059669":"#9CA3AF"}`, background:profile.terms_accepted==="Yes"?"#059669":"#fff", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13, fontWeight:900, flexShrink:0 }}>
+                  {profile.terms_accepted==="Yes" ? "✓" : ""}
+                </div>
+                <span style={{ fontSize:13, fontWeight:700, color:"#111827" }}>I have read and accept the Terms &amp; Conditions</span>
+              </label>
+            </div>
+
+                <div style={{ display:"flex", gap:10, marginBottom:20, marginTop:8 }}>
+                  <button className="btn btn-ghost" style={{ flex:1, justifyContent:"center" }} onClick={() => { setEditMode(false); setSaved(false); }}>✕ Cancel</button>
+                  <button className="btn btn-primary" style={{ flex:2, justifyContent:"center" }} onClick={saveProfile} disabled={saving}>{saving ? "Saving..." : "Save Changes ✓"}</button>
+                </div>
+              </>
             )}
-            </>}
           </div>
         )}
 
@@ -906,27 +1319,219 @@ function TeacherDashboard({ user, setPage }) {
               { key:"status", type:"select", placeholder:"All Statuses",            width:170,
                 options:["Shortlisted","Under Review","Not Selected"] },
             ]} />
-            <div className="card" style={{ padding:0, overflow:"hidden" }}>
-              <div className="tbl-wrap">
-                <table>
-                  <thead><tr><th>Position</th><th>Institution</th><th>Applied On</th><th>Status</th></tr></thead>
-                  <tbody>{applications.filter(a =>
-                      (!appFilterT.job    || a.job.toLowerCase().includes(appFilterT.job.toLowerCase())) &&
-                      (!appFilterT.school || a.school.toLowerCase().includes(appFilterT.school.toLowerCase())) &&
-                      (!appFilterT.status || a.status === appFilterT.status)
-                    ).map((a,i) => (
-                    <tr key={i}>
-                      <td><strong style={{ color:"#111827" }}>{a.job}</strong></td>
-                      <td>{a.school}</td>
-                      <td style={{ color:"#9CA3AF" }}>{a.date}</td>
-                      <td><span className={"badge "+a.sClass}>{a.status}</span></td>
-                    </tr>
-                  ))}</tbody>
-                </table>
+            {appsLoading ? (
+              <div style={{ textAlign:"center", padding:"60px 0", color:"#6B7280" }}>
+                <div style={{ width:36, height:36, border:"3px solid #E5E7EB", borderTopColor:"#1A56DB", borderRadius:"50%", animation:"spin .8s linear infinite", margin:"0 auto 14px" }} />
+                <div style={{ fontWeight:600 }}>Loading your applications...</div>
+              </div>
+            ) : applications.length === 0 ? (
+              <div className="card" style={{ padding:64, textAlign:"center" }}>
+                <div style={{ fontSize:52, marginBottom:16 }}>📋</div>
+                <h3 style={{ fontSize:18, fontWeight:800, marginBottom:8, color:"#111827" }}>No Applications Yet</h3>
+                <p style={{ color:"#6B7280", fontSize:14, marginBottom:20 }}>You haven't applied to any jobs yet.</p>
+                <button className="btn btn-primary" onClick={() => setTab("browse")}>Browse Jobs →</button>
+              </div>
+            ) : (
+              <div className="card" style={{ padding:0, overflow:"hidden" }}>
+                <div className="tbl-wrap">
+                  <table>
+                    <thead><tr><th>Position</th><th>Institution</th><th>Subject</th><th>Location</th><th>Applied On</th><th>Status</th></tr></thead>
+                    <tbody>{applications.filter(a =>
+                        (!appFilterT.job    || a.job.toLowerCase().includes(appFilterT.job.toLowerCase())) &&
+                        (!appFilterT.school || a.school.toLowerCase().includes(appFilterT.school.toLowerCase())) &&
+                        (!appFilterT.status || a.status === appFilterT.status)
+                      ).map((a,i) => (
+                      <tr key={i}>
+                        <td><strong style={{ color:"#111827" }}>{a.job}</strong>
+                          {a.salary && <div style={{ fontSize:11, color:"#059669", fontWeight:600, marginTop:2 }}>{a.salary}</div>}
+                        </td>
+                        <td>{a.school}</td>
+                        <td style={{ color:"#6B7280" }}>{a.subject||"—"}</td>
+                        <td style={{ color:"#6B7280" }}>{a.location||"—"}</td>
+                        <td style={{ color:"#9CA3AF" }}>{a.date}</td>
+                        <td><span className={"badge "+a.sClass}>{a.status}</span></td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══ ANALYTICS ══ */}
+        {tab==="analytics" && (
+          <div className="fadeUp">
+            <div className="page-title">Analytics</div>
+            <div className="page-sub">Your performance insights</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18, marginBottom:24 }}>
+              {[
+                ["Profile Views","0","👁","#1A56DB"],
+                ["Applications Sent",applications.length,"📋","#059669"],
+                ["Shortlisted",applications.filter(a=>a.status==="Shortlisted").length,"⭐","#D97706"],
+              ].map(([l,v,i,c]) => (
+                <div key={l} className="card" style={{ padding:24, textAlign:"center" }}>
+                  <div style={{ fontSize:28, marginBottom:8 }}>{i}</div>
+                  <div style={{ fontSize:28, fontWeight:800, color:c }}>{v}</div>
+                  <div style={{ fontSize:12, color:"#6B7280", fontWeight:600, marginTop:4 }}>{l}</div>
+                </div>
+              ))}
+            </div>
+            <div className="card" style={{ padding:40, textAlign:"center" }}>
+              <div style={{ fontSize:48, marginBottom:12 }}>📊</div>
+              <h3>Analytics Coming Soon</h3>
+              <p style={{ color:"#6B7280", fontSize:14, marginTop:8 }}>Detailed profile views, search appearances, and application analytics will appear here.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ══ RESUME & DOCS ══ */}
+        {tab==="resume" && (
+          <div className="fadeUp">
+            <div className="page-title">Resume & Documents</div>
+            <div className="page-sub">Upload and manage your resume</div>
+
+            {/* Resume card */}
+            <div className="card" style={{ padding:28, marginBottom:16 }}>
+              <div style={{ fontWeight:800, fontSize:13, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:18, paddingBottom:8, borderBottom:"2px solid #EBF5FF" }}>
+                📄 Resume / CV
+              </div>
+
+              {/* Current resume status */}
+              <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:20 }}>
+                <div style={{ width:56, height:56, background:"#EBF5FF", borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, flexShrink:0 }}>📄</div>
+                <div style={{ flex:1 }}>
+                  {profile.resume_file_name ? (
+                    <>
+                      <div style={{ fontWeight:700, color:"#111827", marginBottom:4 }}>📎 {profile.resume_file_name}</div>
+                      <div style={{ fontSize:12, color:"#059669", fontWeight:600 }}>✓ Resume uploaded successfully</div>
+                    </>
+                  ) : profile.resume_link ? (
+                    <>
+                      <div style={{ fontWeight:700, color:"#111827", marginBottom:4 }}>🔗 External Link</div>
+                      <a href={profile.resume_link} target="_blank" rel="noreferrer" style={{ fontSize:12, color:"#1A56DB" }}>
+                        {profile.resume_link.slice(0, 60)}...
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontWeight:700, color:"#9CA3AF", marginBottom:4 }}>No resume uploaded yet</div>
+                      <div style={{ fontSize:12, color:"#9CA3AF" }}>Upload a PDF or DOC file (max 10MB)</div>
+                    </>
+                  )}
+                </div>
+                {/* View button */}
+                {(profile.resume_link || profile.resume_file_name) && (() => {
+                  const link = profile.resume_link || "";
+                  const BASE = (process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","");
+                  const url  = link.startsWith("http") ? link : link ? BASE + link : null;
+                  return url ? (
+                    <a href={url} target="_blank" rel="noreferrer"
+                      style={{ padding:"8px 18px", borderRadius:9, border:"1.5px solid #BFDBFE", background:"#EBF5FF", color:"#1A56DB", fontWeight:700, fontSize:13, textDecoration:"none", whiteSpace:"nowrap" }}>
+                      👁 View Resume
+                    </a>
+                  ) : null;
+                })()}
+              </div>
+
+              {/* Upload new resume */}
+              <div style={{ background:"#F9FAFB", border:"2px dashed #D1D5DB", borderRadius:12, padding:"24px", textAlign:"center" }}
+                onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor="#1A56DB"; e.currentTarget.style.background="#EBF5FF"; }}
+                onDragLeave={e => { e.currentTarget.style.borderColor="#D1D5DB"; e.currentTarget.style.background="#F9FAFB"; }}
+                onDrop={async e => {
+                  e.preventDefault();
+                  e.currentTarget.style.borderColor="#D1D5DB"; e.currentTarget.style.background="#F9FAFB";
+                  const file = e.dataTransfer.files[0];
+                  if (file) handleResumeUpload(file);
+                }}>
+                <div style={{ fontSize:36, marginBottom:10 }}>📤</div>
+                <div style={{ fontWeight:700, color:"#374151", marginBottom:6 }}>
+                  {resumeUploading ? "Uploading..." : "Drag & drop your resume here"}
+                </div>
+                <div style={{ fontSize:13, color:"#9CA3AF", marginBottom:14 }}>Supports PDF, DOC, DOCX (max 10MB)</div>
+                <label style={{ display:"inline-block", padding:"9px 22px", background:"#1A56DB", color:"#fff", borderRadius:10, cursor:"pointer", fontWeight:700, fontSize:13, fontFamily:"Nunito,sans-serif" }}>
+                  {resumeUploading ? "⏳ Uploading..." : "📂 Browse File"}
+                  <input type="file" accept=".pdf,.doc,.docx" style={{ display:"none" }}
+                    onChange={e => { if (e.target.files[0]) handleResumeUpload(e.target.files[0]); }} />
+                </label>
+              </div>
+
+              {resumeError && <div className="alert a-err" style={{ marginTop:12 }}>❌ {resumeError}</div>}
+              {resumeSuccess && <div className="alert a-ok" style={{ marginTop:12 }}>✅ {resumeSuccess}</div>}
+
+              {/* OR add link */}
+              <div style={{ marginTop:20 }}>
+                <div style={{ fontWeight:700, fontSize:13, color:"#374151", marginBottom:8 }}>Or add a Google Drive / external link:</div>
+                <div style={{ display:"flex", gap:10 }}>
+                  <input className="input" style={{ flex:1 }} placeholder="https://drive.google.com/..."
+                    value={profile.resume_link||""}
+                    onChange={e => setProfile(p => ({...p, resume_link: e.target.value}))} />
+                  <button className="btn btn-primary btn-sm" onClick={async () => {
+                    try {
+                      const token = localStorage.getItem("acadhr_token");
+                      await fetch((process.env.REACT_APP_API_URL||"http://localhost:5000/api") + "/teacher/profile", {
+                        method:"PATCH", headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+                        body: JSON.stringify({ resume_link: profile.resume_link })
+                      });
+                      setResumeSuccess("Link saved successfully!");
+                      setTimeout(() => setResumeSuccess(""), 3000);
+                    } catch { setResumeError("Failed to save link."); }
+                  }}>Save Link</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Inline preview */}
+            {profile.resume_link && (profile.resume_link.endsWith(".pdf") || profile.resume_link.includes("/uploads/resumes/")) && (
+              <div className="card" style={{ padding:0, overflow:"hidden" }}>
+                <div style={{ padding:"14px 20px", borderBottom:"1px solid #E5E7EB", fontWeight:700, fontSize:14, color:"#111827" }}>
+                  📄 Resume Preview
+                </div>
+                <iframe
+                  src={profile.resume_link.startsWith("http")
+                    ? profile.resume_link
+                    : (process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + profile.resume_link}
+                  style={{ width:"100%", height:600, border:"none" }}
+                  title="Resume Preview"
+                />
+              </div>
+            )}
+
+            {/* Document vault placeholder */}
+            <div className="card" style={{ padding:32, textAlign:"center", marginTop:16 }}>
+              <div style={{ fontSize:40, marginBottom:12 }}>📁</div>
+              <h3 style={{ marginBottom:8 }}>Document Vault Coming Soon</h3>
+              <p style={{ color:"#6B7280", fontSize:14 }}>Upload degree certificates, experience letters, and other documents securely.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ══ SETTINGS ══ */}
+        {tab==="settings" && (
+          <div className="fadeUp">
+            <div className="page-title">Settings</div>
+            <div className="page-sub">Manage your account preferences</div>
+            <div className="card" style={{ padding:28, marginBottom:16, maxWidth:500 }}>
+              <div style={{ fontWeight:800, fontSize:13, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:18, paddingBottom:8, borderBottom:"2px solid #EBF5FF" }}>⚙️ Account</div>
+              {[
+                ["Name",  user.name],
+                ["Email", user.email],
+                ["Role",  "Teacher"],
+              ].map(([k,v]) => (
+                <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"12px 0", borderBottom:"1px solid #F3F4F6", fontSize:13 }}>
+                  <span style={{ color:"#6B7280", fontWeight:600 }}>{k}</span>
+                  <span style={{ color:"#111827", fontWeight:600 }}>{v}</span>
+                </div>
+              ))}
+              <div style={{ marginTop:20 }}>
+                <button className="btn btn-danger btn-sm" onClick={() => { if(window.confirm("Are you sure you want to logout?")) logout(); }}>
+                  🚪 Logout
+                </button>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

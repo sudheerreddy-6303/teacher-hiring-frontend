@@ -55,6 +55,25 @@ function Navbar({ setPage }) {
 
 /* ─── Hero Schools Carousel ─────────────────────────────────────────────────── */
 
+/* Small inline icon set for the carousel (line icons, no emoji) */
+function CIc({ name, size = 16, stroke = 1.7, style }) {
+  const p = {
+    building: <><path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16" /><path d="M14 21V9h4a1 1 0 0 1 1 1v11" /><path d="M3 21h18" /><path d="M7.5 8h3M7.5 12h3M7.5 16h3" /></>,
+    pin:      <><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z" /><circle cx="12" cy="11" r="2.2" /></>,
+    cap:      <><path d="M3 9l9-4 9 4-9 4-9-4z" /><path d="M7 11.5V16c0 1 2.4 2.4 5 2.4s5-1.4 5-2.4v-4.5" /></>,
+    tag:      <><path d="M3 12l8.5-8.5a1 1 0 0 1 .7-.3H20a1 1 0 0 1 1 1v7.8a1 1 0 0 1-.3.7L12 21z" /><circle cx="16.5" cy="7.5" r="1.3" fill="currentColor" stroke="none" /></>,
+    left:     <path d="M14.5 6l-6 6 6 6" />,
+    right:    <path d="M9.5 6l6 6-6 6" />,
+    arrow:    <><path d="M5 12h13" /><path d="M12.5 6l6 6-6 6" /></>,
+  }[name];
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style} aria-hidden="true">
+      {p}
+    </svg>
+  );
+}
+
 function HeroSchoolsCarousel({ setPage, dark }) {
   const [slide, setSlide]       = useState(0);
   const [animating, setAnimating] = useState(false);
@@ -74,62 +93,62 @@ function HeroSchoolsCarousel({ setPage, dark }) {
 
   return (
     <div className="fadeUp" style={{ animationDelay:".2s" }}>
-      <div style={{ background:"#fff", borderRadius:20, border:"1px solid #E5E7EB", overflow:"hidden", boxShadow:"0 8px 40px rgba(0,0,0,.08)" }}>
+      <div style={{ background:"#fff" }}>
 
         {/* Header — school info */}
-        <div style={{ padding:"24px 24px 18px", borderBottom:"1px solid #F3F4F6", opacity:animating?0:1, transition:"opacity .2s" }}>
-          <div style={{ display:"flex", alignItems:"flex-start", gap:14 }}>
+        <div style={{ padding:"22px 22px 16px", borderBottom:"1px solid #EEF1F5", opacity:animating?0:1, transition:"opacity .2s" }}>
+          <div style={{ display:"flex", alignItems:"flex-start", gap:13 }}>
 
             {/* Icon */}
-            <div style={{ width:60, height:60, borderRadius:14, background:"#EBF5FF", border:"1px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, flexShrink:0 }}>
-              {sc.emoji}
+            <div style={{ width:52, height:52, borderRadius:12, background:"#EBF2FE", color:"#1A56DB", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <CIc name="building" size={24} />
             </div>
 
             <div style={{ flex:1, minWidth:0 }}>
               {/* Tag */}
-              <div style={{ fontSize:11, fontWeight:700, color:"#1A56DB", textTransform:"uppercase", letterSpacing:.6, marginBottom:5 }}>{sc.tag}</div>
+              <div style={{ fontSize:10.5, fontWeight:800, color:"#1A56DB", textTransform:"uppercase", letterSpacing:.7, marginBottom:5 }}>{String(sc.tag || "").replace(/^[^A-Za-z]+/, "")}</div>
               {/* Name */}
-              <div style={{ fontSize:18, fontWeight:800, color:"#111827", marginBottom:5, lineHeight:1.2 }}>{sc.name}</div>
+              <div style={{ fontSize:17.5, fontWeight:800, color:"#0F172A", marginBottom:7, lineHeight:1.2 }}>{sc.name}</div>
               {/* Meta */}
-              <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
-                <span style={{ fontSize:12, color:"#6B7280", fontWeight:600 }}>📍 {sc.city}</span>
-                <span style={{ fontSize:12, color:"#6B7280", fontWeight:600 }}>🎓 {sc.board}</span>
-                <span style={{ fontSize:12, color:"#6B7280", fontWeight:600 }}>🏷 {sc.type}</span>
+              <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
+                <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:12, color:"#64748B", fontWeight:600 }}><CIc name="pin" size={13} style={{ color:"#94A3B8" }} />{sc.city}</span>
+                <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:12, color:"#64748B", fontWeight:600 }}><CIc name="cap" size={13} style={{ color:"#94A3B8" }} />{sc.board}</span>
+                <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:12, color:"#64748B", fontWeight:600 }}><CIc name="tag" size={13} style={{ color:"#94A3B8" }} />{sc.type}</span>
               </div>
             </div>
 
             {/* Open count */}
             <div style={{ textAlign:"right", flexShrink:0 }}>
-              <div style={{ fontSize:38, fontWeight:900, color:"#059669", lineHeight:1 }}>{sc.open}</div>
-              <div style={{ fontSize:11, color:"#6B7280", fontWeight:700, marginTop:3 }}>open roles</div>
+              <div style={{ fontSize:34, fontWeight:800, color:"#1A56DB", lineHeight:1, fontFamily:"Playfair Display,serif" }}>{sc.open}</div>
+              <div style={{ fontSize:10.5, color:"#94A3B8", fontWeight:700, marginTop:4, textTransform:"uppercase", letterSpacing:.4 }}>open roles</div>
             </div>
           </div>
         </div>
 
         {/* Roles */}
-        <div style={{ padding:"14px 24px 16px", borderBottom:"1px solid #F3F4F6", opacity:animating?0:1, transition:"opacity .2s" }}>
-          <div style={{ fontSize:11, fontWeight:700, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.5, marginBottom:8 }}>Hiring for</div>
+        <div style={{ padding:"14px 22px 16px", borderBottom:"1px solid #EEF1F5", opacity:animating?0:1, transition:"opacity .2s" }}>
+          <div style={{ fontSize:10.5, fontWeight:800, color:"#94A3B8", textTransform:"uppercase", letterSpacing:.6, marginBottom:9 }}>Hiring for</div>
           <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
             {sc.roles.map(r => (
-              <span key={r} style={{ background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:8, padding:"4px 10px", fontSize:12, fontWeight:600, color:"#374151" }}>{r}</span>
+              <span key={r} style={{ background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:7, padding:"5px 10px", fontSize:12, fontWeight:600, color:"#475569" }}>{r}</span>
             ))}
           </div>
         </div>
 
         {/* Controls */}
-        <div style={{ padding:"12px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:"1px solid #F3F4F6" }}>
+        <div style={{ padding:"12px 22px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", gap:5 }}>
             {HERO_SLIDES.map((_, i) => (
               <span key={i} onClick={() => goTo(i)}
-                style={{ display:"inline-block", width:i===slide?18:6, height:6, borderRadius:3, background:i===slide?"#1A56DB":"#E5E7EB", cursor:"pointer", transition:"all .3s" }} />
+                style={{ display:"inline-block", width:i===slide?18:6, height:6, borderRadius:3, background:i===slide?"#1A56DB":"#E2E8F0", cursor:"pointer", transition:"all .3s" }} />
             ))}
           </div>
           <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-            <button onClick={() => goTo(sv => (sv-1+total)%total)}
-              style={{ width:30, height:30, borderRadius:"50%", border:"1px solid #E5E7EB", background:"#fff", cursor:"pointer", fontSize:14, color:"#6B7280", display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-            <button onClick={() => goTo(sv => (sv+1)%total)}
-              style={{ width:30, height:30, borderRadius:"50%", border:"1px solid #E5E7EB", background:"#fff", cursor:"pointer", fontSize:14, color:"#6B7280", display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
-            <button className="btn btn-primary btn-sm" onClick={() => setPage("institutes")}>View All →</button>
+            <button aria-label="Previous" onClick={() => goTo(sv => (sv-1+total)%total)}
+              style={{ width:30, height:30, borderRadius:"50%", border:"1px solid #E2E8F0", background:"#fff", cursor:"pointer", color:"#64748B", display:"flex", alignItems:"center", justifyContent:"center" }}><CIc name="left" size={15} /></button>
+            <button aria-label="Next" onClick={() => goTo(sv => (sv+1)%total)}
+              style={{ width:30, height:30, borderRadius:"50%", border:"1px solid #E2E8F0", background:"#fff", cursor:"pointer", color:"#64748B", display:"flex", alignItems:"center", justifyContent:"center" }}><CIc name="right" size={15} /></button>
+            <button className="btn btn-primary btn-sm" onClick={() => setPage("institutes")}>View all <CIc name="arrow" size={14} style={{ marginLeft:2 }} /></button>
           </div>
         </div>
 

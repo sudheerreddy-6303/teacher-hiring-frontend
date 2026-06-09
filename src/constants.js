@@ -2,13 +2,13 @@
 // Shared constants
 export const MOCK_JOBS = [
   { id:1,  title:"Senior Mathematics Teacher",   institute:"Delhi Public School",        location:"Hyderabad",  type:"Full-Time",    salary:"₹45,000–₹60,000/mo", subject:"Mathematics",      experience:"3+ Years",   posted:"2 days ago",  applicants:12, logo:"🏫" },
-  { id:2,  title:"Physics Tutor (Grade 11-12)",  institute:"Narayana College",           location:"Bangalore",  type:"Part-Time",    salary:"₹800–₹1,200/hr",      subject:"Physics",          experience:"2+ Years",   posted:"1 day ago",   applicants:8,  logo:"🎓" },
+  // { id:2,  title:"Physics Tutor (Grade 11-12)",  institute:"Narayana College",           location:"Bangalore",  type:"Part-Time",    salary:"₹800–₹1,200/hr",      subject:"Physics",          experience:"2+ Years",   posted:"1 day ago",   applicants:8,  logo:"🎓" },
   { id:3,  title:"English Language Instructor",  institute:"British Language Institute", location:"Mumbai",     type:"Full-Time",    salary:"₹35,000–₹50,000/mo", subject:"English",          experience:"1+ Years",   posted:"3 days ago",  applicants:24, logo:"📚" },
   { id:4,  title:"Computer Science Teacher",     institute:"St. Xavier's School",        location:"Chennai",    type:"Full-Time",    salary:"₹50,000–₹70,000/mo", subject:"Computer Science", experience:"4+ Years",   posted:"5 days ago",  applicants:6,  logo:"🏛️" },
   { id:5,  title:"Chemistry Home Tutor",         institute:"Individual / Private",       location:"Hyderabad",  type:"Home Tuition", salary:"₹600–₹900/hr",        subject:"Chemistry",        experience:"1+ Years",   posted:"Today",       applicants:3,  logo:"🧪" },
   { id:6,  title:"Kindergarten Teacher",         institute:"Sunshine Montessori",        location:"Pune",       type:"Full-Time",    salary:"₹25,000–₹35,000/mo", subject:"Early Education",  experience:"Fresher OK", posted:"4 days ago",  applicants:18, logo:"🌟" },
   { id:7,  title:"Social Science Teacher",       institute:"Kendriya Vidyalaya",         location:"Delhi",      type:"Full-Time",    salary:"₹38,000–₹52,000/mo", subject:"Social Science",   experience:"2+ Years",   posted:"6 days ago",  applicants:10, logo:"🏛️" },
-  { id:8,  title:"Commerce & Accountancy",       institute:"Sri Chaitanya Jr. College",  location:"Vijayawada", type:"Full-Time",    salary:"₹42,000–₹58,000/mo", subject:"Commerce",         experience:"3+ Years",   posted:"1 week ago",  applicants:15, logo:"📊" },
+  // { id:8,  title:"Commerce & Accountancy",       institute:"Sri Chaitanya Jr. College",  location:"Vijayawada", type:"Full-Time",    salary:"₹42,000–₹58,000/mo", subject:"Commerce",         experience:"3+ Years",   posted:"1 week ago",  applicants:15, logo:"📊" },
   { id:9,  title:"Hindi Language Teacher",       institute:"Ryan International School",  location:"Gurgaon",    type:"Full-Time",    salary:"₹30,000–₹45,000/mo", subject:"Hindi",            experience:"2+ Years",   posted:"2 days ago",  applicants:7,  logo:"📖" },
 ];
 
@@ -62,19 +62,19 @@ export const HERO_SLIDES = [
     roles:   ["Mathematics Teacher","Physics Teacher","English Teacher","Commerce Faculty"],
     est:     "Est. 1949",
   },
-  {
-    name:    "Sri Chaitanya Jr. College",
-    city:    "Hyderabad",
-    board:   "CBSE / TS State",
-    type:    "Junior College & Coaching",
-    open:    18,
-    emoji:   "🎓",
-    color:   "#059669",
-    bg:      "linear-gradient(135deg,#065F46,#059669)",
-    tag:     "🔥 Actively Hiring",
-    roles:   ["Chemistry Faculty","Biology Teacher","Maths Faculty","Physics HOD"],
-    est:     "Est. 1986",
-  },
+  // {
+  //   name:    "Sri Chaitanya Jr. College",
+  //   city:    "Hyderabad",
+  //   board:   "CBSE / TS State",
+  //   type:    "Junior College & Coaching",
+  //   open:    18,
+  //   emoji:   "🎓",
+  //   color:   "#059669",
+  //   bg:      "linear-gradient(135deg,#065F46,#059669)",
+  //   tag:     "🔥 Actively Hiring",
+  //   roles:   ["Chemistry Faculty","Biology Teacher","Maths Faculty","Physics HOD"],
+  //   est:     "Est. 1986",
+  // },
   {
     name:    "Ryan International School",
     city:    "Gurgaon",

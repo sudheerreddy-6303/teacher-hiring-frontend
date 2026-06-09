@@ -474,6 +474,30 @@ import { useAuth } from "../context/AuthContext";
 import { Navbar, HeroSchoolsCarousel, JobCard, Toast, Brand, Divider } from "../components/common/Shared";
 import apiBase from "../config/apiBase";
 
+/* Lightweight inline icon set — consistent line icons replace emoji in the hero */
+function Ic({ name, size = 20, stroke = 1.7, style }) {
+  const p = {
+    search:   <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></>,
+    pin:      <><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z" /><circle cx="12" cy="11" r="2.2" /></>,
+    cap:      <><path d="M3 9l9-4 9 4-9 4-9-4z" /><path d="M7 11.5V16c0 1 2.4 2.4 5 2.4s5-1.4 5-2.4v-4.5" /></>,
+    building: <><path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16" /><path d="M14 21V9h4a1 1 0 0 1 1 1v11" /><path d="M3 21h18" /><path d="M7.5 8h3M7.5 12h3M7.5 16h3" /></>,
+    check:    <path d="M5 12.5l4 4 10-10" />,
+    target:   <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4.5" /><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" /></>,
+    shield:   <><path d="M12 3l7 3v5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6l7-3z" /><path d="M9 12l2 2 4-4" /></>,
+    bell:     <><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z" /><path d="M10 20a2 2 0 0 0 4 0" /></>,
+    activity: <path d="M3 12h4l2.5-6 4 12 2.5-6H20" />,
+    arrow:    <><path d="M5 12h13" /><path d="M12.5 6l6 6-6 6" /></>,
+    left:     <path d="M14.5 6l-6 6 6 6" />,
+    right:    <path d="M9.5 6l6 6-6 6" />,
+  }[name];
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style} aria-hidden="true">
+      {p}
+    </svg>
+  );
+}
+
 function HomePage({ setPage }) {
   const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
   useEffect(() => {
@@ -550,12 +574,11 @@ function HomePage({ setPage }) {
     <div className="home-page">
       <Navbar setPage={setPage} />
       {/* ── HERO ───────────────────────────────────────────────────────────── */}
-      <section className="hero-section" style={{ display:"flex", flexDirection:"column", background:"#fff", position:"relative", overflow:"hidden" }}>
+      <section className="hero-section" style={{ display:"flex", flexDirection:"column", background:"#fff", position:"relative", overflow:"hidden", borderBottom:"1px solid #EEF1F5" }}>
 
-        {/* Subtle background accents */}
-        <div style={{ position:"absolute", width:700, height:700, borderRadius:"50%", background:"radial-gradient(circle,rgba(26,86,219,.05),transparent 65%)", top:-200, right:-150, pointerEvents:"none" }} />
-        <div style={{ position:"absolute", width:500, height:500, borderRadius:"50%", background:"radial-gradient(circle,rgba(14,165,233,.05),transparent 65%)", bottom:-100, left:-100, pointerEvents:"none" }} />
-        <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(circle,rgba(26,86,219,.04) 1px,transparent 1px)", backgroundSize:"36px 36px", pointerEvents:"none" }} />
+        {/* Single, restrained background wash */}
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg,#FBFCFE 0%,#FFFFFF 55%)", pointerEvents:"none" }} />
+        <div style={{ position:"absolute", width:620, height:620, borderRadius:"50%", background:"radial-gradient(circle,rgba(26,86,219,.06),transparent 62%)", top:-220, right:-160, pointerEvents:"none" }} />
 
         <div className="hero-inner" style={{ position:"relative", zIndex:1, flex:1, display:"flex", alignItems:"center", paddingTop:40, paddingBottom:60, paddingLeft:isMobile?16:isTablet?24:60, paddingRight:isMobile?16:isTablet?24:60, width:"100%", boxSizing:"border-box" }}>
           <div className="hero-grid">
@@ -563,116 +586,110 @@ function HomePage({ setPage }) {
             {/* ── LEFT: Copy ── */}
             <div className="fadeUp">
               {/* Eyebrow badge */}
-              <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"#EBF5FF", border:"1px solid #BFDBFE", borderRadius:30, padding:"6px 16px", marginBottom:28 }}>
-                <span style={{ width:7, height:7, borderRadius:"50%", background:"#059669", display:"inline-block", boxShadow:"0 0 8px rgba(5,150,105,.5)" }} />
-                <span style={{ fontSize:12, fontWeight:700, color:"#1A56DB", letterSpacing:.5 }}>LIVE · 3,200+ Schools Hiring Now</span>
+              <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"#fff", border:"1px solid #E2E8F0", borderRadius:30, padding:"6px 14px", marginBottom:26, boxShadow:"0 1px 2px rgba(15,23,42,.04)" }}>
+                <span style={{ width:7, height:7, borderRadius:"50%", background:"#059669", display:"inline-block" }} />
+                <span style={{ fontSize:12, fontWeight:800, color:"#334155", letterSpacing:.4 }}>Live teaching jobs across India</span>
               </div>
 
               {/* Headline */}
-              <h1 style={{ fontFamily:"Playfair Display,serif", fontSize:"clamp(38px,4.5vw,64px)", fontWeight:800, lineHeight:1.1, color:"#0F172A", marginBottom:22 }}>
-                India's Smartest<br />
-                <span style={{ color:"#1A56DB", fontStyle:"italic" }}>Teacher Hiring</span><br />
-                Platform
+              <h1 style={{ fontFamily:"Playfair Display,serif", fontSize:"clamp(36px,4.4vw,60px)", fontWeight:800, lineHeight:1.12, letterSpacing:"-0.01em", color:"#0F172A", marginBottom:20 }}>
+                Where India&rsquo;s teachers<br />
+                find their <span style={{ color:"#1A56DB" }}>next role</span>.
               </h1>
 
-              <p style={{ fontSize:16, color:"#4B5563", lineHeight:1.85, maxWidth:440, marginBottom:36 }}>
-                AcadHr connects verified educators with top schools, colleges and coaching institutes across India. Apply, post, and hire — faster than ever.
+              <p style={{ fontSize:16.5, color:"#475569", lineHeight:1.75, maxWidth:460, marginBottom:34 }}>
+                AcadHr connects educators with schools, colleges and coaching institutes across India. Search verified openings, apply in one click, and get hired faster.
               </p>
 
               {/* Search */}
               <div className="hero-search-row">
                 <div className="hero-search-input-wrap">
-                  <span className="hero-search-icon" aria-hidden="true">🔍</span>
+                  <span className="hero-search-icon" aria-hidden="true"><Ic name="search" size={18} /></span>
                   <input
                     className="hero-search-input"
-                    placeholder="Subject, city, or school..."
+                    placeholder="Subject, city, or school…"
                     onKeyDown={e => e.key==="Enter" && setPage("jobs")}
                   />
                 </div>
                 <button type="button" className="btn btn-primary hero-search-btn" onClick={() => setPage("jobs")}>
-                  Search
+                  Search jobs
                 </button>
               </div>
 
               {/* Subject tag pills */}
-              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:44 }}>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:36 }}>
                 {["Mathematics","Physics","English","CS","Chemistry","Biology"].map(s => (
-                  <span key={s} onClick={() => setPage("jobs")} style={{ padding:"5px 13px", borderRadius:20, fontSize:12, fontWeight:700, cursor:"pointer", background:"#F3F4F6", color:"#374151", border:"1px solid #E5E7EB", transition:"all .15s" }}
+                  <span key={s} onClick={() => setPage("jobs")} style={{ padding:"6px 14px", borderRadius:8, fontSize:12.5, fontWeight:700, cursor:"pointer", background:"#fff", color:"#475569", border:"1px solid #E2E8F0", transition:"all .15s" }}
                     onMouseEnter={e => { e.currentTarget.style.background="#1A56DB"; e.currentTarget.style.color="#fff"; e.currentTarget.style.borderColor="#1A56DB"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background="#F3F4F6"; e.currentTarget.style.color="#374151"; e.currentTarget.style.borderColor="#E5E7EB"; }}>
+                    onMouseLeave={e => { e.currentTarget.style.background="#fff"; e.currentTarget.style.color="#475569"; e.currentTarget.style.borderColor="#E2E8F0"; }}>
                     {s}
                   </span>
                 ))}
               </div>
 
               {/* CTA row */}
-              <div style={{ display:"flex", gap:12, alignItems:"center", flexWrap:"wrap", marginBottom:48 }}>
+              <div style={{ display:"flex", gap:12, alignItems:"center", flexWrap:"wrap", marginBottom:34 }}>
                 <button className="btn btn-primary btn-lg" onClick={() => setPage("signup")} style={{ fontSize:15 }}>
-                  Get Started Free →
+                  Get started &mdash; it&rsquo;s free <Ic name="arrow" size={17} style={{ marginLeft:2 }} />
                 </button>
-                <button onClick={() => setPage("jobs")} style={{ background:"#fff", border:"1.5px solid #D1D5DB", color:"#374151", borderRadius:10, padding:"13px 26px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .18s" }}
+                <button onClick={() => setPage("jobs")} style={{ background:"#fff", border:"1.5px solid #CBD5E1", color:"#334155", borderRadius:10, padding:"13px 26px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .18s" }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor="#1A56DB"; e.currentTarget.style.color="#1A56DB"; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor="#D1D5DB"; e.currentTarget.style.color="#374151"; }}>
-                  Browse Jobs
+                  onMouseLeave={e => { e.currentTarget.style.borderColor="#CBD5E1"; e.currentTarget.style.color="#334155"; }}>
+                  Browse jobs
                 </button>
               </div>
 
-              {/* Trust avatars */}
-              <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-                <div style={{ display:"flex" }}>
-                  {["👩‍🏫","👨‍🏫","👩‍🔬","👨‍💼","👩‍💻"].map((a,i) => (
-                    <div key={i} style={{ width:34, height:34, borderRadius:"50%", background:`hsl(${210+i*20},70%,55%)`, border:"2px solid #fff", boxShadow:"0 0 0 1px #E5E7EB", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, marginLeft: i===0?0:-10, zIndex:5-i }}>
-                      {a}
-                    </div>
-                  ))}
-                </div>
-                {/* <div>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#111827" }}>12,400+ educators</div>
-                  <div style={{ fontSize:11, color:"#6B7280" }}>already on AcadHr</div>
-                </div> */}
+              {/* Trust row — plain, honest signals (no emoji avatars) */}
+              <div style={{ display:"flex", gap:20, flexWrap:"wrap", alignItems:"center" }}>
+                {["Free for teachers","Verified institutions","Apply in one click"].map(t => (
+                  <span key={t} style={{ display:"inline-flex", alignItems:"center", gap:7, fontSize:13, fontWeight:700, color:"#475569" }}>
+                    <Ic name="check" size={16} stroke={2.2} style={{ color:"#059669" }} />
+                    {t}
+                  </span>
+                ))}
               </div>
             </div>
 
             {/* ── RIGHT: App Showcase Card ── */}
             <div className="fadeUp" style={{ animationDelay:".15s" }}>
               {/* Main card */}
-              <div style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:24, overflow:"hidden", boxShadow:"0 20px 60px rgba(26,86,219,.12)" }}>
+              <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:20, overflow:"hidden", boxShadow:"0 24px 56px -22px rgba(15,23,42,.22)" }}>
                 {/* Card topbar */}
-                <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                    <div style={{ width:8, height:8, borderRadius:"50%", background:"#4ADE80", boxShadow:"0 0 8px #4ADE80" }} />
-                    <span style={{ color:"#fff", fontWeight:800, fontSize:14 }}>🏫 Top Hiring Schools</span>
+                <div style={{ background:"#1E3A8A", padding:"15px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:11 }}>
+                    <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:30, height:30, borderRadius:8, background:"rgba(255,255,255,.14)", color:"#fff" }}>
+                      <Ic name="building" size={17} />
+                    </span>
+                    <span style={{ color:"#fff", fontWeight:800, fontSize:14.5, letterSpacing:.2 }}>Top hiring schools</span>
                   </div>
-                  <span style={{ background:"rgba(255,255,255,.2)", color:"#fff", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>Updated Now</span>
+                  <span style={{ display:"inline-flex", alignItems:"center", gap:6, color:"#BFDBFE", fontSize:11.5, fontWeight:700 }}>
+                    <span style={{ width:7, height:7, borderRadius:"50%", background:"#34D399", display:"inline-block" }} />
+                    Live
+                  </span>
                 </div>
 
                 {/* Schools carousel */}
                 <HeroSchoolsCarousel setPage={setPage} />
-
-                {/* Card footer stats */}
-                {/* <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", borderTop:"1px solid #E5E7EB" }}>
-                  {[["12.4k+","Educators"],["3.2k+","Schools"],["9.8k+","Placed"]].map(([n,l],i) => (
-                    <div key={l} style={{ padding:"16px 0", textAlign:"center", borderRight: i<2?"1px solid #E5E7EB":"none" }}>
-                      <div style={{ fontSize:18, fontWeight:800, color:"#1A56DB", fontFamily:"Playfair Display,serif" }}>{n}</div>
-                      <div style={{ fontSize:11, color:"#6B7280", fontWeight:600, marginTop:2 }}>{l}</div>
-                    </div>
-                  ))}
-                </div> */}
               </div>
 
-              {/* Feature pills below card */}
-              <div className="home-pills-grid" style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:12, marginTop:16 }}>
+              {/* Feature cards below — one consistent treatment, line icons */}
+              <div className="home-pills-grid" style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:12, marginTop:14 }}>
                 {[
-                  { icon:"🎯", t:"Smart Matching",    bg:"#EBF5FF", border:"#BFDBFE", color:"#1E429F" },
-                  { icon:"🔐", t:"Verified Profiles", bg:"#ECFDF5", border:"#A7F3D0", color:"#065F46" },
-                  { icon:"⚡", t:"Instant Alerts",    bg:"#FFFBEB", border:"#FDE68A", color:"#92400E" },
-                  { icon:"📊", t:"Live Dashboard",    bg:"#F5F3FF", border:"#DDD6FE", color:"#4C1D95" },
+                  { icon:"target",   t:"Smart matching",    d:"By subject, city & experience" },
+                  { icon:"shield",   t:"Verified profiles", d:"Schools and teachers reviewed" },
+                  { icon:"bell",     t:"Instant alerts",    d:"New openings in real time" },
+                  { icon:"activity", t:"Live dashboard",    d:"Track every application" },
                 ].map(f => (
-                  <div key={f.t} style={{ background:f.bg, border:`1px solid ${f.border}`, borderRadius:14, padding:"12px 16px", display:"flex", alignItems:"center", gap:10, cursor:"pointer", transition:"transform .18s, box-shadow .18s" }}
-                    onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 6px 16px rgba(0,0,0,.08)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform="none"; e.currentTarget.style.boxShadow="none"; }}>
-                    <span style={{ fontSize:18 }}>{f.icon}</span>
-                    <span style={{ fontSize:12, fontWeight:700, color:f.color }}>{f.t}</span>
+                  <div key={f.t} style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:14, padding:"14px 15px", display:"flex", alignItems:"flex-start", gap:11, transition:"transform .18s, box-shadow .18s, border-color .18s" }}
+                    onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 10px 22px -12px rgba(15,23,42,.22)"; e.currentTarget.style.borderColor="#BFDBFE"; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform="none"; e.currentTarget.style.boxShadow="none"; e.currentTarget.style.borderColor="#E2E8F0"; }}>
+                    <span style={{ flexShrink:0, display:"inline-flex", alignItems:"center", justifyContent:"center", width:34, height:34, borderRadius:9, background:"#EBF2FE", color:"#1A56DB" }}>
+                      <Ic name={f.icon} size={18} />
+                    </span>
+                    <span>
+                      <span style={{ display:"block", fontSize:13, fontWeight:800, color:"#0F172A" }}>{f.t}</span>
+                      <span style={{ display:"block", fontSize:11.5, color:"#64748B", marginTop:2, lineHeight:1.4 }}>{f.d}</span>
+                    </span>
                   </div>
                 ))}
               </div>
