@@ -371,22 +371,25 @@ const PLANS = {
     },
   ],
   tutor: [
-    {
-      name:     "Free",
-      price:    "₹0",
-      period:   "Forever",
-      color:    "#6B7280",
-      bg:       "#F9FAFB",
-      border:   "#E5E7EB",
-      badge:    "",
+   {
+      name:     "Starter",
+      color:    "#DB2777",
+      bg:       "#FDF2F8",
+      border:   "#F9A8D4",
+      badge:    "Most Popular",
+      badgeIcon:"⭐",
+      prices: {
+        "1m": { price:"₹1,500", period:"+ GST / month" },
+        "3m": { price:"₹2,700", period:"+ GST / 3 months", note:"≈ ₹900/mo · save 10%" },
+      },
       features: [
-        "Basic tutor profile",
-        "Respond to 5 leads/month",
-        "Browse tuition requests",
-        "Email & WhatsApp alerts",
+        "upto 10 profiles apply",
+        "improved profile visibility",
+        "shortlisted job alerts"
+        // { text:"60 unlock credits", highlight:true },
       ],
-      cta: "Sign Up Free",
-      ctaStyle: { background:"#F3F4F6", color:"#374151", border:"1px solid #D1D5DB" },
+      cta: "Choose Starter",
+      ctaStyle: { background:"#DB2777", color:"#fff" },
     },
     {
       name:      "Pro Tutor",
@@ -412,42 +415,61 @@ const PLANS = {
   ],
   parent: [
     {
-      name:     "Free",
-      price:    "₹0",
-      period:   "Forever",
-      color:    "#6B7280",
-      bg:       "#F9FAFB",
-      border:   "#E5E7EB",
-      badge:    "",
+      name:     "Inaugural Offer",
+      price:    "Free",
+      period:   "Limited launch offer",
+      color:    "#059669",
+      bg:       "#ECFDF5",
+      border:   "#A7F3D0",
+      badge:    "Launch Offer",
+      badgeIcon:"🎉",
       features: [
-        "Browse verified tutors",
-        "Post 2 tuition requests/month",
+        "Post 1 tuition request",
         "View tutor profiles",
-        "Email & WhatsApp alerts",
+        "Academic updates",
+        { text:"20 free credits", highlight:true },
       ],
       cta: "Get Started Free",
       ctaStyle: { background:"#F3F4F6", color:"#374151", border:"1px solid #D1D5DB" },
     },
     {
-      name:      "Premium",
-      price:     "₹499",
-      period:    "/month",
-      color:     "#DB2777",
-      bg:        "#FDF2F8",
-      border:    "#F9A8D4",
-      badge:     "Most Popular",
-      badgeIcon: "⭐",
+      name:     "Starter",
+      color:    "#DB2777",
+      bg:       "#FDF2F8",
+      border:   "#F9A8D4",
+      badge:    "Most Popular",
+      badgeIcon:"⭐",
+      prices: {
+        "1m": { price:"₹1,000", period:"+ GST / month" },
+        "3m": { price:"₹2,700", period:"+ GST / 3 months", note:"≈ ₹900/mo · save 10%" },
+      },
       features: [
-        "Unlimited tuition requests",
-        "Direct contact with tutors",
-        "Background-verified tutors",
-        "Priority tutor matching",
-        "Demo class scheduling",
-        "Progress tracking",
-        "Dedicated support",
+        "2–3 tuition requests",
+        "Access tutor profiles",
+        { text:"60 unlock credits", highlight:true },
       ],
-      cta: "Go Premium",
+      cta: "Choose Starter",
       ctaStyle: { background:"#DB2777", color:"#fff" },
+    },
+    {
+      name:     "Premium",
+      color:    "#7C3AED",
+      bg:       "#F5F3FF",
+      border:   "#DDD6FE",
+      badge:    "",
+      prices: {
+        "1m": { price:"₹2,000", period:"+ GST / month" },
+        "3m": { price:"₹5,400", period:"+ GST / 3 months", note:"≈ ₹1,800/mo · save 10%" },
+      },
+      features: [
+        "4–5 tuition requests",
+        { text:"100 unlock credits", highlight:true },
+        "Dedicated recruiter support",
+        "Demo class scheduling",
+        "One month dedicated support",
+      ],
+      cta: "Choose Premium",
+      ctaStyle: { background:"#7C3AED", color:"#fff" },
     },
   ],
 };
@@ -463,6 +485,14 @@ const FAQ = [
 export default function PricingPage({ setPage }) {
   const [tab, setTab] = useState("school");
   const [openFaq, setOpenFaq] = useState(null);
+  const [billing, setBilling] = useState("1m");
+
+  // Apply the selected billing period (1 month / 3 months) to plans that offer both
+  const plans = PLANS[tab].map(p =>
+    p.prices
+      ? { ...p, price: p.prices[billing].price, period: p.prices[billing].period, note: p.prices[billing].note || p.note }
+      : p
+  );
 
   return (
     <div className="fw-page" style={{ minHeight:"100vh", background:"#F9FAFB" }}>
@@ -496,8 +526,25 @@ export default function PricingPage({ setPage }) {
 
         {/* Plans */}
         <div className="container" style={{ padding:"48px 0" }}>
-          <div style={{ display:"grid", gridTemplateColumns:`repeat(${PLANS[tab].length},1fr)`, gap:24, maxWidth: PLANS[tab].length===2 ? 800 : 1000, margin:"0 auto" }}>
-            {PLANS[tab].map(plan => (
+
+          {/* Billing period toggle — Parents plans */}
+          {tab === "parent" && (
+            <div style={{ display:"flex", justifyContent:"center", marginBottom:30 }}>
+              <div style={{ display:"inline-flex", background:"#fff", borderRadius:12, padding:4, gap:4, border:"1px solid #E5E7EB", boxShadow:"0 2px 8px rgba(0,0,0,.05)" }}>
+                {[["1m","1 Month"],["3m","3 Months · save 10%"]].map(([id, label]) => (
+                  <button key={id} onClick={() => setBilling(id)}
+                    style={{ padding:"9px 20px", borderRadius:9, border:"none", cursor:"pointer", fontWeight:700, fontSize:13.5, fontFamily:"Nunito,sans-serif", transition:"all .2s",
+                      background: billing===id ? "#1A56DB" : "transparent",
+                      color:      billing===id ? "#fff" : "#6B7280" }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="pricing-grid" style={{ display:"grid", gridTemplateColumns:`repeat(${plans.length},1fr)`, gap:24, maxWidth: plans.length===2 ? 800 : 1000, margin:"0 auto" }}>
+            {plans.map(plan => (
               <div key={plan.name}
                 style={{ background:"#fff", borderRadius:20, border:`2px solid ${plan.border}`, padding:32, position:"relative", transition:"all .2s",
                   boxShadow: plan.badge ? "0 8px 32px rgba(26,86,219,.15)" : "0 2px 8px rgba(0,0,0,.06)" }}
