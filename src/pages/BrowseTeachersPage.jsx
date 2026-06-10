@@ -132,7 +132,7 @@ export default function BrowseTeachersPage({ setPage }) {
                     <div style={{ width:54, height:54, borderRadius:"50%", overflow:"hidden", background:"#EBF5FF", border:"2px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>
                       {t.profile_photo
                         ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + t.profile_photo} alt={t.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                        : "👤"}
+                        : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></svg>}
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{t.name}</div>
@@ -142,25 +142,12 @@ export default function BrowseTeachersPage({ setPage }) {
                   </div>
 
                   {/* Tags */}
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 }}>
                     {t.city             && <span style={{ background:"#F3F4F6", color:"#374151", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>📍 {t.city}</span>}
                     {t.total_experience && <span style={{ background:"#EBF5FF", color:"#1A56DB", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>⏳ {t.total_experience}</span>}
                     {t.qualification    && <span style={{ background:"#F5F3FF", color:"#6D28D9", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>🎓 {t.qualification}</span>}
                     {t.work_mode        && <span style={{ background:"#ECFDF5", color:"#059669", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>{t.work_mode}</span>}
                   </div>
-
-                  {/* Profile completion bar */}
-                  {t.completion_pct > 0 && (
-                    <div style={{ marginBottom:14 }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"#6B7280", fontWeight:600, marginBottom:4 }}>
-                        <span>Profile completion</span>
-                        <span style={{ color:t.completion_pct>=70?"#059669":"#D97706", fontWeight:700 }}>{t.completion_pct}%</span>
-                      </div>
-                      <div style={{ height:5, background:"#F3F4F6", borderRadius:3, overflow:"hidden" }}>
-                        <div style={{ height:5, borderRadius:3, background:t.completion_pct>=70?"#059669":"#FBBF24", width:`${t.completion_pct}%`, transition:"width .4s" }} />
-                      </div>
-                    </div>
-                  )}
 
                   <button
                     style={{ width:"100%", padding:"9px 0", borderRadius:10, border:"1.5px solid #BFDBFE", background:"#EBF5FF", color:"#1A56DB", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s" }}

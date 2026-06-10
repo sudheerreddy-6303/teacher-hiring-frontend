@@ -327,3 +327,10 @@
   .s-item { min-height: 44px; }
   .nav-link { padding: 10px 0; }
 }
+/* ── Pricing plan cards: responsive ── */
+@media (max-width: 1024px) {
+  .pricing-grid { grid-template-columns: 1fr 1fr !important; max-width: 720px !important; }
+}
+@media (max-width: 768px) {
+  .pricing-grid { grid-template-columns: 1fr !important; max-width: 460px !important; }
+}

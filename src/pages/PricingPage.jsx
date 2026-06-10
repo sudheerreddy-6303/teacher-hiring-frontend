@@ -333,81 +333,120 @@ const PLANS = {
   ],
   teacher: [
     {
-      name:     "Free",
+      name:     "Inaugural Offer",
       price:    "Free",
-      period:   "Forever",
-      color:    "#6B7280",
-      bg:       "#F9FAFB",
-      border:   "#E5E7EB",
-      badge:    "",
+      period:   "Limited launch offer",
+      color:    "#059669",
+      bg:       "#ECFDF5",
+      border:   "#A7F3D0",
+      badge:    "Free",
+      badgeIcon:"🎉",
       features: [
         "Basic profile",
-        "Apply to 5 jobs/month",
+        "Apply to up to 5 jobs",
         "View job listings",
-        "Email alerts",
+        "Job alerts",
       ],
-      cta: "Sign Up Free",
+      cta: "Get Started Free",
       ctaStyle: { background:"#F3F4F6", color:"#374151", border:"1px solid #D1D5DB" },
     },
     {
-      name:     "Pro Teacher",
-      price:    "₹299",
-      period:   "/month",
-      color:    "#059669",
-      bg:       "#ECFDF5",
-      border:   "#6EE7B7",
-      badge:    "Recommended",
+      name:     "Starter",
+      color:    "#1A56DB",
+      bg:        "#EFF5FF",
+      border:    "#BFDBFE",
+      badge:     "",
+      prices: {
+        "1m": { price:"₹1,500", period:"+ GST / month" },
+        "3m": { price:"₹4,050", period:"+ GST / 3 months", note:"≈ ₹1,350/mo · save 10%" },
+      },
       features: [
-        "Unlimited job applications",
+        "Apply to up to 10 jobs",
         "Priority profile visibility",
-        "Direct contact from schools",
-        "Resume builder",
-        "Interview tips & resources",
-        "Salary insights",
-        "Career counselling session",
+        "Resume building",
+        "Access to shortlisted jobs",
+        { text:"Regular job alerts", highlight:true },
       ],
-      cta: "Go Pro",
-      ctaStyle: { background:"#059669", color:"#fff" },
+      cta: "Choose Starter",
+      ctaStyle: { background:"#1A56DB", color:"#fff" },
+    },
+    {
+      name:     "Premium",
+      color:    "#4F46E5",
+      bg:        "#EEF2FF",
+      border:    "#C7D2FE",
+      badge:     "Most Popular",
+      badgeIcon: "⭐",
+      prices: {
+        "1m": { price:"₹2,000", period:"+ GST / month" },
+        "3m": { price:"₹5,400", period:"+ GST / 3 months", note:"≈ ₹1,800/mo · save 10%" },
+      },
+      features: [
+        "Top priority visibility",
+        "Direct interview opportunities from schools",
+        "Dedicated profile promotion",
+        { text:"Early alerts to high-paying roles", highlight:true },
+      ],
+      cta: "Go Premium",
+      ctaStyle: { background:"#4F46E5", color:"#fff" },
+    },
+    {
+      name:     "Prestige",
+      subtitle: "Exclusively for leadership roles",
+      color:    "#B45309",
+      bg:        "#FFFBEB",
+      border:    "#FDE68A",
+      badge:     "Leadership",
+      badgeIcon: "👑",
+      prices: {
+        "1m": { price:"₹2,500", period:"+ GST / month" },
+        "3m": { price:"₹6,750", period:"+ GST / 3 months", note:"≈ ₹2,250/mo · save 10%" },
+      },
+      features: [
+        "Dedicated HR for interviews",
+        "Profile boosting",
+        { text:"Early job alerts", highlight:true },
+      ],
+      cta: "Go Prestige",
+      ctaStyle: { background:"#B45309", color:"#fff" },
     },
   ],
   tutor: [
-   {
-      name:     "Starter",
-      color:    "#DB2777",
-      bg:       "#FDF2F8",
-      border:   "#F9A8D4",
-      badge:    "Most Popular",
-      badgeIcon:"⭐",
+    {
+      name:     "Inaugural Offer",
+      color:    "#0891B2",
+      bg:        "#ECFEFF",
+      border:    "#67E8F9",
+      badge:     "Launch Offer",
+      badgeIcon: "🎉",
       prices: {
         "1m": { price:"₹1,500", period:"+ GST / month" },
-        "3m": { price:"₹2,700", period:"+ GST / 3 months", note:"≈ ₹900/mo · save 10%" },
+        "3m": { price:"₹4,050", period:"+ GST / 3 months", note:"≈ ₹1,350/mo · save 10%" },
       },
       features: [
-        "upto 10 profiles apply",
-        "improved profile visibility",
-        "shortlisted job alerts"
-        // { text:"60 unlock credits", highlight:true },
+        "Apply to up to 10 profiles",
+        "Improved profile visibility",
+        { text:"Shortlisted job alerts", highlight:true },
       ],
-      cta: "Choose Starter",
-      ctaStyle: { background:"#DB2777", color:"#fff" },
+      cta: "Get the Offer",
+      ctaStyle: { background:"#0891B2", color:"#fff" },
     },
     {
       name:      "Pro Tutor",
-      price:     "₹399",
-      period:    "/month",
       color:     "#0E7490",
-      bg:        "#ECFEFF",
-      border:    "#67E8F9",
-      badge:     "Recommended",
+      bg:        "#CFFAFE",
+      border:    "#22D3EE",
+      badge:     "Most Popular",
       badgeIcon: "⭐",
+      prices: {
+        "1m": { price:"₹3,000", period:"+ GST / month" },
+        "3m": { price:"₹8,100", period:"+ GST / 3 months", note:"≈ ₹2,700/mo · save 10%" },
+      },
       features: [
-        "Unlimited lead responses",
-        "Priority profile visibility",
-        "Direct contact from parents",
-        "Verified tutor badge",
-        "Subject & hourly-rate showcase",
-        "Online & home tuition listings",
-        "Performance insights",
+        "Up to 20 job applications",
+        "Priority profile shown to parents",
+        "Direct recruiter support",
+        { text:"Highlighted profile", highlight:true },
       ],
       cta: "Go Pro",
       ctaStyle: { background:"#0E7490", color:"#fff" },
@@ -527,8 +566,8 @@ export default function PricingPage({ setPage }) {
         {/* Plans */}
         <div className="container" style={{ padding:"48px 0" }}>
 
-          {/* Billing period toggle — Parents plans */}
-          {tab === "parent" && (
+          {/* Billing period toggle — shown for plans that offer monthly / 3-monthly */}
+          {plans.some(p => p.prices) && (
             <div style={{ display:"flex", justifyContent:"center", marginBottom:30 }}>
               <div style={{ display:"inline-flex", background:"#fff", borderRadius:12, padding:4, gap:4, border:"1px solid #E5E7EB", boxShadow:"0 2px 8px rgba(0,0,0,.05)" }}>
                 {[["1m","1 Month"],["3m","3 Months · save 10%"]].map(([id, label]) => (
@@ -543,7 +582,7 @@ export default function PricingPage({ setPage }) {
             </div>
           )}
 
-          <div className="pricing-grid" style={{ display:"grid", gridTemplateColumns:`repeat(${plans.length},1fr)`, gap:24, maxWidth: plans.length===2 ? 800 : 1000, margin:"0 auto" }}>
+          <div className="pricing-grid" style={{ display:"grid", gridTemplateColumns:`repeat(${plans.length},1fr)`, gap:24, maxWidth: plans.length===2 ? 800 : plans.length>=4 ? 1280 : 1000, margin:"0 auto" }}>
             {plans.map(plan => (
               <div key={plan.name}
                 style={{ background:"#fff", borderRadius:20, border:`2px solid ${plan.border}`, padding:32, position:"relative", transition:"all .2s",
