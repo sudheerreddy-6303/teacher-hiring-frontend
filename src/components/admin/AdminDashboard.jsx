@@ -3,6 +3,186 @@ import { useAuth } from "../../context/AuthContext";
 import { FilterBar, Toast } from "../common/Shared";
 import './Admin.css';
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Day-wise registrations & jobs — one individual chart per category, each
+   showing the daily numbers and a 7-day total. Self-contained SVG, no deps.
+   Uses the existing /admin/analytics data (regTrend + jobTrend).
+════════════════════════════════════════════════════════════════════════════ */
+function OverviewTrendChart({ analytics }) {
+  // Build the last 7 calendar days (oldest → newest)
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - i);
+    days.push(d);
+  }
+  const key = (d) => {
+    const dt = (d instanceof Date) ? d : new Date(d);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+  };
+
+  const regTrend = (analytics && analytics.regTrend) || [];
+  const jobTrend = (analytics && analytics.jobTrend) || [];
+
+  const sumFor = (rows, dayKey, roleMatch) =>
+    rows.filter(r => key(r.date) === dayKey && (roleMatch ? r.role === roleMatch : true))
+        .reduce((acc, r) => acc + Number(r.count || 0), 0);
+
+  const series = [
+    { name: "Teachers", title: "Teacher Registrations", icon: "👩‍🏫", color: "#1A56DB", bg: "#EBF5FF", values: days.map(d => sumFor(regTrend, key(d), "teacher")) },
+    { name: "Tutors",   title: "Tutor Registrations",   icon: "🧑‍🎓", color: "#6D28D9", bg: "#F5F3FF", values: days.map(d => sumFor(regTrend, key(d), "tutor"))   },
+    { name: "Parents",  title: "Parent Registrations",  icon: "👨‍👩‍👧", color: "#D97706", bg: "#FFFBEB", values: days.map(d => sumFor(regTrend, key(d), "parent"))  },
+    { name: "Jobs",     title: "Job Postings",          icon: "💼",   color: "#059669", bg: "#ECFDF5", values: days.map(d => sumFor(jobTrend, key(d), null))      },
+  ];
+
+  // One individual chart card for a single category
+  const renderMini = (s) => {
+    const total = s.values.reduce((a, b) => a + b, 0);
+    const W = 380, H = 200, padL = 26, padR = 16, padT = 30, padB = 26;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const maxVal = Math.max(1, ...s.values);
+    const x = (i) => padL + (plotW * i) / (s.values.length - 1);
+    const y = (v) => padT + plotH - (plotH * v) / maxVal;
+    const labelFor = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    const pts  = s.values.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+    const area = `${padL},${padT + plotH} ${pts} ${padL + plotW},${padT + plotH}`;
+    const hasData = total > 0;
+    const gid = `grad-${s.name}`;
+
+    return (
+      <div key={s.name} className="card" style={{ padding: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <span style={{ width: 34, height: 34, borderRadius: 9, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{s.icon}</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>{s.title}</span>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 26, fontWeight: 800, color: s.color, lineHeight: 1, fontFamily: "Playfair Display,serif" }}>{total}</div>
+            <div style={{ fontSize: 10, color: "#9CA3AF", fontWeight: 700, textTransform: "uppercase", letterSpacing: .4 }}>added · last 7 days</div>
+          </div>
+        </div>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block" }} preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={s.color} stopOpacity="0.18" />
+              <stop offset="100%" stopColor={s.color} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <line x1={padL} y1={padT + plotH} x2={padL + plotW} y2={padT + plotH} stroke="#EEF2F7" strokeWidth="1" />
+          {hasData && <polygon points={area} fill={`url(#${gid})`} />}
+          {hasData && <polyline points={pts} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
+          {s.values.map((v, i) => (
+            <g key={i}>
+              {hasData && <circle cx={x(i)} cy={y(v)} r="3.2" fill="#fff" stroke={s.color} strokeWidth="2" />}
+              <text x={x(i)} y={(hasData ? y(v) : padT + plotH) - 9} textAnchor="middle" fontSize="11" fontWeight="700" fill={s.color}>{v}</text>
+              <text x={x(i)} y={H - 8} textAnchor="middle" fontSize="9" fill="#9CA3AF">{labelFor(days[i])}</text>
+            </g>
+          ))}
+          {!hasData && <text x={W / 2} y={padT + plotH / 2} textAnchor="middle" fontSize="12" fill="#9CA3AF">No additions in the last 7 days</text>}
+        </svg>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      {!analytics ? (
+        <div className="card" style={{ padding: 30, textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>Loading charts…</div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 18 }}>
+          {series.map(renderMini)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Analytics tab — combined multi-line registrations trend (last 7 days), one
+   line per role. Self-contained SVG, no extra deps. Uses regTrend data.
+════════════════════════════════════════════════════════════════════════════ */
+function AnalyticsRegChart({ regTrend }) {
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - i);
+    days.push(d);
+  }
+  const key = (d) => {
+    const dt = (d instanceof Date) ? d : new Date(d);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+  };
+  const rows = regTrend || [];
+  const sumFor = (dayKey, role) =>
+    rows.filter(r => key(r.date) === dayKey && r.role === role).reduce((a, r) => a + Number(r.count || 0), 0);
+
+  const roles = [
+    { role: "teacher", label: "Teachers", color: "#1A56DB" },
+    { role: "tutor",   label: "Tutors",   color: "#6D28D9" },
+    { role: "parent",  label: "Parents",  color: "#D97706" },
+    { role: "school",  label: "Schools",  color: "#0EA5E9" },
+  ];
+  const series = roles.map(r => ({ ...r, values: days.map(d => sumFor(key(d), r.role)) }));
+
+  const W = 760, H = 300, padL = 36, padR = 18, padT = 20, padB = 40;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxVal = Math.max(1, ...series.flatMap(s => s.values));
+  const yTicks = 4;
+  const x = (i) => padL + (plotW * i) / (days.length - 1);
+  const y = (v) => padT + plotH - (plotH * v) / maxVal;
+  const labelFor = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  const hasData = series.some(s => s.values.some(v => v > 0));
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 10 }}>
+        {series.map(s => (
+          <div key={s.role} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 12, height: 12, borderRadius: 3, background: s.color, display: "inline-block" }} />
+            <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 700 }}>{s.label} ({s.values.reduce((a, b) => a + b, 0)})</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ width: "100%", overflowX: "auto" }}>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ minWidth: 520, display: "block" }} preserveAspectRatio="xMidYMid meet">
+          {Array.from({ length: yTicks + 1 }).map((_, i) => {
+            const val = Math.round((maxVal * (yTicks - i)) / yTicks);
+            const yy = padT + (plotH * i) / yTicks;
+            return (
+              <g key={i}>
+                <line x1={padL} y1={yy} x2={W - padR} y2={yy} stroke="#EEF2F7" strokeWidth="1" />
+                <text x={padL - 8} y={yy + 4} textAnchor="end" fontSize="11" fill="#9CA3AF">{val}</text>
+              </g>
+            );
+          })}
+          {days.map((d, i) => (
+            <text key={i} x={x(i)} y={H - padB + 20} textAnchor="middle" fontSize="11" fill="#6B7280">{labelFor(d)}</text>
+          ))}
+          {hasData && series.map(s => {
+            const pts = s.values.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+            return (
+              <g key={s.role}>
+                <polyline points={pts} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                {s.values.map((v, i) => (
+                  <circle key={i} cx={x(i)} cy={y(v)} r="3.5" fill="#fff" stroke={s.color} strokeWidth="2">
+                    <title>{`${s.label} · ${labelFor(days[i])}: ${v}`}</title>
+                  </circle>
+                ))}
+              </g>
+            );
+          })}
+          {!hasData && (
+            <text x={W / 2} y={padT + plotH / 2} textAnchor="middle" fontSize="13" fill="#9CA3AF">No registrations in the last 7 days yet</text>
+          )}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 function AdminDashboard({ setPage }) {
   const { logout } = useAuth();
   const [tab, setTab]   = useState("overview");
@@ -41,6 +221,7 @@ function AdminDashboard({ setPage }) {
   useEffect(() => {
     fetchData("stats",    "/admin/stats",    setStats);
     fetchData("pending",  "/admin/pending-jobs", setPending);
+    fetchData("analytics", "/admin/analytics", setAnalytics);
   }, []);
 
   // Load tab-specific data on tab change
@@ -179,6 +360,9 @@ function AdminDashboard({ setPage }) {
                 </div>
               ))}
             </div>
+
+            {/* Day-wise additions line graph */}
+            <OverviewTrendChart analytics={analytics} />
 
             {/* Pending jobs preview */}
             {pending.length > 0 && (
@@ -1038,28 +1222,7 @@ function AdminDashboard({ setPage }) {
                   {analytics.regTrend.length === 0 ? (
                     <div style={{ color:"#9CA3AF", textAlign:"center", padding:"30px 0" }}>No registrations in the last 7 days</div>
                   ) : (
-                    <div style={{ overflowX:"auto" }}>
-                      <table style={{ width:"100%", borderCollapse:"collapse" }}>
-                        <thead>
-                          <tr style={{ background:"#F9FAFB" }}>
-                            <th style={{ padding:"10px 14px", textAlign:"left", fontSize:11, color:"#6B7280", fontWeight:800, textTransform:"uppercase" }}>Date</th>
-                            <th style={{ padding:"10px 14px", textAlign:"left", fontSize:11, color:"#6B7280", fontWeight:800, textTransform:"uppercase" }}>Role</th>
-                            <th style={{ padding:"10px 14px", textAlign:"left", fontSize:11, color:"#6B7280", fontWeight:800, textTransform:"uppercase" }}>Count</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {analytics.regTrend.map((r,i) => (
-                            <tr key={i} style={{ borderBottom:"1px solid #F3F4F6" }}>
-                              <td style={{ padding:"10px 14px", fontSize:13 }}>{new Date(r.date).toLocaleDateString()}</td>
-                              <td style={{ padding:"10px 14px" }}>
-                                <span className={"badge "+(r.role==="teacher"?"bblue":r.role==="school"?"bsky":"bamber")}>{r.role}</span>
-                              </td>
-                              <td style={{ padding:"10px 14px", fontWeight:700, color:"#1A56DB" }}>{r.count}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <AnalyticsRegChart regTrend={analytics.regTrend} />
                   )}
                 </div>
               </>
