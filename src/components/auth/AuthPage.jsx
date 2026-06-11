@@ -29,6 +29,16 @@ function AuthPage({ mode, setPage }) {
   const [loginOtpLoading,setLoginOtpLoading]= useState(false);
   const [loginResendTimer,setLoginResendTimer] = useState(0);
 
+  // Forgot-password state (mode stays "login"; this is a sub-flow)
+  const [forgotMode,    setForgotMode]    = useState(false);
+  const [forgotStep,    setForgotStep]    = useState(1); // 1=enter email, 2=otp+new password, 3=success
+  const [forgotEmail,   setForgotEmail]   = useState("");
+  const [forgotOtp,     setForgotOtp]     = useState(["","","","","",""]);
+  const [forgotNewPw,   setForgotNewPw]   = useState("");
+  const [forgotErr,     setForgotErr]     = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotTimer,   setForgotTimer]   = useState(0);
+
   const [roleSelected, setRoleSelected] = useState(() => {
     // If role was pre-selected from welcome popup, skip role selection screen
     const saved = localStorage.getItem("acadhr_selected_role");
@@ -101,6 +111,77 @@ function AuthPage({ mode, setPage }) {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
+  // FORGOT PASSWORD FLOW
+  // ════════════════════════════════════════════════════════════════════════════
+  // Dedicated OTP helpers for the forgot flow (prefix "forgot")
+  function handleForgotOtpChange(val, idx, setter, arr) {
+    if (!/^\d?$/.test(val)) return;
+    const next = [...arr]; next[idx] = val; setter(next);
+    if (val && idx < 5) {
+      setTimeout(() => document.getElementById(`otp-forgot-${idx+1}`)?.focus(), 0);
+    }
+  }
+  function handleForgotOtpKeyDown(e, idx, setter, arr) {
+    if (e.key === "Backspace" && !arr[idx] && idx > 0) {
+      setTimeout(() => document.getElementById(`otp-forgot-${idx-1}`)?.focus(), 0);
+    }
+  }
+
+  function openForgot() {
+    setForgotMode(true);
+    setForgotStep(1);
+    setForgotEmail(form.email || "");
+    setForgotOtp(["","","","","",""]);
+    setForgotNewPw("");
+    setForgotErr("");
+  }
+
+  function closeForgot() {
+    setForgotMode(false);
+    setForgotStep(1);
+    setForgotOtp(["","","","","",""]);
+    setForgotNewPw("");
+    setForgotErr("");
+  }
+
+  async function handleSendForgotOtp(e) {
+    if (e) e.preventDefault();
+    setForgotErr(""); setForgotLoading(true);
+    try {
+      const res = await import('../../api.js').then(m => m.authAPI.sendForgotOtp(forgotEmail));
+      setForgotStep(2);
+      setForgotOtp(["","","","","",""]);
+      if (res.dev) setForgotErr("⚠️ Dev mode: OTP is printed in the server console (no email configured).");
+      startResendTimer(setForgotTimer);
+    } catch (ex) { setForgotErr(ex.message); }
+    finally { setForgotLoading(false); }
+  }
+
+  async function handleResetPassword() {
+    const otp = forgotOtp.join("");
+    if (otp.length < 6) { setForgotErr("Please enter all 6 digits."); return; }
+    if (forgotNewPw.length < 8) { setForgotErr("Password must be at least 8 characters."); return; }
+    setForgotLoading(true); setForgotErr("");
+    try {
+      await import('../../api.js').then(m => m.authAPI.resetPassword(forgotEmail, otp, forgotNewPw));
+      setForgotStep(3);
+    } catch (ex) {
+      setForgotErr(ex.message);
+      setForgotOtp(["","","","","",""]);
+      document.getElementById(`otp-forgot-0`)?.focus();
+    } finally { setForgotLoading(false); }
+  }
+
+  async function handleResendForgotOtp() {
+    try {
+      await import('../../api.js').then(m => m.authAPI.sendForgotOtp(forgotEmail));
+      setForgotOtp(["","","","","",""]);
+      setForgotErr("");
+      startResendTimer(setForgotTimer);
+    } catch (ex) { setForgotErr(ex.message); }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
   // SIGNUP FLOW
   // ════════════════════════════════════════════════════════════════════════════
   async function handleSignupNext(e) {
@@ -145,7 +226,7 @@ function AuthPage({ mode, setPage }) {
         student_name:      form.student_name,
         student_class:     form.student_class,
         board:             form.board_pref,
-        subject:           form.subject_pref,
+        subject:           form.role === "parent" ? form.subject_pref : form.subject,
         location:          form.location_pref,
         mode:              form.mode_pref,
         preferred_time:    form.preferred_time,
@@ -217,6 +298,10 @@ function AuthPage({ mode, setPage }) {
           {/* Back button */}
           <button
             onClick={() => {
+              if (mode==="login" && forgotMode) {
+                if (forgotStep===2) { setForgotStep(1); setForgotErr(""); return; }
+                closeForgot(); return;
+              }
               if (mode==="login" && loginStep===2) { setLoginStep(1); return; }
               if (mode==="signup" && step>1) { setStep(s => s-1); setErr(""); return; }
               if (mode==="signup" && step===1 && roleSelected) { setRoleSelected(false); setErr(""); return; }
@@ -227,7 +312,9 @@ function AuthPage({ mode, setPage }) {
             onMouseLeave={e => e.currentTarget.style.color="#6B7280"}
           >
             <span style={{ fontSize:16 }}>←</span>
-            {mode==="login" && loginStep===2 ? "Back to credentials" :
+            {mode==="login" && forgotMode && forgotStep===2 ? "Back to email" :
+             mode==="login" && forgotMode ? "Back to sign in" :
+             mode==="login" && loginStep===2 ? "Back to credentials" :
              mode==="signup" && step===2 ? "Back to basic info" :
              mode==="signup" && step===3 ? "Back to details" :
              mode==="signup" && roleSelected ? "Back to role selection" :
@@ -238,7 +325,9 @@ function AuthPage({ mode, setPage }) {
           {!(mode==="signup" && !roleSelected) && (
             <h3 style={{ fontSize:22, marginBottom:4, color:"#111827" }}>
               {mode==="login"
-                ? (loginStep===1 ? "Sign In" : "Enter Verification Code")
+                ? (forgotMode
+                    ? (forgotStep===1 ? "Forgot Password" : forgotStep===2 ? "Reset Password" : "Password Reset")
+                    : (loginStep===1 ? "Sign In" : "Enter Verification Code"))
                 : (step===1 ? "Create Your Account" : step===2 ? "Professional Details" : "Verify Your Email")}
             </h3>
           )}
@@ -247,7 +336,7 @@ function AuthPage({ mode, setPage }) {
           )}
           {!(mode==="signup" && !roleSelected) && (
             <p style={{ color:"#9CA3AF", marginBottom:20, fontSize:14 }}>
-              {mode==="signup" ? `Step ${step} of 3 — ${stepLabels[step-1]}` : loginStep===1 ? "Enter your credentials to continue" : `Code sent to ${form.email}`}
+              {mode==="signup" ? `Step ${step} of 3 — ${stepLabels[step-1]}` : forgotMode ? (forgotStep===1 ? "Enter your registered email to receive a reset code" : forgotStep===2 ? `Code sent to ${forgotEmail}` : "All done!") : loginStep===1 ? "Enter your credentials to continue" : `Code sent to ${form.email}`}
             </p>
           )}
 
@@ -268,7 +357,7 @@ function AuthPage({ mode, setPage }) {
           {/* ════════════════════════════════════════════════════════════════
               LOGIN MODE
           ════════════════════════════════════════════════════════════════ */}
-          {mode==="login" && (
+          {mode==="login" && !forgotMode && (
             <>
               {loginStep===1 && (
                 <form onSubmit={handleSendLoginOtp}>
@@ -277,6 +366,12 @@ function AuthPage({ mode, setPage }) {
                   </div>
                   <div className="fg"><label className="flabel">Password</label>
                     <input className="input" type="password" placeholder="Enter password" value={form.password} onChange={e => up("password", e.target.value)} required />
+                  </div>
+                  <div style={{ textAlign:"right", marginTop:-8, marginBottom:14 }}>
+                    <span onClick={openForgot}
+                      style={{ color:"#1A56DB", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+                      Forgot password?
+                    </span>
                   </div>
                   <button className="btn btn-primary" style={{ width:"100%", justifyContent:"center", padding:"13px", marginTop:4 }} disabled={loginOtpLoading}>
                     {loginOtpLoading ? <Spinner /> : "Send Verification Code →"}
@@ -316,6 +411,93 @@ function AuthPage({ mode, setPage }) {
                       : <span style={{ color:"#1A56DB", cursor:"pointer", fontWeight:700 }} onClick={handleResendLoginOtp}>Resend Code</span>
                     }
                   </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════════
+              FORGOT PASSWORD MODE
+          ════════════════════════════════════════════════════════════════ */}
+          {mode==="login" && forgotMode && (
+            <>
+              {/* Step 1 — enter registered email */}
+              {forgotStep===1 && (
+                <form onSubmit={handleSendForgotOtp}>
+                  <div style={{ background:"#EBF5FF", border:"1px solid #BFDBFE", borderRadius:12, padding:"14px 16px", marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
+                    <span style={{ fontSize:22 }}>🔒</span>
+                    <div>
+                      <div style={{ fontWeight:700, fontSize:14, color:"#1E429F" }}>Reset your password</div>
+                      <div style={{ fontSize:12, color:"#6B7280", marginTop:3 }}>We'll send a 6-digit code to your registered email.</div>
+                    </div>
+                  </div>
+                  <div className="fg"><label className="flabel">Registered Email Address</label>
+                    <input className="input" type="email" placeholder="your@email.com" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} required />
+                  </div>
+                  {forgotErr && <div className={`alert ${forgotErr.startsWith('⚠️') ? 'a-warn' : 'a-err'}`}>{forgotErr}</div>}
+                  <button className="btn btn-primary" style={{ width:"100%", justifyContent:"center", padding:"13px", marginTop:4 }} disabled={forgotLoading}>
+                    {forgotLoading ? <Spinner /> : "Send Reset Code →"}
+                  </button>
+                  <div style={{ textAlign:"center", marginTop:16, fontSize:13 }}>
+                    <span style={{ cursor:"pointer", color:"#374151", fontWeight:600 }} onClick={closeForgot}>← Back to Sign In</span>
+                  </div>
+                </form>
+              )}
+
+              {/* Step 2 — enter OTP + new password */}
+              {forgotStep===2 && (
+                <div>
+                  <div style={{ background:"#EBF5FF", border:"1px solid #BFDBFE", borderRadius:12, padding:"14px 16px", marginBottom:20, display:"flex", gap:10, alignItems:"flex-start" }}>
+                    <span style={{ fontSize:22 }}>📧</span>
+                    <div>
+                      <div style={{ fontWeight:700, fontSize:14, color:"#1E429F" }}>Check your inbox</div>
+                      <div style={{ fontSize:13, color:"#1A56DB" }}>{forgotEmail}</div>
+                      <div style={{ fontSize:12, color:"#6B7280", marginTop:3 }}>Enter the 6-digit code and set a new password.</div>
+                    </div>
+                  </div>
+
+                  <div className="fg">
+                    <label className="flabel">6-Digit Verification Code</label>
+                    <OtpBoxes arr={forgotOtp} setter={setForgotOtp} prefix="forgot" disabled={forgotLoading} onChangeFn={handleForgotOtpChange} onKeyDownFn={handleForgotOtpKeyDown} />
+                  </div>
+
+                  <div className="fg"><label className="flabel">New Password</label>
+                    <input className="input" type="password" placeholder="Min. 8 characters" value={forgotNewPw} onChange={e => setForgotNewPw(e.target.value)} minLength={8} required />
+                  </div>
+
+                  {forgotErr && <div className={`alert ${forgotErr.startsWith('⚠️') ? 'a-warn' : 'a-err'}`}>{forgotErr}</div>}
+
+                  <button type="button" className="btn btn-primary" style={{ width:"100%", justifyContent:"center", padding:"13px", marginBottom:12 }}
+                    disabled={forgotLoading} onClick={handleResetPassword}>
+                    {forgotLoading ? <Spinner /> : "Reset Password ✓"}
+                  </button>
+
+                  <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, color:"#9CA3AF" }}>
+                    <span style={{ cursor:"pointer", color:"#374151" }} onClick={() => { setForgotStep(1); setForgotOtp(["","","","","",""]); setForgotErr(""); }}>
+                      ← Use different email
+                    </span>
+                    {forgotTimer > 0
+                      ? <span>Resend in {forgotTimer}s</span>
+                      : <span style={{ color:"#1A56DB", cursor:"pointer", fontWeight:700 }} onClick={handleResendForgotOtp}>Resend Code</span>
+                    }
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3 — success */}
+              {forgotStep===3 && (
+                <div>
+                  <div style={{ background:"#F0FDF4", border:"1px solid #A7F3D0", borderRadius:12, padding:"20px 18px", marginBottom:20, display:"flex", gap:12, alignItems:"flex-start" }}>
+                    <span style={{ fontSize:24 }}>✅</span>
+                    <div>
+                      <div style={{ fontWeight:800, fontSize:15, color:"#065F46", marginBottom:3 }}>Password reset successful</div>
+                      <div style={{ fontSize:13, color:"#047857", lineHeight:1.6 }}>Your password has been updated. You can now sign in with your new password.</div>
+                    </div>
+                  </div>
+                  <button className="btn btn-primary" style={{ width:"100%", justifyContent:"center", padding:"13px" }}
+                    onClick={() => { closeForgot(); up("password", ""); }}>
+                    Back to Sign In →
+                  </button>
                 </div>
               )}
             </>

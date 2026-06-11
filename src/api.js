@@ -64,6 +64,13 @@ export const authAPI = {
   resendOtp: (email, name, type) =>
     request('POST', '/auth/resend-otp', { email, name, type }),
 
+  // Forgot / reset password flow
+  sendForgotOtp: (email) =>
+    request('POST', '/auth/send-forgot-otp', { email }),
+
+  resetPassword: (email, otp, password) =>
+    request('POST', '/auth/reset-password', { email, otp, password }),
+
   // Get current user from token
   me: () => request('GET', '/auth/me', null, true),
 };
