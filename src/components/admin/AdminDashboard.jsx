@@ -40,13 +40,16 @@ function OverviewTrendChart({ analytics }) {
   // One individual chart card for a single category
   const renderMini = (s) => {
     const total = s.values.reduce((a, b) => a + b, 0);
+    // Cumulative running total so the line grows day by day (each day = previous + that day)
+    const cum = [];
+    s.values.reduce((acc, v) => { const t = acc + v; cum.push(t); return t; }, 0);
     const W = 380, H = 200, padL = 26, padR = 16, padT = 30, padB = 26;
     const plotW = W - padL - padR, plotH = H - padT - padB;
-    const maxVal = Math.max(1, ...s.values);
-    const x = (i) => padL + (plotW * i) / (s.values.length - 1);
+    const maxVal = Math.max(1, ...cum);
+    const x = (i) => padL + (plotW * i) / (cum.length - 1);
     const y = (v) => padT + plotH - (plotH * v) / maxVal;
     const labelFor = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-    const pts  = s.values.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+    const pts  = cum.map((v, i) => `${x(i)},${y(v)}`).join(" ");
     const area = `${padL},${padT + plotH} ${pts} ${padL + plotW},${padT + plotH}`;
     const hasData = total > 0;
     const gid = `grad-${s.name}`;
@@ -73,7 +76,7 @@ function OverviewTrendChart({ analytics }) {
           <line x1={padL} y1={padT + plotH} x2={padL + plotW} y2={padT + plotH} stroke="#EEF2F7" strokeWidth="1" />
           {hasData && <polygon points={area} fill={`url(#${gid})`} />}
           {hasData && <polyline points={pts} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
-          {s.values.map((v, i) => (
+          {cum.map((v, i) => (
             <g key={i}>
               {hasData && <circle cx={x(i)} cy={y(v)} r="3.2" fill="#fff" stroke={s.color} strokeWidth="2" />}
               <text x={x(i)} y={(hasData ? y(v) : padT + plotH) - 9} textAnchor="middle" fontSize="11" fontWeight="700" fill={s.color}>{v}</text>
@@ -1208,6 +1211,11 @@ function ParentEditModal({ parent, api, hdr, onClose, onToggle, onSaved }) {
     tutor_gender_pref: parent.tutor_gender_pref || "",
     experience_req:    parent.experience_req || "",
     notes:             parent.notes || "",
+    state:             parent.state || "",
+    pincode:           parent.pincode || "",
+    landmark:          parent.landmark || "",
+    institute_name:    parent.institute_name || "",
+    hourly_budget:     parent.hourly_budget || "",
   }));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg]       = useState("");
@@ -1271,9 +1279,15 @@ function ParentEditModal({ parent, api, hdr, onClose, onToggle, onSaved }) {
             <div className="fg"><label className="flabel">Subject(s) Required</label><input className="input" placeholder="e.g. Mathematics, Physics" value={form.subject} onChange={e=>up("subject",e.target.value)} /></div>
           </div>
           <div className="fg"><label className="flabel">Location / Area</label><input className="input" placeholder="e.g. Banjara Hills, Hyderabad" value={form.location} onChange={e=>up("location",e.target.value)} /></div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">State</label><input className="input" placeholder="e.g. Telangana" value={form.state} onChange={e=>up("state",e.target.value)} /></div>
+            <div className="fg"><label className="flabel">Pincode</label><input className="input" placeholder="e.g. 500034" value={form.pincode} onChange={e=>up("pincode",e.target.value)} /></div>
+          </div>
+          <div className="fg"><label className="flabel">Landmark / Area</label><input className="input" placeholder="e.g. Near City Center Mall" value={form.landmark} onChange={e=>up("landmark",e.target.value)} /></div>
+          <div className="fg"><label className="flabel">School / College / Institute Name</label><input className="input" placeholder="e.g. Delhi Public School" value={form.institute_name} onChange={e=>up("institute_name",e.target.value)} /></div>
           <div className="fg"><label className="flabel">Tutoring Mode</label>
             <div style={{ display:"flex", gap:10, marginTop:6 }}>
-              {["Home","Online","Either"].map(m => (
+              {["Home","Online","Offline & Online"].map(m => (
                 <label key={m} onClick={() => up("mode",m)} style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"9px 0", borderRadius:10, border:`2px solid ${form.mode===m?"#059669":"#E5E7EB"}`, background:form.mode===m?"#ECFDF5":"#F9FAFB", cursor:"pointer", fontSize:13, fontWeight:700, color:form.mode===m?"#059669":"#6B7280", userSelect:"none" }}>
                   {m==="Home"?"🏠":m==="Online"?"💻":"🔄"} {m}
                 </label>
@@ -1282,9 +1296,7 @@ function ParentEditModal({ parent, api, hdr, onClose, onToggle, onSaved }) {
           </div>
           <div className="grid2">
             <div className="fg"><label className="flabel">Preferred Time</label>
-              <select className="input" value={form.preferred_time} onChange={e=>up("preferred_time",e.target.value)}>
-                <option value="">Select</option><option>Morning (6am–12pm)</option><option>Afternoon (12pm–4pm)</option><option>Evening (4pm–8pm)</option><option>Flexible</option>
-              </select>
+              <input className="input" placeholder="e.g. Morning, Evening" value={form.preferred_time} onChange={e=>up("preferred_time",e.target.value)} />
             </div>
             <div className="fg"><label className="flabel">Monthly Budget (₹)</label>
               <select className="input" value={form.budget} onChange={e=>up("budget",e.target.value)}>
@@ -1292,6 +1304,7 @@ function ParentEditModal({ parent, api, hdr, onClose, onToggle, onSaved }) {
               </select>
             </div>
           </div>
+          <div className="fg"><label className="flabel">Hourly Budget (₹)</label><input className="input" type="number" min="0" placeholder="e.g. 500" value={form.hourly_budget} onChange={e=>up("hourly_budget",e.target.value)} /></div>
           <div className="grid2">
             <div className="fg"><label className="flabel">Tutor Gender Preference</label>
               <select className="input" value={form.tutor_gender_pref} onChange={e=>up("tutor_gender_pref",e.target.value)}>
