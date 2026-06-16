@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { FilterBar, Toast } from "../common/Shared";
+import { SUBS, INDIA_LOCATIONS } from "../../constants";
 import './Admin.css';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -183,6 +184,1281 @@ function AnalyticsRegChart({ regTrend }) {
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Admin "Add" modals — these render the SAME forms that teachers, tutors,
+   parents and schools fill in their own dashboards, so the admin can post a
+   teacher profile, tutor profile, tuition requirement or job/position on
+   anyone's behalf. Each form posts to the matching /api/admin create endpoint.
+════════════════════════════════════════════════════════════════════════════ */
+const ADD_META = {
+  teacher: { title:"Add Teacher",             icon:"👩‍🏫", endpoint:"/admin/teachers", refresh:"teachers" },
+  tutor:   { title:"Add Tutor",               icon:"🧑‍🎓", endpoint:"/admin/tutors",   refresh:"tutors"   },
+  tuition: { title:"Add Tuition Requirement", icon:"📒",   endpoint:"/admin/tuitions", refresh:"parents"  },
+  job:     { title:"Post a New Requirement",  icon:"💼",   endpoint:"/admin/jobs",     refresh:"jobs"     },
+};
+
+const SECTION = { fontWeight:800, fontSize:13, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginTop:22, marginBottom:14, paddingBottom:6, borderBottom:"2px solid #EBF5FF" };
+
+// Reusable pill / chip selector — matches the style used across the role dashboards.
+function Chips({ options, value, onChange, multi=false }) {
+  const selected = multi ? (value ? String(value).split(",").map(s=>s.trim()).filter(Boolean) : []) : [value];
+  const isOn = o => multi ? selected.includes(o) : value === o;
+  const toggle = o => {
+    if (!multi) return onChange(o);
+    const cur = selected.includes(o) ? selected.filter(x=>x!==o) : [...selected, o];
+    onChange(cur.join(", "));
+  };
+  return (
+    <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:6 }}>
+      {options.map(o => (
+        <label key={o} onClick={() => toggle(o)}
+          style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:20,
+            border:`1.5px solid ${isOn(o)?"#1A56DB":"#D1D5DB"}`, background:isOn(o)?"#EBF5FF":"#fff",
+            cursor:"pointer", fontSize:13, fontWeight:600, color:isOn(o)?"#1A56DB":"#374151", userSelect:"none" }}>
+          {isOn(o) ? (multi?"✓ ":"● ") : (multi?"":"○ ")}{o}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+/* ── Teacher form — mirrors TeacherDashboard → My Profile ── */
+// ── Pill helpers that match the teacher dashboard's selectors ──
+function PillRadio({ options, value, onChange, color="#1A56DB", bg="#EBF5FF" }) {
+  return (
+    <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
+      {options.map(o => {
+        const on = value === o;
+        return (
+          <label key={o} onClick={()=>onChange(o)}
+            style={{ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${on?color:"#D1D5DB"}`, background:on?bg:"#fff", cursor:"pointer", fontSize:12, fontWeight:700, color:on?color:"#374151", userSelect:"none" }}>
+            {on?"● ":"○ "}{o}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+function PillMulti({ options, value, onChange, color="#1A56DB", bg="#EBF5FF", grid=false }) {
+  const sel = value ? String(value).split(",").map(x=>x.trim()).filter(Boolean) : [];
+  const toggle = o => { const next = sel.includes(o) ? sel.filter(x=>x!==o) : [...sel,o]; onChange(next.join(", ")); };
+  const wrapStyle = grid
+    ? { display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:8, marginTop:6 }
+    : { display:"flex", gap:8, flexWrap:"wrap", marginTop:6 };
+  return (
+    <div style={wrapStyle}>
+      {options.map(o => {
+        const on = sel.includes(o);
+        return (
+          <label key={o} onClick={()=>toggle(o)}
+            style={{ padding:"7px 14px", borderRadius:20, border:`1.5px solid ${on?color:"#D1D5DB"}`, background:on?bg:"#fff", cursor:"pointer", fontSize:12, fontWeight:700, color:on?color:"#374151", userSelect:"none", display:"flex", alignItems:"center", justifyContent: grid?"center":"flex-start", gap:4 }}>
+            {on?"✓ ":""}{o}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+function YesNoPills({ value, onChange, color="#1A56DB" }) {
+  return (
+    <div style={{ display:"flex", gap:10, marginTop:6 }}>
+      {["Yes","No"].map(v => {
+        const on = value === v;
+        return (
+          <label key={v} onClick={()=>onChange(v)}
+            style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 18px", borderRadius:22, border:`2px solid ${on?color:"#D1D5DB"}`, background:on?color+"15":"#fff", cursor:"pointer", fontSize:13, fontWeight:700, color:on?color:"#374151", userSelect:"none" }}>
+            <div style={{ width:13, height:13, borderRadius:"50%", border:`2px solid ${on?color:"#9CA3AF"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              {on && <div style={{ width:5, height:5, borderRadius:"50%", background:color }} />}
+            </div>{v}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Teacher form — the SAME 5-section form a teacher fills under My Profile → Edit Profile.
+   Email is editable and a password is added because the admin is creating the account.   ── */
+function AdminTeacherForm({ form, up }) {
+  const SUB_LIST = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Telugu","Kannada","Tamil","History","Geography","Civics","Accountancy","Business Studies"];
+  const card = { padding:28, marginBottom:20 };
+  const head = { fontWeight:800, fontSize:13, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:18, paddingBottom:8, borderBottom:"2px solid #EBF5FF" };
+
+  const DEMO_MAX = 3;
+  const [demoLinks, setDemoLinks] = useState(() => {
+    const a = form.demo_link ? form.demo_link.split(",").map(x=>x.trim()).filter(Boolean) : [];
+    return a.length ? a : [""];
+  });
+  const syncDemo  = rows => { setDemoLinks(rows); up("demo_link", rows.map(s=>s.trim()).filter(Boolean).join(", ")); };
+  const setDemoAt = (i,v) => { const r=[...demoLinks]; r[i]=v; syncDemo(r); };
+  const addDemo   = () => { if (demoLinks.length < DEMO_MAX) setDemoLinks([...demoLinks, ""]); };
+  const removeDemo= i  => { if (demoLinks.length > 1) syncDemo(demoLinks.filter((_,x)=>x!==i)); };
+
+  const prefList = form.preferred_locations ? form.preferred_locations.split(",").map(x=>x.trim()).filter(Boolean) : [];
+  const specList = form.specialization ? form.specialization.split(",").map(x=>x.trim()).filter(Boolean) : [];
+
+  return (
+    <>
+      {/* ── Section 1: Basic Information ── */}
+      <div className="card" style={card}>
+        <div style={head}>👤 Basic Information</div>
+        <div className="grid2">
+          <div className="fg"><label className="flabel">Full Name *</label>
+            <input className="input" value={form.full_name} onChange={e=>up("full_name",e.target.value)} placeholder="Teacher's full name" />
+          </div>
+          <div className="fg"><label className="flabel">Mobile Number *</label>
+            <input className="input" value={form.mobile} onChange={e=>up("mobile",e.target.value)} placeholder="+91 98765 43210" />
+          </div>
+        </div>
+        <div className="grid2">
+          <div className="fg"><label className="flabel">Email ID *</label>
+            <input className="input" type="email" value={form.email} onChange={e=>up("email",e.target.value)} placeholder="teacher@email.com" />
+          </div>
+          <div className="fg"><label className="flabel">Login Password</label>
+            <input className="input" value={form.password} onChange={e=>up("password",e.target.value)} placeholder="Welcome@123" />
+          </div>
+        </div>
+        <div className="grid2">
+          <div className="fg"><label className="flabel">Date of Birth *</label>
+            <input className="input" type="date" value={form.dob} onChange={e=>up("dob",e.target.value)} />
+          </div>
+          <div className="fg"><label className="flabel">Gender *</label>
+            <PillRadio options={["Male","Female","Prefer not to say"]} value={form.gender} onChange={v=>up("gender",v)} />
+          </div>
+        </div>
+        <div className="grid2">
+          <div className="fg"><label className="flabel">Current Location (City) *</label>
+            <input className="input" value={form.current_location} onChange={e=>up("current_location",e.target.value)} placeholder="e.g. Hyderabad" />
+          </div>
+          <div className="fg"><label className="flabel">Preferred Locations (select multiple cities)</label>
+            <select className="input" value="" onChange={e=>{ const c=e.target.value; if(!c) return; if(!prefList.includes(c)) up("preferred_locations",[...prefList,c].join(", ")); }}>
+              <option value="">+ Add city (you can select multiple)</option>
+              {Object.entries(INDIA_LOCATIONS).map(([state,cities]) => (
+                <optgroup key={state} label={state}>{cities.map(c=><option key={c} value={c}>{c}</option>)}</optgroup>
+              ))}
+            </select>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:8 }}>
+              {prefList.map(c => (
+                <span key={c} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:20, border:"1.5px solid #1A56DB", background:"#EBF5FF", fontSize:12, fontWeight:700, color:"#1A56DB" }}>
+                  {c}<span onClick={()=>up("preferred_locations", prefList.filter(x=>x!==c).join(", "))} style={{ cursor:"pointer", fontWeight:900 }}>×</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 2: Qualifications & Experience ── */}
+      <div className="card" style={card}>
+        <div style={head}>🎓 Qualifications & Experience</div>
+        <div className="fg"><label className="flabel">Qualification * (B.Sc / M.Sc / B.Tech etc)</label>
+          <PillRadio options={["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","M.Sc + B.Ed","B.Tech + B.Ed","PhD","Diploma"]} value={form.qualification} onChange={v=>up("qualification",v)} />
+        </div>
+        <div className="grid2">
+          <div className="fg"><label className="flabel">Specialization / Subject * (select at least 3)</label>
+            <select className="input" value="" onChange={e=>{ const s=e.target.value; if(!s) return; if(!specList.includes(s)) up("specialization",[...specList,s].join(", ")); }}>
+              <option value="">+ Add subject (you can select multiple)</option>
+              {SUB_LIST.map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:8 }}>
+              {specList.map(s => (
+                <span key={s} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:20, border:"1.5px solid #1A56DB", background:"#EBF5FF", fontSize:12, fontWeight:700, color:"#1A56DB" }}>
+                  {s}<span onClick={()=>up("specialization", specList.filter(x=>x!==s).join(", "))} style={{ cursor:"pointer", fontWeight:900 }}>×</span>
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="fg"><label className="flabel">Current Role *</label>
+            <select className="input" value={form.current_role} onChange={e=>up("current_role",e.target.value)}>
+              <option value="">Select role</option>
+              <option>Teacher</option><option>Faculty</option><option>Tutor</option><option>Lecturer</option><option>HOD</option><option>PGT</option><option>TGT</option><option>PRT</option><option>Fresher</option>
+            </select>
+          </div>
+        </div>
+        <div className="fg"><label className="flabel">Total Experience *</label>
+          <PillRadio options={["Fresher","Less than 1 Year","1–2 Years","2–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years","15+ Years","20+ Years"]} value={form.total_experience} onChange={v=>up("total_experience",v)} />
+        </div>
+        <div className="fg"><label className="flabel">Relevant Teaching Experience *</label>
+          <PillRadio options={["Fresher","Less than 1 Year","1–2 Years","2–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years","15+ Years","20+ Years"]} value={form.relevant_experience} onChange={v=>up("relevant_experience",v)} color="#059669" bg="#ECFDF5" />
+        </div>
+        <div className="grid2">
+          <div className="fg"><label className="flabel">Current Organization</label>
+            <input className="input" value={form.current_org} onChange={e=>up("current_org",e.target.value)} placeholder="School / Coaching name" />
+          </div>
+          <div className="fg"><label className="flabel">Available From</label>
+            <input className="input" type="date" value={form.available_from} onChange={e=>up("available_from",e.target.value)} />
+          </div>
+        </div>
+        <div className="grid2">
+          <div className="fg"><label className="flabel">Current Salary (Monthly)</label>
+            <select className="input" value={form.current_salary} onChange={e=>up("current_salary",e.target.value)}>
+              <option value="">Select range</option>
+              <option>Below ₹20,000</option><option>₹20,000–₹40,000</option><option>₹40,000–₹60,000</option>
+              <option>₹60,000–₹80,000</option><option>₹80,000–₹100,000</option><option>₹100,000–₹120,000</option>
+            </select>
+          </div>
+          <div className="fg"><label className="flabel">Expected Salary (Monthly)</label>
+            <select className="input" value={form.expected_salary} onChange={e=>up("expected_salary",e.target.value)}>
+              <option value="">Select range</option>
+              <option>Below ₹20,000</option><option>₹20,000–₹40,000</option><option>₹40,000–₹60,000</option>
+              <option>₹60,000–₹80,000</option><option>₹80,000–₹100,000</option><option>₹100,000–₹120,000</option>
+              <option>₹120,000–₹140,000</option><option>₹140,000–₹160,000</option><option>₹160,000–₹180,000</option>
+              <option>₹180,000–₹200,000</option><option>Above ₹2,00,000</option><option>Above ₹3,00,000</option>
+            </select>
+          </div>
+        </div>
+        <div className="fg"><label className="flabel">Notice Period</label>
+          <PillRadio options={["Immediate","15 Days","30 Days","45 Days","60 Days","90 Days"]} value={form.notice_period} onChange={v=>up("notice_period",v)} color="#D97706" bg="#FFFBEB" />
+        </div>
+        <div className="fg"><label className="flabel">Certifications</label>
+          <PillMulti options={["B.Ed","M.Ed","CTET","TET (State)","NET","SET","NTT","D.El.Ed","BTC","PGDCA","None"]} value={form.certifications} onChange={v=>up("certifications",v)} color="#6D28D9" bg="#F5F3FF" />
+        </div>
+      </div>
+
+      {/* ── Section 3: Teaching Preferences ── */}
+      <div className="card" style={card}>
+        <div style={head}>📚 Teaching Preferences</div>
+        <div className="fg"><label className="flabel">Work Mode *</label>
+          <PillRadio options={["Full-time","Part-time","Online","Hybrid"]} value={form.work_mode} onChange={v=>up("work_mode",v)} />
+        </div>
+        <div className="fg"><label className="flabel">Tutor Type</label>
+          <PillRadio options={["School Teacher","Coaching Faculty","Home Tutor","Online Tutor"]} value={form.tutor_type} onChange={v=>up("tutor_type",v)} color="#0EA5E9" bg="#E0F2FE" />
+        </div>
+        <div className="fg"><label className="flabel">Subjects * (select all you teach)</label>
+          <PillMulti options={SUB_LIST} value={form.subjects} onChange={v=>up("subjects",v)} grid />
+          {form.subjects && <div style={{ fontSize:11, color:"#6B7280", marginTop:5 }}>Selected: {form.subjects}</div>}
+        </div>
+        <div className="fg"><label className="flabel">Grades Handling * (select all applicable)</label>
+          <PillMulti options={["Pre-Primary (Nursery–KG)","Primary (1–5)","Upper Primary (6–8)","Secondary (9–10)","Senior Secondary (11–12)","All Grades","Degree Level","Diploma Level"]} value={form.grades_handling} onChange={v=>up("grades_handling",v)} />
+        </div>
+        <div className="fg"><label className="flabel">Boards Handled * (CBSE / ICSE / State)</label>
+          <PillMulti options={["CBSE","ICSE","State Board (AP)","State Board (TS)","State Board (KA)","State Board (MH)","IB","IGCSE","All Boards"]} value={form.boards_handled} onChange={v=>up("boards_handled",v)} color="#059669" bg="#ECFDF5" />
+        </div>
+        <div className="fg"><label className="flabel">Competitive Exams Handled</label>
+          <PillMulti options={["JEE (Mains)","JEE (Advanced)","NEET","EAMCET","Olympiad","NTSE","NDA","UPSC","CA Foundation","State SET"]} value={form.competitive_exams} onChange={v=>up("competitive_exams",v)} color="#6D28D9" bg="#F5F3FF" />
+        </div>
+        <div className="fg"><label className="flabel">Teaching Mode *</label>
+          <PillRadio options={["Offline","Online","Hybrid (Both)"]} value={form.teaching_mode} onChange={v=>up("teaching_mode",v)} />
+        </div>
+        <div className="fg"><label className="flabel">Languages Known *</label>
+          <PillMulti options={["English","Hindi","Telugu","Kannada","Tamil","Malayalam","Marathi","Bengali","Gujarati","Punjabi","Urdu","Odia"]} value={form.languages} onChange={v=>up("languages",v)} color="#D97706" bg="#FFFBEB" />
+        </div>
+      </div>
+
+      {/* ── Section 4: Demo & Additional Details ── */}
+      <div className="card" style={card}>
+        <div style={head}>🎥 Demo & Additional Details</div>
+        <div className="fg"><label className="flabel">Demo Available</label>
+          <YesNoPills value={form.demo_available} onChange={v=>up("demo_available",v)} color="#059669" />
+        </div>
+        <div className="fg"><label className="flabel">Demo Link (Video URL)</label>
+          <div style={{ fontSize:12, color:"#6B7280", marginTop:2, marginBottom:8, lineHeight:1.6 }}>
+            📁 Paste the demo video as a <strong>Google Drive</strong> link. You can add 1 to 3 links.
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {demoLinks.map((link, idx) => {
+              const invalid = link.trim() !== "" && !link.includes("drive.google.com");
+              return (
+                <div key={idx}>
+                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    <input className="input" value={link} onChange={e=>setDemoAt(idx,e.target.value)} placeholder="https://drive.google.com/file/d/.../view?usp=sharing" style={{ flex:1 }} />
+                    {demoLinks.length > 1 && (
+                      <button type="button" onClick={()=>removeDemo(idx)} title="Remove this link"
+                        style={{ flexShrink:0, width:38, height:38, borderRadius:8, border:"1.5px solid #FCA5A5", background:"#FEF2F2", color:"#DC2626", fontWeight:900, fontSize:16, cursor:"pointer" }}>×</button>
+                    )}
+                  </div>
+                  {invalid && <div style={{ fontSize:11, color:"#DC2626", marginTop:4 }}>⚠️ This doesn't look like a Google Drive link.</div>}
+                </div>
+              );
+            })}
+            {demoLinks.length < DEMO_MAX && (
+              <button type="button" onClick={addDemo}
+                style={{ alignSelf:"flex-start", padding:"8px 16px", borderRadius:8, border:"1.5px dashed #1A56DB", background:"#EBF5FF", color:"#1A56DB", fontWeight:700, fontSize:13, cursor:"pointer" }}>
+                + Add another link ({demoLinks.length}/{DEMO_MAX})
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="grid2">
+          {[
+            ["Residential Preference","residential_pref","#1A56DB"],
+            ["Relocation Ready","relocation_ready","#1A56DB"],
+            ["Accommodation Required","accommodation_req","#DC2626"],
+            ["Aadhaar / ID Verified","aadhaar_verified","#059669"],
+          ].map(([label,key,color]) => (
+            <div key={key} className="fg"><label className="flabel">{label}</label>
+              <YesNoPills value={form[key]} onChange={v=>up(key,v)} color={color} />
+            </div>
+          ))}
+        </div>
+        <div className="fg"><label className="flabel">Profile Status</label>
+          <div style={{ display:"flex", gap:10, marginTop:6 }}>
+            {[["Active","#059669"],["Inactive","#DC2626"]].map(([v,color]) => {
+              const on = form.profile_status === v;
+              return (
+                <label key={v} onClick={()=>up("profile_status",v)}
+                  style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 20px", borderRadius:22, border:`2px solid ${on?color:"#D1D5DB"}`, background:on?color+"18":"#fff", cursor:"pointer", fontSize:13, fontWeight:700, color:on?color:"#374151", userSelect:"none" }}>
+                  <div style={{ width:8, height:8, borderRadius:"50%", background:on?color:"#D1D5DB" }} />{v}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+        <div className="fg"><label className="flabel">Resume Link (Google Drive)</label>
+          <input className="input" value={form.resume_link} onChange={e=>{ up("resume_link",e.target.value); up("resume_file_name",""); }} placeholder="https://drive.google.com/file/..." />
+        </div>
+        <div className="fg"><label className="flabel">Remarks / Notes</label>
+          <textarea className="input" rows={3} value={form.remarks} onChange={e=>up("remarks",e.target.value)} placeholder="Any additional information..." />
+        </div>
+      </div>
+
+      {/* ── Section 5: Terms & Conditions ── */}
+      <div className="card" style={card}>
+        <div style={head}>📜 Terms & Conditions</div>
+        <div style={{ maxHeight:200, overflowY:"auto", padding:"14px 16px", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:10, fontSize:13, color:"#374151", lineHeight:1.7 }}>
+          <p style={{ marginTop:0 }}>By submitting this profile, the teacher confirms and agrees that:</p>
+          <ol style={{ paddingLeft:18, margin:0 }}>
+            <li>All information provided in this profile is true, accurate, and complete.</li>
+            <li>The documents, demo videos, and links shared (including Google Drive links) are genuine.</li>
+            <li>AcadHr is authorized to share this profile with registered schools and recruiters for hiring purposes.</li>
+            <li>Providing false or misleading information may lead to rejection or removal of the profile.</li>
+            <li>The teacher agrees to be contacted by AcadHr and prospective employers regarding suitable opportunities.</li>
+          </ol>
+        </div>
+        <label onClick={()=>up("terms_accepted", form.terms_accepted==="Yes" ? "No" : "Yes")}
+          style={{ display:"flex", alignItems:"center", gap:10, marginTop:14, cursor:"pointer", userSelect:"none" }}>
+          <div style={{ width:20, height:20, borderRadius:5, border:`2px solid ${form.terms_accepted==="Yes"?"#059669":"#9CA3AF"}`, background:form.terms_accepted==="Yes"?"#059669":"#fff", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13, fontWeight:900, flexShrink:0 }}>
+            {form.terms_accepted==="Yes" ? "✓" : ""}
+          </div>
+          <span style={{ fontSize:13, fontWeight:700, color:"#111827" }}>I have read and accept the Terms &amp; Conditions</span>
+        </label>
+      </div>
+    </>
+  );
+}
+
+/* ── Tutor form — mirrors TutorDashboard → My Profile ── */
+function AdminTutorForm({ form, up }) {
+  return (
+    <>
+      <div style={{ ...SECTION, marginTop:0 }}>👤 Account & Contact</div>
+      <div className="grid2">
+        <div className="fg"><label className="flabel">Full Name *</label><input className="input" value={form.name} onChange={e=>up("name",e.target.value)} placeholder="Tutor's full name" /></div>
+        <div className="fg"><label className="flabel">Email ID *</label><input className="input" type="email" value={form.email} onChange={e=>up("email",e.target.value)} placeholder="tutor@email.com" /></div>
+      </div>
+      <div className="grid2">
+        <div className="fg"><label className="flabel">Phone</label><input className="input" value={form.phone} onChange={e=>up("phone",e.target.value)} placeholder="+91 98765 43210" /></div>
+        <div className="fg"><label className="flabel">Login Password</label><input className="input" value={form.password} onChange={e=>up("password",e.target.value)} /></div>
+      </div>
+
+      <div style={SECTION}>📚 Tutor Profile</div>
+      <div className="grid2">
+        <div className="fg"><label className="flabel">Subject(s) * (select one or more)</label>
+          <PillMulti options={SUBS} value={form.subject} onChange={v=>up("subject",v)} grid />
+        </div>
+        <div className="fg"><label className="flabel">City</label><input className="input" value={form.city} onChange={e=>up("city",e.target.value)} placeholder="e.g. Hyderabad" /></div>
+      </div>
+      <div className="grid2">
+        <div className="fg"><label className="flabel">Experience</label>
+          <select className="input" value={form.experience} onChange={e=>up("experience",e.target.value)}>
+            <option value="">Select</option>{["Fresher","1–2 Years","2–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years"].map(x=><option key={x}>{x}</option>)}
+          </select>
+        </div>
+        <div className="fg"><label className="flabel">Qualification</label><input className="input" value={form.qualification} onChange={e=>up("qualification",e.target.value)} placeholder="e.g. M.Sc, B.Ed" /></div>
+      </div>
+      <div className="grid2">
+        <div className="fg"><label className="flabel">Hourly Rate (₹)</label><input className="input" value={form.hourly_rate} onChange={e=>up("hourly_rate",e.target.value)} placeholder="e.g. 500" /></div>
+        <div className="fg"><label className="flabel">Teaching Mode</label>
+          <select className="input" value={form.teaching_mode} onChange={e=>up("teaching_mode",e.target.value)}>
+            <option>Both</option><option>Online</option><option>Offline</option>
+          </select>
+        </div>
+      </div>
+      <div className="fg"><label className="flabel">Bio</label><textarea className="input" rows={3} value={form.bio} onChange={e=>up("bio",e.target.value)} placeholder="A short bio..." /></div>
+    </>
+  );
+}
+
+/* ── Tuition requirement form — mirrors ParentDashboard → My Requirement ── */
+function AdminTuitionForm({ form, up }) {
+  return (
+    <>
+      <div style={{ ...SECTION, marginTop:0 }}>👨‍👩‍👧 Parent Account</div>
+      <div className="grid2">
+        <div className="fg"><label className="flabel">Parent Name *</label><input className="input" value={form.name} onChange={e=>up("name",e.target.value)} placeholder="Parent's name" /></div>
+        <div className="fg"><label className="flabel">Email ID *</label><input className="input" type="email" value={form.email} onChange={e=>up("email",e.target.value)} placeholder="parent@email.com" /></div>
+      </div>
+      <div className="grid2">
+        <div className="fg"><label className="flabel">Phone</label><input className="input" value={form.phone} onChange={e=>up("phone",e.target.value)} placeholder="+91 98765 43210" /></div>
+        <div className="fg"><label className="flabel">Login Password</label><input className="input" value={form.password} onChange={e=>up("password",e.target.value)} /></div>
+      </div>
+
+      <div style={SECTION}>📋 Tutor Requirement</div>
+      <div className="grid2">
+        <div className="fg"><label className="flabel">Student Name</label><input className="input" value={form.student_name} onChange={e=>up("student_name",e.target.value)} placeholder="Child's name" /></div>
+        <div className="fg"><label className="flabel">Class / Grade</label>
+          <select className="input" value={form.student_class} onChange={e=>up("student_class",e.target.value)}>
+            <option value="">Select class</option>{["Pre-Primary (Nursery–KG)","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12","Degree"].map(c=><option key={c}>{c}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="grid2">
+        <div className="fg"><label className="flabel">Board</label>
+          <select className="input" value={form.board} onChange={e=>up("board",e.target.value)}>
+            <option value="">Select board</option><option>CBSE</option><option>ICSE</option><option>State Board (AP)</option><option>State Board (TS)</option><option>IB</option><option>IGCSE</option>
+          </select>
+        </div>
+        <div className="fg"><label className="flabel">Subject(s) Required *</label><input className="input" value={form.subject} onChange={e=>up("subject",e.target.value)} placeholder="e.g. Mathematics, Physics" /></div>
+      </div>
+      <div className="fg"><label className="flabel">Location / Area</label><input className="input" value={form.location} onChange={e=>up("location",e.target.value)} placeholder="e.g. Banjara Hills, Hyderabad" /></div>
+      <div className="fg"><label className="flabel">Tutoring Mode</label>
+        <div style={{ display:"flex", gap:10, marginTop:6 }}>
+          {["Home","Online","Either"].map(m => (
+            <label key={m} onClick={()=>up("mode",m)} style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"8px 0", borderRadius:10, border:`2px solid ${form.mode===m?"#1A56DB":"#E5E7EB"}`, background:form.mode===m?"#EBF5FF":"#F9FAFB", cursor:"pointer", fontSize:13, fontWeight:700, color:form.mode===m?"#1A56DB":"#6B7280", userSelect:"none" }}>
+              {m==="Home"?"🏠":m==="Online"?"💻":"🔄"} {m}
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className="grid2">
+        <div className="fg"><label className="flabel">Preferred Time</label>
+          <select className="input" value={form.preferred_time} onChange={e=>up("preferred_time",e.target.value)}>
+            <option value="">Select</option><option>Morning (6am–12pm)</option><option>Afternoon (12pm–4pm)</option><option>Evening (4pm–8pm)</option><option>Flexible</option>
+          </select>
+        </div>
+        <div className="fg"><label className="flabel">Monthly Budget (₹)</label>
+          <select className="input" value={form.budget} onChange={e=>up("budget",e.target.value)}>
+            <option value="">Select range</option><option>Under ₹2,000</option><option>₹2,000–₹4,000</option><option>₹4,000–₹6,000</option><option>₹6,000–₹10,000</option><option>Above ₹10,000</option>
+          </select>
+        </div>
+      </div>
+      <div className="grid2">
+        <div className="fg"><label className="flabel">Tutor Gender Preference</label>
+          <select className="input" value={form.tutor_gender_pref} onChange={e=>up("tutor_gender_pref",e.target.value)}>
+            <option value="">No Preference</option><option>Male</option><option>Female</option>
+          </select>
+        </div>
+        <div className="fg"><label className="flabel">Experience Required</label>
+          <select className="input" value={form.experience_req} onChange={e=>up("experience_req",e.target.value)}>
+            <option value="">Any</option><option>Fresher OK</option><option>1+ Years</option><option>2+ Years</option><option>3+ Years</option><option>5+ Years</option>
+          </select>
+        </div>
+      </div>
+      <div className="fg"><label className="flabel">Additional Notes</label><textarea className="input" rows={3} value={form.notes} onChange={e=>up("notes",e.target.value)} placeholder="Any special requirements..." /></div>
+    </>
+  );
+}
+
+/* ── Job / position form — mirrors SchoolDashboard → Post a New Requirement ── */
+function AdminJobForm({ form, up }) {
+  // Same inline section styles the school "Post a New Requirement" form uses.
+  const sec     = { fontWeight:800, fontSize:13, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:14, paddingBottom:6, borderBottom:"2px solid #EBF5FF" };
+  const secTop  = { ...sec, marginTop:0 };
+  const secNext = { ...sec, marginTop:22 };
+  const secGray = { fontWeight:800, fontSize:13, color:"#6B7280", textTransform:"uppercase", letterSpacing:1, marginTop:22, marginBottom:14, paddingBottom:6, borderBottom:"2px solid #F3F4F6" };
+  return (
+    <>
+      {/* ── Section 1: Institution Details ── */}
+      <div style={secTop}>🏫 Institution Details</div>
+      <div className="grid2">
+        <div className="fg">
+          <label className="flabel">Requirement ID</label>
+          <div style={{ display:"flex", alignItems:"center", gap:10, padding:"11px 14px", background:"#F0FDF4", border:"1.5px solid #A7F3D0", borderRadius:8 }}>
+            <span style={{ fontSize:16 }}>🔖</span>
+            <span style={{ fontWeight:800, fontSize:16, color:"#059669", fontFamily:"Fira Code,monospace", letterSpacing:1 }}>Will be generated on submit</span>
+          </div>
+          <div style={{ fontSize:11, color:"#6B7280", marginTop:4 }}>Auto-generated by the system. Unique &amp; saved to database.</div>
+        </div>
+        <div className="fg">
+          <label className="flabel">Institution Name *</label>
+          <input className="input" placeholder="e.g. Delhi Public School" value={form.institution_name} onChange={e => up("institution_name",e.target.value)} />
+        </div>
+      </div>
+      <div className="grid2">
+        <div className="fg">
+          <label className="flabel">Institution Type *</label>
+          <select className="input" value={form.institution_type} onChange={e => up("institution_type",e.target.value)}>
+            <option value="">Select type</option>
+            <option>School</option><option>Coaching</option><option>Junior College</option>
+            <option>Degree College</option><option>Online Platform</option>
+          </select>
+        </div>
+        <div className="fg">
+          <label className="flabel">State *</label>
+          <select className="input" value={form.location_state} onChange={e => { up("location_state", e.target.value); up("location_city", ""); }}>
+            <option value="">Select state</option>
+            {Object.keys(INDIA_LOCATIONS).sort().map(s => <option key={s}>{s}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="grid2">
+        <div className="fg">
+          <label className="flabel">City *</label>
+          <select className="input" value={form.location_city} onChange={e => up("location_city", e.target.value)} disabled={!form.location_state}>
+            <option value="">{form.location_state ? "Select city" : "Select state first"}</option>
+            {form.location_state && (INDIA_LOCATIONS[form.location_state]||[]).map(c => <option key={c}>{c}</option>)}
+          </select>
+        </div>
+        <div className="fg">
+          <label className="flabel">Contact Person</label>
+          <input className="input" placeholder="Name" value={form.contact_person} onChange={e => up("contact_person",e.target.value)} />
+        </div>
+      </div>
+      <div className="grid2">
+        <div className="fg">
+          <label className="flabel">Contact Number</label>
+          <input className="input" type="tel" placeholder="+91 98765 43210" value={form.contact_number} onChange={e => up("contact_number",e.target.value)} />
+        </div>
+        <div className="fg">
+          <label className="flabel">Email</label>
+          <input className="input" type="email" placeholder="contact@school.edu.in" value={form.contact_email} onChange={e => up("contact_email",e.target.value)} />
+        </div>
+      </div>
+
+      {/* ── Section 2: Requirement Details ── */}
+      <div style={secNext}>📋 Requirement Details</div>
+      <div className="grid2">
+        <div className="fg">
+          <label className="flabel">Requirement Type *</label>
+          <select className="input" value={form.requirement_type} onChange={e => up("requirement_type",e.target.value)}>
+            <option>Teacher</option><option>Faculty</option><option>Tutor</option>
+          </select>
+        </div>
+        <div className="fg">
+          <label className="flabel">Subject(s) * (select one or more)</label>
+          <PillMulti options={SUBS} value={form.subject} onChange={v => up("subject",v)} grid />
+        </div>
+      </div>
+
+      {/* Grades — checkboxes */}
+      <div className="fg">
+        <label className="flabel">Grades / Classes</label>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:6 }}>
+          {["Nursery–KG","Grade 1–5","Grade 6–8","Grade 9–10","Grade 11–12","All Grades","Degree","Diploma"].map(g => (
+            <label key={g} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:20, border:`1.5px solid ${form.grades.includes(g)?"#1A56DB":"#D1D5DB"}`, background:form.grades.includes(g)?"#EBF5FF":"#fff", cursor:"pointer", fontSize:13, fontWeight:600, color:form.grades.includes(g)?"#1A56DB":"#374151", transition:"all .15s", userSelect:"none" }}>
+              <input type="checkbox" style={{ display:"none" }} checked={form.grades.includes(g)}
+                onChange={() => up("grades", form.grades.includes(g) ? form.grades.filter(x => x !== g) : [...form.grades, g])} />
+              {form.grades.includes(g) ? "✓ " : ""}{g}
+            </label>
+          ))}
+        </div>
+        {form.grades.length > 0 && <div style={{ fontSize:11, color:"#6B7280", marginTop:6 }}>Selected: {form.grades.join(", ")}</div>}
+      </div>
+
+      {/* Board — radio */}
+      <div className="fg">
+        <label className="flabel">Board</label>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:6 }}>
+          {["CBSE","ICSE","State Board","IB","IGCSE","All Boards"].map(b => (
+            <label key={b} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:20, border:`1.5px solid ${form.board===b?"#1A56DB":"#D1D5DB"}`, background:form.board===b?"#EBF5FF":"#fff", cursor:"pointer", fontSize:13, fontWeight:600, color:form.board===b?"#1A56DB":"#374151", transition:"all .15s", userSelect:"none" }}>
+              <input type="radio" name="board" style={{ display:"none" }} checked={form.board===b} onChange={() => up("board", b)} />
+              {form.board===b ? "● " : "○ "}{b}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Experience — radio */}
+      <div className="fg">
+        <label className="flabel">Experience Required</label>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:6 }}>
+          {["Fresher","0–1 Year","1–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years"].map(exp => (
+            <label key={exp} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:20, border:`1.5px solid ${form.experience===exp?"#1A56DB":"#D1D5DB"}`, background:form.experience===exp?"#EBF5FF":"#fff", cursor:"pointer", fontSize:13, fontWeight:600, color:form.experience===exp?"#1A56DB":"#374151", transition:"all .15s", userSelect:"none" }}>
+              <input type="radio" name="experience" style={{ display:"none" }} checked={form.experience===exp} onChange={() => up("experience", exp)} />
+              {form.experience===exp ? "● " : "○ "}{exp}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Section 3: Compensation & Schedule ── */}
+      <div style={secNext}>💰 Compensation &amp; Schedule</div>
+      <div className="grid2">
+        <div className="fg">
+          <label className="flabel">Salary Budget — Min (₹/mo)</label>
+          <input className="input" type="number" placeholder="e.g. 30000" value={form.salary_min} onChange={e => up("salary_min",e.target.value)} />
+        </div>
+        <div className="fg">
+          <label className="flabel">Salary Budget — Max (₹/mo)</label>
+          <input className="input" type="number" placeholder="e.g. 60000" value={form.salary_max} onChange={e => up("salary_max",e.target.value)} />
+        </div>
+      </div>
+      <div className="grid2">
+        <div className="fg">
+          <label className="flabel">Joining Timeline</label>
+          <select className="input" value={form.joining_timeline} onChange={e => up("joining_timeline",e.target.value)}>
+            <option>Immediate</option><option>Within 15 days</option>
+            <option>30 days</option><option>60 days</option><option>Flexible</option>
+          </select>
+        </div>
+        <div className="fg">
+          <label className="flabel">Work Mode</label>
+          <select className="input" value={form.work_mode} onChange={e => up("work_mode",e.target.value)}>
+            <option>Full-time</option><option>Part-time</option>
+            <option>Online</option><option>Hybrid</option>
+          </select>
+        </div>
+      </div>
+
+      {/* ── Section 4: Conditions ── */}
+      <div style={secNext}>🏠 Conditions &amp; Preferences</div>
+      <div className="grid2">
+        <div className="fg">
+          <label className="flabel">Residential</label>
+          <select className="input" value={form.residential} onChange={e => up("residential",e.target.value)}>
+            <option>No</option><option>Yes</option>
+          </select>
+        </div>
+        <div className="fg">
+          <label className="flabel">Accommodation</label>
+          <select className="input" value={form.accommodation} onChange={e => up("accommodation",e.target.value)}>
+            <option>Not Provided</option><option>Provided</option>
+          </select>
+        </div>
+      </div>
+      <div className="grid2">
+        <div className="fg">
+          <label className="flabel">Gender Preference</label>
+          <select className="input" value={form.gender_preference} onChange={e => up("gender_preference",e.target.value)}>
+            <option>No Preference</option><option>Male</option><option>Female</option>
+          </select>
+        </div>
+        <div className="fg">
+          <label className="flabel">Interview Mode</label>
+          <select className="input" value={form.interview_mode} onChange={e => up("interview_mode",e.target.value)}>
+            <option>Online</option><option>Offline</option><option>Both</option>
+          </select>
+        </div>
+      </div>
+      <div className="grid2">
+        <div className="fg">
+          <label className="flabel">Demo Required</label>
+          <select className="input" value={form.demo_required} onChange={e => up("demo_required",e.target.value)}>
+            <option>No</option><option>Yes</option>
+          </select>
+        </div>
+        <div className="fg">
+          <label className="flabel">Number of Positions</label>
+          <input className="input" type="number" min="1" placeholder="1" value={form.positions} onChange={e => up("positions",e.target.value)} />
+        </div>
+      </div>
+
+      {/* ── Section 5: Admin / Internal ── */}
+      <div style={secGray}>🗂 Internal Details</div>
+      <div className="grid2">
+        <div className="fg">
+          <label className="flabel">Status</label>
+          <select className="input" value={form.status} onChange={e => up("status",e.target.value)}>
+            <option>Open</option><option>Closed</option>
+          </select>
+        </div>
+        <div className="fg">
+          <label className="flabel">Assigned Recruiter</label>
+          <input className="input" placeholder="Recruiter name" value={form.assigned_recruiter} onChange={e => up("assigned_recruiter",e.target.value)} />
+        </div>
+      </div>
+      <div className="fg">
+        <label className="flabel">Notes / Remarks</label>
+        <textarea className="input" rows={3} placeholder="Any additional remarks or special requirements..." value={form.notes} onChange={e => up("notes",e.target.value)} />
+      </div>
+    </>
+  );
+}
+
+const ADD_REQUIRED = {
+  teacher: [["full_name","Full Name"],["email","Email"],["specialization","Specialization / Subject"]],
+  tutor:   [["name","Full Name"],["email","Email"],["subject","Subject"]],
+  tuition: [["name","Parent Name"],["email","Email"],["subject","Subject(s) Required"]],
+  job:     [["subject","Subject"]],
+};
+
+const ADD_INIT = {
+  teacher: { full_name:"", email:"", mobile:"", password:"Welcome@123", gender:"", dob:"", current_location:"", preferred_locations:"", qualification:"", specialization:"", total_experience:"", relevant_experience:"", current_role:"", current_org:"", current_salary:"", expected_salary:"", notice_period:"", available_from:"", certifications:"", work_mode:"", tutor_type:"", subjects:"", grades_handling:"", boards_handled:"", competitive_exams:"", teaching_mode:"", languages:"", demo_available:"", demo_link:"", residential_pref:"", relocation_ready:"", accommodation_req:"", aadhaar_verified:"", resume_link:"", resume_file_name:"", profile_status:"Active", remarks:"", terms_accepted:"" },
+  tutor:   { name:"", email:"", phone:"", password:"Welcome@123", subject:"", city:"", experience:"", qualification:"", hourly_rate:"", teaching_mode:"Both", bio:"" },
+  tuition: { name:"", email:"", phone:"", password:"Welcome@123", student_name:"", student_class:"", board:"", subject:"", location:"", mode:"Home", preferred_time:"", budget:"", tutor_gender_pref:"", experience_req:"", notes:"" },
+  job:     { institution_name:"", institution_type:"", location_state:"", location_city:"", contact_person:"", contact_number:"", contact_email:"", requirement_type:"Teacher", subject:"", grades:[], board:"CBSE", experience:"", salary_min:"", salary_max:"", joining_timeline:"Immediate", work_mode:"Full-time", residential:"No", accommodation:"Not Provided", gender_preference:"No Preference", interview_mode:"Online", demo_required:"No", positions:1, status:"Open", assigned_recruiter:"", notes:"" },
+};
+
+/* ── Teacher View/Edit modal — shows the SAME full teacher form, pre-filled with
+   the selected teacher's data, and lets the admin update & save it.            ── */
+function TeacherEditModal({ teacher, api, hdr, onClose, onToggle, onSaved }) {
+  const d = (v) => (v ? String(v).split("T")[0] : "");   // ISO datetime → YYYY-MM-DD
+  const [form, setForm] = useState(() => ({
+    full_name:           teacher.full_name || teacher.name || "",
+    email:               teacher.email || "",
+    mobile:              teacher.mobile || teacher.phone || "",
+    password:            "",
+    gender:              teacher.gender || "",
+    dob:                 d(teacher.dob),
+    current_location:    teacher.current_location || teacher.city || "",
+    preferred_locations: teacher.preferred_locations || "",
+    qualification:       teacher.qualification || "",
+    specialization:      teacher.specialization || "",
+    total_experience:    teacher.total_experience || "",
+    relevant_experience: teacher.relevant_experience || "",
+    current_role:        teacher.current_role || "",
+    current_org:         teacher.current_org || "",
+    current_salary:      teacher.current_salary || "",
+    expected_salary:     teacher.expected_salary || "",
+    notice_period:       teacher.notice_period || "",
+    available_from:      d(teacher.available_from),
+    certifications:      teacher.certifications || "",
+    work_mode:           teacher.work_mode || "",
+    tutor_type:          teacher.tutor_type || "",
+    subjects:            teacher.subjects || "",
+    grades_handling:     teacher.grades_handling || "",
+    boards_handled:      teacher.boards_handled || "",
+    competitive_exams:   teacher.competitive_exams || "",
+    teaching_mode:       teacher.teaching_mode || "",
+    languages:           teacher.languages || "",
+    demo_available:      teacher.demo_available || "",
+    demo_link:           teacher.demo_link || "",
+    residential_pref:    teacher.residential_pref || "",
+    relocation_ready:    teacher.relocation_ready || "",
+    accommodation_req:   teacher.accommodation_req || "",
+    aadhaar_verified:    teacher.aadhaar_verified || "",
+    resume_link:         teacher.resume_link || "",
+    resume_file_name:    teacher.resume_file_name || "",
+    profile_status:      teacher.profile_status || "Active",
+    remarks:             teacher.remarks || "",
+    terms_accepted:      teacher.terms_accepted || "",
+  }));
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg]       = useState("");
+  const up = (k, v) => setForm(s => ({ ...s, [k]: v }));
+
+  async function save() {
+    if (!String(form.full_name).trim() || !String(form.email).trim()) { setMsg("⚠️ Name and Email are required."); return; }
+    setSaving(true); setMsg("");
+    try {
+      const r = await fetch(api + `/admin/teachers/${teacher.id}`, {
+        method: "PATCH",
+        headers: { ...hdr, "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await r.json();
+      if (r.ok) { setMsg("✓ Changes saved to database."); onSaved && onSaved(); }
+      else setMsg("Error: " + (data.message || "Save failed"));
+    } catch (e) { setMsg("Network error: " + e.message); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+        {/* Header */}
+        <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+            <div style={{ minWidth:0 }}>
+              <div style={{ color:"#93C5FD", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>👩‍🏫 Teacher Profile</div>
+              <div style={{ color:"#fff", fontSize:20, fontWeight:800 }}>{form.full_name || teacher.name}</div>
+              <div style={{ color:"#BFDBFE", fontSize:13, marginTop:2 }}>{form.specialization || "—"}{form.current_location ? ` · 📍 ${form.current_location}` : ""}</div>
+            </div>
+            <button onClick={onClose} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, flexShrink:0 }}>✕</button>
+          </div>
+        </div>
+        {/* Body — the full form, pre-filled */}
+        <div style={{ padding:"24px 28px" }}>
+          {msg && <div className={"alert " + (msg.startsWith("✓") ? "a-ok" : "a-warn")} style={{ marginBottom:16 }}>{msg}</div>}
+          <AdminTeacherForm form={form} up={up} />
+          <div style={{ display:"flex", gap:10, alignItems:"center", marginTop:8, paddingTop:18, borderTop:"1px solid #E5E7EB" }}>
+            <button className={"btn btn-sm " + (teacher.is_active ? "btn-danger" : "btn-success")} onClick={() => onToggle(teacher.id)}>
+              {teacher.is_active ? "Deactivate" : "Activate"}
+            </button>
+            <div style={{ flex:1 }} />
+            <button className="btn btn-ghost" onClick={onClose}>Close</button>
+            <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Changes ✓"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Tutor View/Edit modal — shows the SAME tutor registration form, pre-filled
+   with the selected tutor's data, and lets the admin update & save it.        ── */
+function TutorEditModal({ tutor, api, hdr, onClose, onToggle, onSaved }) {
+  const EXPS  = ["Fresher (0-1 year)","1-3 years","3-5 years","5-10 years","10+ years"];
+  const QUALS = ["B.Ed","M.Ed","M.Sc + B.Ed","B.Tech + B.Ed","M.Tech + B.Ed","PhD","Diploma in Education"];
+  const TIMES = ["Morning","Afternoon","Evening","Any Time"];
+  const [form, setForm] = useState(() => ({
+    name:          tutor.name || "",
+    email:         tutor.email || "",
+    phone:         tutor.phone || "",
+    city:          tutor.city || "",
+    password:      "",
+    subjects:      tutor.subjects || tutor.subject || "",
+    qualifications:tutor.qualifications || tutor.qualification || "",
+    experience:    tutor.experience || "",
+    hourly_rate:   tutor.hourly_rate || "",
+    teaching_mode: tutor.teaching_mode || "Both",
+    availability:  tutor.availability || "",
+    address:       tutor.address || "",
+    location:      tutor.location || "",
+    pincode:       tutor.pincode || "",
+    class_link:    tutor.class_link || "",
+    resume_link:   tutor.resume_link || "",
+    resume_file_name: tutor.resume_file_name || "",
+    bio:           tutor.bio || "",
+  }));
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg]       = useState("");
+  const up = (k, v) => setForm(s => ({ ...s, [k]: v }));
+
+  async function save() {
+    if (!String(form.name).trim() || !String(form.email).trim()) { setMsg("⚠️ Name and Email are required."); return; }
+    setSaving(true); setMsg("");
+    try {
+      const r = await fetch(api + `/admin/tutors/${tutor.id}`, {
+        method: "PATCH",
+        headers: { ...hdr, "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await r.json();
+      if (r.ok) { setMsg("✓ Changes saved to database."); onSaved && onSaved(); }
+      else setMsg("Error: " + (data.message || "Save failed"));
+    } catch (e) { setMsg("Network error: " + e.message); }
+    finally { setSaving(false); }
+  }
+
+  const sec = { fontWeight:800, fontSize:13, color:"#6D28D9", textTransform:"uppercase", letterSpacing:1, marginTop:22, marginBottom:14, paddingBottom:6, borderBottom:"2px solid #F5F3FF" };
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+        <div style={{ background:"linear-gradient(135deg,#5B21B6,#7C3AED)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+            <div style={{ minWidth:0 }}>
+              <div style={{ color:"#DDD6FE", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>🧑‍🎓 Tutor Profile</div>
+              <div style={{ color:"#fff", fontSize:20, fontWeight:800 }}>{form.name}</div>
+              <div style={{ color:"#EDE9FE", fontSize:13, marginTop:2 }}>{(form.subjects||"").split(",")[0] || "—"}{form.city ? ` · 📍 ${form.city}` : ""}</div>
+            </div>
+            <button onClick={onClose} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, flexShrink:0 }}>✕</button>
+          </div>
+        </div>
+        <div style={{ padding:"24px 28px" }}>
+          {msg && <div className={"alert " + (msg.startsWith("✓") ? "a-ok" : "a-warn")} style={{ marginBottom:16 }}>{msg}</div>}
+
+          <div style={{ ...sec, marginTop:0 }}>👤 Account & Contact</div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">Full Name *</label><input className="input" value={form.name} onChange={e=>up("name",e.target.value)} /></div>
+            <div className="fg"><label className="flabel">Email ID *</label><input className="input" type="email" value={form.email} onChange={e=>up("email",e.target.value)} /></div>
+          </div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">Phone</label><input className="input" value={form.phone} onChange={e=>up("phone",e.target.value)} /></div>
+            <div className="fg"><label className="flabel">City</label><input className="input" value={form.city} onChange={e=>up("city",e.target.value)} /></div>
+          </div>
+          <div className="fg"><label className="flabel">Login Password</label><input className="input" value={form.password} onChange={e=>up("password",e.target.value)} placeholder="Leave blank to keep current password" /></div>
+
+          <div style={sec}>🧑‍🎓 Tutor Details</div>
+          <div className="fg"><label className="flabel">Subjects (select one or more)</label>
+            <PillMulti options={SUBS} value={form.subjects} onChange={v=>up("subjects",v)} color="#6D28D9" bg="#F5F3FF" grid />
+          </div>
+          <div className="fg"><label className="flabel">Qualifications (select one or more)</label>
+            <PillMulti options={QUALS} value={form.qualifications} onChange={v=>up("qualifications",v)} color="#6D28D9" bg="#F5F3FF" />
+          </div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">Experience</label>
+              <select className="input" value={form.experience} onChange={e=>up("experience",e.target.value)}>
+                <option value="">Select</option>{EXPS.map(s=><option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="fg"><label className="flabel">Hourly Charges</label>
+              <input className="input" placeholder="e.g. ₹800/hr" value={form.hourly_rate} onChange={e=>up("hourly_rate",e.target.value)} />
+            </div>
+          </div>
+          <div className="fg"><label className="flabel">Teaching Mode</label>
+            <select className="input" value={form.teaching_mode} onChange={e=>up("teaching_mode",e.target.value)}>
+              <option>Online</option><option>Offline</option><option>Both</option>
+            </select>
+          </div>
+          <div className="fg"><label className="flabel">Available Timings (select one or more)</label>
+            <PillMulti options={TIMES} value={form.availability} onChange={v=>up("availability",v)} color="#D97706" bg="#FFFBEB" />
+          </div>
+
+          <div style={sec}>📍 Location & Links</div>
+          <div className="fg"><label className="flabel">Address</label><input className="input" placeholder="House no., street, area" value={form.address} onChange={e=>up("address",e.target.value)} /></div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">Location</label><input className="input" placeholder="e.g. Banjara Hills, Hyderabad" value={form.location} onChange={e=>up("location",e.target.value)} /></div>
+            <div className="fg"><label className="flabel">Pincode</label><input className="input" placeholder="e.g. 500034" value={form.pincode} onChange={e=>up("pincode",e.target.value)} /></div>
+          </div>
+          <div className="fg"><label className="flabel">Class Link (Google Meet / Zoom)</label><input className="input" placeholder="https://meet.google.com/..." value={form.class_link} onChange={e=>up("class_link",e.target.value)} /></div>
+          <div className="fg"><label className="flabel">Resume / CV Link</label>
+            <input className="input" value={form.resume_link} onChange={e=>up("resume_link",e.target.value)} placeholder="https://drive.google.com/file/..." />
+            {form.resume_file_name && <div style={{ fontSize:12, color:"#059669", marginTop:6, fontWeight:700 }}>📄 {form.resume_file_name}</div>}
+          </div>
+          <div className="fg"><label className="flabel">Short Bio</label><textarea className="input" rows={3} value={form.bio} onChange={e=>up("bio",e.target.value)} placeholder="Tell schools about yourself..." /></div>
+
+          <div style={{ display:"flex", gap:10, alignItems:"center", marginTop:8, paddingTop:18, borderTop:"1px solid #E5E7EB" }}>
+            <button className={"btn btn-sm " + (tutor.is_active ? "btn-danger" : "btn-success")} onClick={() => onToggle(tutor.id)}>
+              {tutor.is_active ? "Deactivate" : "Activate"}
+            </button>
+            <div style={{ flex:1 }} />
+            <button className="btn btn-ghost" onClick={onClose}>Close</button>
+            <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Changes ✓"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── School View/Edit modal — same registration form, pre-filled & saveable ── */
+function SchoolEditModal({ school, api, hdr, onClose, onToggle, onSaved }) {
+  const ITYPES = ["School (CBSE)","School (ICSE)","School (State Board)","Junior College","Degree College","Coaching Institute","Tuition Centre","Online Platform"];
+  const [form, setForm] = useState(() => ({
+    name:           school.name || "",
+    email:          school.email || "",
+    phone:          school.phone || "",
+    city:           school.city || "",
+    password:       "",
+    institute_type: school.institute_type || "",
+    est_year:       school.est_year || "",
+    student_count:  school.student_count || "",
+    website:        school.website || "",
+  }));
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg]       = useState("");
+  const up = (k, v) => setForm(s => ({ ...s, [k]: v }));
+
+  async function save() {
+    if (!String(form.name).trim() || !String(form.email).trim()) { setMsg("⚠️ Name and Email are required."); return; }
+    setSaving(true); setMsg("");
+    try {
+      const r = await fetch(api + `/admin/schools/${school.id}`, { method:"PATCH", headers:{...hdr,"Content-Type":"application/json"}, body: JSON.stringify(form) });
+      const data = await r.json();
+      if (r.ok) { setMsg("✓ Changes saved to database."); onSaved && onSaved(); }
+      else setMsg("Error: " + (data.message || "Save failed"));
+    } catch (e) { setMsg("Network error: " + e.message); }
+    finally { setSaving(false); }
+  }
+  const sec = { fontWeight:800, fontSize:13, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginTop:22, marginBottom:14, paddingBottom:6, borderBottom:"2px solid #EBF5FF" };
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:720, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+        <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+            <div style={{ minWidth:0 }}>
+              <div style={{ color:"#93C5FD", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>🏫 Institution Profile</div>
+              <div style={{ color:"#fff", fontSize:20, fontWeight:800 }}>{form.name}</div>
+              <div style={{ color:"#BFDBFE", fontSize:13, marginTop:2 }}>{form.institute_type || "—"}{form.city ? ` · 📍 ${form.city}` : ""}</div>
+            </div>
+            <button onClick={onClose} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, flexShrink:0 }}>✕</button>
+          </div>
+        </div>
+        <div style={{ padding:"24px 28px" }}>
+          {msg && <div className={"alert " + (msg.startsWith("✓") ? "a-ok" : "a-warn")} style={{ marginBottom:16 }}>{msg}</div>}
+
+          <div style={{ ...sec, marginTop:0 }}>👤 Account & Contact</div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">Institution Name *</label><input className="input" value={form.name} onChange={e=>up("name",e.target.value)} /></div>
+            <div className="fg"><label className="flabel">Email ID *</label><input className="input" type="email" value={form.email} onChange={e=>up("email",e.target.value)} /></div>
+          </div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">Phone</label><input className="input" value={form.phone} onChange={e=>up("phone",e.target.value)} /></div>
+            <div className="fg"><label className="flabel">City</label><input className="input" value={form.city} onChange={e=>up("city",e.target.value)} /></div>
+          </div>
+          <div className="fg"><label className="flabel">Login Password</label><input className="input" value={form.password} onChange={e=>up("password",e.target.value)} placeholder="Leave blank to keep current password" /></div>
+
+          <div style={sec}>🏫 Institution Details</div>
+          <div className="fg"><label className="flabel">Institute Type</label>
+            <select className="input" value={form.institute_type} onChange={e=>up("institute_type",e.target.value)}>
+              <option value="">Select type</option>{ITYPES.map(s=><option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">Est. Year</label><input className="input" type="number" placeholder="e.g. 1995" value={form.est_year} onChange={e=>up("est_year",e.target.value)} /></div>
+            <div className="fg"><label className="flabel">No. of Students</label>
+              <select className="input" value={form.student_count} onChange={e=>up("student_count",e.target.value)}>
+                <option value="">Select</option><option>Under 500</option><option>500-1,000</option><option>1,000-3,000</option><option>3,000+</option>
+              </select>
+            </div>
+          </div>
+          <div className="fg"><label className="flabel">Website (Optional)</label><input className="input" placeholder="https://yourschool.edu.in" value={form.website} onChange={e=>up("website",e.target.value)} /></div>
+
+          <div style={{ display:"flex", gap:10, alignItems:"center", marginTop:8, paddingTop:18, borderTop:"1px solid #E5E7EB" }}>
+            <button className={"btn btn-sm " + (school.is_active ? "btn-danger" : "btn-success")} onClick={() => onToggle(school.id)}>{school.is_active ? "Deactivate" : "Activate"}</button>
+            <div style={{ flex:1 }} />
+            <button className="btn btn-ghost" onClick={onClose}>Close</button>
+            <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Changes ✓"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Parent View/Edit modal — same tuition requirement form, pre-filled & saveable ── */
+function ParentEditModal({ parent, api, hdr, onClose, onToggle, onSaved }) {
+  const [form, setForm] = useState(() => ({
+    name:              parent.name || "",
+    email:             parent.email || "",
+    phone:             parent.phone || "",
+    city:              parent.city || "",
+    password:          "",
+    student_name:      parent.student_name || "",
+    student_class:     parent.student_class || "",
+    board:             parent.board || "",
+    subject:           parent.subject || "",
+    location:          parent.location || "",
+    mode:              parent.mode || "",
+    preferred_time:    parent.preferred_time || "",
+    budget:            parent.budget || "",
+    tutor_gender_pref: parent.tutor_gender_pref || "",
+    experience_req:    parent.experience_req || "",
+    notes:             parent.notes || "",
+  }));
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg]       = useState("");
+  const up = (k, v) => setForm(s => ({ ...s, [k]: v }));
+
+  async function save() {
+    if (!String(form.name).trim() || !String(form.email).trim()) { setMsg("⚠️ Name and Email are required."); return; }
+    setSaving(true); setMsg("");
+    try {
+      const r = await fetch(api + `/admin/parents/${parent.id}`, { method:"PATCH", headers:{...hdr,"Content-Type":"application/json"}, body: JSON.stringify(form) });
+      const data = await r.json();
+      if (r.ok) { setMsg("✓ Changes saved to database."); onSaved && onSaved(); }
+      else setMsg("Error: " + (data.message || "Save failed"));
+    } catch (e) { setMsg("Network error: " + e.message); }
+    finally { setSaving(false); }
+  }
+  const sec = { fontWeight:800, fontSize:13, color:"#059669", textTransform:"uppercase", letterSpacing:1, marginTop:22, marginBottom:14, paddingBottom:6, borderBottom:"2px solid #ECFDF5" };
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:720, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+        <div style={{ background:"linear-gradient(135deg,#047857,#059669)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+            <div style={{ minWidth:0 }}>
+              <div style={{ color:"#A7F3D0", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>👨‍👩‍👧 Parent Profile</div>
+              <div style={{ color:"#fff", fontSize:20, fontWeight:800 }}>{form.name}</div>
+              <div style={{ color:"#D1FAE5", fontSize:13, marginTop:2 }}>{form.student_name ? `Student: ${form.student_name}` : "—"}{form.subject ? ` · ${form.subject}` : ""}</div>
+            </div>
+            <button onClick={onClose} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, flexShrink:0 }}>✕</button>
+          </div>
+        </div>
+        <div style={{ padding:"24px 28px" }}>
+          {msg && <div className={"alert " + (msg.startsWith("✓") ? "a-ok" : "a-warn")} style={{ marginBottom:16 }}>{msg}</div>}
+
+          <div style={{ ...sec, marginTop:0 }}>👤 Parent Account</div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">Parent Name *</label><input className="input" value={form.name} onChange={e=>up("name",e.target.value)} /></div>
+            <div className="fg"><label className="flabel">Email ID *</label><input className="input" type="email" value={form.email} onChange={e=>up("email",e.target.value)} /></div>
+          </div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">Phone</label><input className="input" value={form.phone} onChange={e=>up("phone",e.target.value)} /></div>
+            <div className="fg"><label className="flabel">City</label><input className="input" value={form.city} onChange={e=>up("city",e.target.value)} /></div>
+          </div>
+          <div className="fg"><label className="flabel">Login Password</label><input className="input" value={form.password} onChange={e=>up("password",e.target.value)} placeholder="Leave blank to keep current password" /></div>
+
+          <div style={sec}>📋 Tutor Requirement</div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">Student Name</label><input className="input" placeholder="Child's full name" value={form.student_name} onChange={e=>up("student_name",e.target.value)} /></div>
+            <div className="fg"><label className="flabel">Class / Grade</label>
+              <select className="input" value={form.student_class} onChange={e=>up("student_class",e.target.value)}>
+                <option value="">Select class</option>{["Pre-Primary (Nursery–KG)","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12","Degree"].map(c=><option key={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">Board</label>
+              <select className="input" value={form.board} onChange={e=>up("board",e.target.value)}>
+                <option value="">Select board</option><option>CBSE</option><option>ICSE</option><option>State Board (AP)</option><option>State Board (TS)</option><option>IB</option><option>IGCSE</option>
+              </select>
+            </div>
+            <div className="fg"><label className="flabel">Subject(s) Required</label><input className="input" placeholder="e.g. Mathematics, Physics" value={form.subject} onChange={e=>up("subject",e.target.value)} /></div>
+          </div>
+          <div className="fg"><label className="flabel">Location / Area</label><input className="input" placeholder="e.g. Banjara Hills, Hyderabad" value={form.location} onChange={e=>up("location",e.target.value)} /></div>
+          <div className="fg"><label className="flabel">Tutoring Mode</label>
+            <div style={{ display:"flex", gap:10, marginTop:6 }}>
+              {["Home","Online","Either"].map(m => (
+                <label key={m} onClick={() => up("mode",m)} style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"9px 0", borderRadius:10, border:`2px solid ${form.mode===m?"#059669":"#E5E7EB"}`, background:form.mode===m?"#ECFDF5":"#F9FAFB", cursor:"pointer", fontSize:13, fontWeight:700, color:form.mode===m?"#059669":"#6B7280", userSelect:"none" }}>
+                  {m==="Home"?"🏠":m==="Online"?"💻":"🔄"} {m}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">Preferred Time</label>
+              <select className="input" value={form.preferred_time} onChange={e=>up("preferred_time",e.target.value)}>
+                <option value="">Select</option><option>Morning (6am–12pm)</option><option>Afternoon (12pm–4pm)</option><option>Evening (4pm–8pm)</option><option>Flexible</option>
+              </select>
+            </div>
+            <div className="fg"><label className="flabel">Monthly Budget (₹)</label>
+              <select className="input" value={form.budget} onChange={e=>up("budget",e.target.value)}>
+                <option value="">Select range</option><option>Under ₹2,000</option><option>₹2,000–₹4,000</option><option>₹4,000–₹6,000</option><option>₹6,000–₹10,000</option><option>Above ₹10,000</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid2">
+            <div className="fg"><label className="flabel">Tutor Gender Preference</label>
+              <select className="input" value={form.tutor_gender_pref} onChange={e=>up("tutor_gender_pref",e.target.value)}>
+                <option value="">No Preference</option><option>Male</option><option>Female</option>
+              </select>
+            </div>
+            <div className="fg"><label className="flabel">Experience Required</label>
+              <select className="input" value={form.experience_req} onChange={e=>up("experience_req",e.target.value)}>
+                <option value="">Any</option><option>Fresher OK</option><option>1+ Years</option><option>2+ Years</option><option>3+ Years</option><option>5+ Years</option>
+              </select>
+            </div>
+          </div>
+          <div className="fg"><label className="flabel">Additional Notes</label><textarea className="input" rows={3} placeholder="Any special requirements or notes..." value={form.notes} onChange={e=>up("notes",e.target.value)} /></div>
+
+          <div style={{ display:"flex", gap:10, alignItems:"center", marginTop:8, paddingTop:18, borderTop:"1px solid #E5E7EB" }}>
+            <button className={"btn btn-sm " + (parent.is_active ? "btn-danger" : "btn-success")} onClick={() => onToggle(parent.id)}>{parent.is_active ? "Deactivate" : "Activate"}</button>
+            <div style={{ flex:1 }} />
+            <button className="btn btn-ghost" onClick={onClose}>Close</button>
+            <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Changes ✓"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Job View/Edit modal — shows the SAME job posting form, pre-filled with the
+   requirement's data and saveable. Pending jobs keep Approve/Reject.          ── */
+function JobEditModal({ job, api, hdr, onClose, onApprove, onReject, onSaved }) {
+  const num = (v) => (v == null || v === "" ? "" : String(v).replace(/\.00$/, ""));
+  const [form, setForm] = useState(() => ({
+    institution_name: job.institution_name || job.institute_name || "",
+    institution_type: job.institution_type || "",
+    location_state:   job.location_state || "",
+    location_city:    job.location_city || "",
+    contact_person:   job.contact_person || "",
+    contact_number:   job.contact_number || "",
+    contact_email:    job.contact_email || job.institute_email || "",
+    requirement_type: job.requirement_type || "Teacher",
+    subject:          job.subject || "",
+    grades:           job.grades ? String(job.grades).split(",").map(x=>x.trim()).filter(Boolean) : [],
+    board:            job.board || "",
+    experience:       job.experience || "",
+    salary_min:       num(job.salary_min),
+    salary_max:       num(job.salary_max),
+    joining_timeline: job.joining_timeline || "Immediate",
+    work_mode:        job.work_mode || "Full-time",
+    residential:      job.residential || "No",
+    accommodation:    job.accommodation || "Not Provided",
+    gender_preference:job.gender_preference || "No Preference",
+    interview_mode:   job.interview_mode || "Online",
+    demo_required:    job.demo_required || "No",
+    positions:        job.positions || 1,
+    status:           job.status || "Open",
+    assigned_recruiter: job.assigned_recruiter || "",
+    notes:            job.notes || job.description || "",
+  }));
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg]       = useState("");
+  const up = (k, v) => setForm(s => ({ ...s, [k]: v }));
+  const isPending = job.status === "pending";
+
+  async function save() {
+    if (!String(form.subject).trim()) { setMsg("⚠️ Subject is required."); return; }
+    setSaving(true); setMsg("");
+    const payload = { ...form, title: (form.requirement_type || "Teacher") + " — " + form.subject, description: form.notes };
+    try {
+      const r = await fetch(api + `/admin/jobs/${job.id}`, { method:"PATCH", headers:{...hdr,"Content-Type":"application/json"}, body: JSON.stringify(payload) });
+      const data = await r.json();
+      if (r.ok) { setMsg("✓ Changes saved to database."); onSaved && onSaved(); }
+      else setMsg("Error: " + (data.message || "Save failed"));
+    } catch (e) { setMsg("Network error: " + e.message); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:760, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+        <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+            <div style={{ minWidth:0 }}>
+              <div style={{ color:"#93C5FD", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>💼 Job Requirement</div>
+              <div style={{ color:"#fff", fontSize:20, fontWeight:800 }}>{(form.requirement_type || "Teacher")} — {form.subject || "—"}</div>
+              <div style={{ color:"#BFDBFE", fontSize:13, marginTop:2 }}>{form.institution_name}{form.location_city ? ` · 📍 ${form.location_city}` : ""}</div>
+              {job.requirement_id && <div style={{ marginTop:6, fontFamily:"Fira Code,monospace", fontSize:12, color:"#4ADE80", fontWeight:700 }}>🔖 {job.requirement_id}</div>}
+            </div>
+            <button onClick={onClose} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, flexShrink:0 }}>✕</button>
+          </div>
+        </div>
+        <div style={{ padding:"24px 28px" }}>
+          {msg && <div className={"alert " + (msg.startsWith("✓") ? "a-ok" : "a-warn")} style={{ marginBottom:16 }}>{msg}</div>}
+          <AdminJobForm form={form} up={up} />
+          <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap", marginTop:8, paddingTop:18, borderTop:"1px solid #E5E7EB" }}>
+            {isPending && (
+              <>
+                <button className="btn btn-success btn-sm" onClick={onApprove}>✓ Approve &amp; Publish</button>
+                <button className="btn btn-danger btn-sm" onClick={onReject}>✕ Reject</button>
+              </>
+            )}
+            <div style={{ flex:1 }} />
+            <button className="btn btn-ghost" onClick={onClose}>Close</button>
+            <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Changes ✓"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddEntityModal({ type, busy, onClose, onSubmit }) {
+  const meta = ADD_META[type];
+  const [form, setForm] = useState(() => ({ ...ADD_INIT[type] }));
+  const [err, setErr]   = useState("");
+  const up = (k, v) => setForm(s => ({ ...s, [k]: v }));
+
+  const submit = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    for (const [k, label] of (ADD_REQUIRED[type] || [])) {
+      if (!String(form[k] || "").trim()) { setErr("Please fill: " + label); return; }
+    }
+    setErr("");
+    const payload = { ...form };
+    if (type === "teacher") {
+      // Rough profile completion so the admin-added teacher shows a sensible %.
+      const keys = ["full_name","mobile","gender","dob","current_location","qualification",
+        "specialization","total_experience","relevant_experience","current_role",
+        "work_mode","subjects","grades_handling","boards_handled","teaching_mode",
+        "languages","resume_link","terms_accepted"];
+      const filled = keys.filter(k => String(form[k] || "").trim()).length;
+      payload.completion_pct = Math.round((filled / keys.length) * 100);
+    }
+    if (type === "job") {
+      payload.contact_email = form.contact_email;
+      payload.title = form.title || ((form.requirement_type || "Teacher") + " — " + form.subject);
+      payload.description = form.description || form.notes;
+    }
+    onSubmit(meta.endpoint, meta.refresh, payload);
+  };
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()} style={{ maxWidth:680, padding:0 }}>
+        <div style={{ padding:"20px 28px", borderBottom:"1px solid #E5E7EB", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, background:"#fff", zIndex:10, borderRadius:"18px 18px 0 0" }}>
+          <div>
+            <h2 style={{ fontSize:20, fontWeight:800, color:"#111827" }}>{meta.icon} {meta.title}</h2>
+            <p style={{ fontSize:13, color:"#6B7280", marginTop:2 }}>The same form your users fill — posted by admin and saved to the database.</p>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+        </div>
+        <div style={{ padding:"24px 28px", overflowY:"auto", maxHeight:"72vh" }}>
+          <form onSubmit={submit}>
+            {type==="teacher" && <AdminTeacherForm form={form} up={up} />}
+            {type==="tutor"   && <AdminTutorForm   form={form} up={up} />}
+            {type==="tuition" && <AdminTuitionForm form={form} up={up} />}
+            {type==="job"     && <AdminJobForm     form={form} up={up} />}
+            {err && <div className="alert a-warn" style={{ marginTop:16 }}>⚠️ {err}</div>}
+            <div style={{ display:"flex", gap:10, marginTop:18, paddingTop:18, borderTop:"1px solid #E5E7EB" }}>
+              <button type="button" className="btn btn-ghost" style={{ flex:1, justifyContent:"center" }} onClick={onClose} disabled={busy}>Cancel</button>
+              <button type="submit" className="btn btn-primary" style={{ flex:2, justifyContent:"center" }} disabled={busy}>{busy ? "Saving…" : meta.title + " →"}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminDashboard({ setPage }) {
   const { logout } = useAuth();
   const [tab, setTab]   = useState("overview");
@@ -215,6 +1491,34 @@ function AdminDashboard({ setPage }) {
       else showToast("Error: " + d.message);
     } catch (e) { showToast("Network error: " + e.message); }
     finally { setLoading(l => ({...l, [key]:false})); }
+  }
+
+  // ── Admin "Add" record modal ──────────────────────────────────────────────
+  const [addType, setAddType] = useState(null);   // null | "teacher" | "tutor" | "tuition" | "job"
+  const [addBusy, setAddBusy] = useState(false);
+
+  async function submitAdd(endpoint, refreshKey, payload) {
+    setAddBusy(true);
+    try {
+      const r = await fetch(API + endpoint, {
+        method: "POST",
+        headers: { ...hdr, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const d = await r.json();
+      if (r.ok) {
+        showToast("✓ " + (d.message || "Added successfully"));
+        setAddType(null);
+        if (refreshKey === "teachers")      fetchData("teachers", "/admin/teachers",  setTeachers);
+        else if (refreshKey === "tutors")   fetchData("tutors",   "/admin/tutors",    setTutors);
+        else if (refreshKey === "parents")  fetchData("parents",  "/admin/parents",   setParents);
+        else if (refreshKey === "jobs")     fetchData("jobs",     "/admin/all-jobs",  setAllJobs);
+        fetchData("stats", "/admin/stats", setStats);
+      } else {
+        showToast("Error: " + (d.message || "Failed to add"));
+      }
+    } catch (e) { showToast("Network error: " + e.message); }
+    finally { setAddBusy(false); }
   }
 
   // Load stats on mount
@@ -291,11 +1595,13 @@ function AdminDashboard({ setPage }) {
   }
 
   function StatusBadge({ active }) {
-    return <span style={{ padding:"3px 10px", borderRadius:20, fontSize:11, fontWeight:700,
+    return <span style={{ display:"inline-flex", alignItems:"center", gap:5, whiteSpace:"nowrap", lineHeight:1,
+      padding:"4px 10px", borderRadius:20, fontSize:11, fontWeight:700,
       background: active ? "#ECFDF5" : "#FEF2F2",
       color:      active ? "#059669" : "#DC2626",
       border:     `1px solid ${active ? "#A7F3D0" : "#FECACA"}` }}>
-      {active ? "● Active" : "● Inactive"}
+      <span style={{ width:7, height:7, borderRadius:"50%", flexShrink:0, background: active ? "#059669" : "#DC2626" }} />
+      {active ? "Active" : "Inactive"}
     </span>;
   }
 
@@ -331,6 +1637,7 @@ function AdminDashboard({ setPage }) {
       {/* ── Main ── */}
       <div className="main">
         {toast && <Toast msg={toast} />}
+        {addType && <AddEntityModal type={addType} busy={addBusy} onClose={() => setAddType(null)} onSubmit={submitAdd} />}
 
         {/* ══ OVERVIEW ══ */}
         {tab==="overview" && (
@@ -454,119 +1761,15 @@ function AdminDashboard({ setPage }) {
 
         {/* ══ JOB DETAIL MODAL ══ */}
         {selectedJob && (
-          <div className="overlay" onClick={() => setSelectedJob(null)}>
-            <div onClick={e => e.stopPropagation()}
-              style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
-
-              {/* Header */}
-              <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"24px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                  <div>
-                    <div style={{ color:"#BFDBFE", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:6 }}>⏳ Pending Job Requirement</div>
-                    <div style={{ color:"#fff", fontSize:20, fontWeight:800, marginBottom:4 }}>{selectedJob.title}</div>
-                    <div style={{ color:"#93C5FD", fontSize:13 }}>{selectedJob.institute_name} · {selectedJob.location_city||selectedJob.location_city_user||"—"}</div>
-                    {selectedJob.requirement_id && <div style={{ marginTop:6, fontFamily:"Fira Code,monospace", fontSize:12, color:"#4ADE80", fontWeight:700 }}>🔖 {selectedJob.requirement_id}</div>}
-                  </div>
-                  <button onClick={() => setSelectedJob(null)} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
-                </div>
-                {/* Top action buttons */}
-                <div style={{ display:"flex", gap:10, marginTop:18 }}>
-                  <button className="btn btn-success btn-sm" style={{ flex:1, justifyContent:"center", background:"#059669" }}
-                    onClick={() => { approveJob(selectedJob); setSelectedJob(null); }}>✓ Approve & Publish</button>
-                  <button className="btn btn-danger btn-sm" style={{ flex:1, justifyContent:"center" }}
-                    onClick={() => { rejectJob(selectedJob.id); setSelectedJob(null); }}>✕ Reject</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setSelectedJob(null)}>Close</button>
-                </div>
-              </div>
-
-              <div style={{ padding:"24px 28px" }}>
-
-                {/* Helper component for a field box */}
-                {(() => {
-                  const Field = ({ label, value, full, green, mono }) => !value ? null : (
-                    <div style={{ background:"#F9FAFB", borderRadius:8, padding:"10px 14px", gridColumn: full?"1/-1":"auto" }}>
-                      <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>{label}</div>
-                      <div style={{ fontSize:13, fontWeight:600, color: green?"#059669":mono?"#1A56DB":"#111827", fontFamily: mono?"Fira Code,monospace":"inherit" }}>{value}</div>
-                    </div>
-                  );
-
-                  const j = selectedJob;
-                  const grid = { display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:22 };
-                  const secHead = (icon, label) => (
-                    <div style={{ fontWeight:800, fontSize:11, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1.5, marginBottom:10, paddingBottom:6, borderBottom:"2px solid #EBF5FF" }}>
-                      {icon} {label}
-                    </div>
-                  );
-
-                  return (
-                    <>
-                      {/* ── Section 1: Institution Details ── */}
-                      {secHead("🏫", "Institution Details")}
-                      <div style={grid}>
-                        <Field label="Requirement ID"     value={j.requirement_id}                              mono />
-                        <Field label="Institution Name"   value={j.institution_name||j.institute_name} />
-                        <Field label="Institution Type"   value={j.institution_type} />
-                        <Field label="State"              value={j.location_state} />
-                        <Field label="City"               value={j.location_city||j.institute_city_user} />
-                        <Field label="Contact Person"     value={j.contact_person} />
-                        <Field label="Contact Number"     value={j.contact_number||j.institute_phone} />
-                        <Field label="Email"              value={j.contact_email||j.posted_by_email} />
-                        <Field label="Posted On"          value={new Date(j.created_at).toLocaleString()} />
-                        <Field label="Posted By (Account)" value={j.posted_by_email} />
-                      </div>
-
-                      {/* ── Section 2: Requirement Details ── */}
-                      {secHead("📋", "Requirement Details")}
-                      <div style={grid}>
-                        <Field label="Requirement Type"   value={j.requirement_type} />
-                        <Field label="Subject"            value={j.subject} />
-                        <Field label="Grades / Classes"   value={j.grades} full />
-                        <Field label="Board"              value={j.board} />
-                        <Field label="Experience Required" value={j.experience} />
-                      </div>
-
-                      {/* ── Section 3: Compensation ── */}
-                      {secHead("💰", "Compensation & Schedule")}
-                      <div style={grid}>
-                        <Field label="Salary Min (₹/mo)"  value={j.salary_min ? "₹"+Number(j.salary_min).toLocaleString() : null} green />
-                        <Field label="Salary Max (₹/mo)"  value={j.salary_max ? "₹"+Number(j.salary_max).toLocaleString() : null} green />
-                        <Field label="Joining Timeline"   value={j.joining_timeline} />
-                        <Field label="Work Mode"          value={j.work_mode||j.job_type} />
-                        <Field label="Number of Positions" value={j.positions ? String(j.positions) : null} />
-                        <Field label="Interview Mode"     value={j.interview_mode} />
-                      </div>
-
-                      {/* ── Section 4: Conditions ── */}
-                      {secHead("🏠", "Conditions & Preferences")}
-                      <div style={grid}>
-                        <Field label="Residential"        value={j.residential} />
-                        <Field label="Accommodation"      value={j.accommodation} />
-                        <Field label="Gender Preference"  value={j.gender_preference} />
-                        <Field label="Demo Required"      value={j.demo_required} />
-                      </div>
-
-                      {/* ── Section 5: Internal ── */}
-                      {secHead("🗂", "Internal / Admin")}
-                      <div style={grid}>
-                        <Field label="Status"             value={j.status} />
-                        <Field label="Assigned Recruiter" value={j.assigned_recruiter} />
-                        <Field label="Notes / Remarks"    value={j.notes} full />
-                      </div>
-                    </>
-                  );
-                })()}
-
-                {/* Bottom action row */}
-                <div style={{ display:"flex", gap:10, paddingTop:20, borderTop:"1px solid #E5E7EB", marginTop:8 }}>
-                  <button className="btn btn-success" style={{ flex:1, justifyContent:"center" }}
-                    onClick={() => { approveJob(selectedJob); setSelectedJob(null); }}>✓ Approve & Publish</button>
-                  <button className="btn btn-danger" style={{ flex:1, justifyContent:"center" }}
-                    onClick={() => { rejectJob(selectedJob.id); setSelectedJob(null); }}>✕ Reject</button>
-                  <button className="btn btn-ghost" onClick={() => setSelectedJob(null)}>Cancel</button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <JobEditModal
+            job={selectedJob}
+            api={API}
+            hdr={hdr}
+            onClose={() => setSelectedJob(null)}
+            onApprove={() => { approveJob(selectedJob); setSelectedJob(null); }}
+            onReject={() => { rejectJob(selectedJob.id); setSelectedJob(null); }}
+            onSaved={() => { setAllJobs([]); fetchData("jobs", "/admin/all-jobs", setAllJobs); }}
+          />
         )}
 
 
@@ -575,6 +1778,9 @@ function AdminDashboard({ setPage }) {
           <div className="fadeUp">
             <div className="page-title">All Positions</div>
             <div className="page-sub">Every job posted on AcadHr — from database</div>
+            <div style={{ margin:"4px 0 16px" }}>
+              <button className="btn btn-primary btn-sm" onClick={() => setAddType("job")}>＋ Add Job</button>
+            </div>
             <FilterBar filters={jobFilters} setFilters={setJobFilters} fields={[
                 { key:"title",            type:"text",   placeholder:"🔍 Position...",        width:200 },
                 { key:"institute_name",   type:"text",   placeholder:"🏫 Institution...",      width:180 },
@@ -587,9 +1793,9 @@ function AdminDashboard({ setPage }) {
               ]} />
             {loading.jobs ? <Loader /> : (
               <div className="card" style={{ padding:0, overflow:"hidden" }}>
-                <div className="tbl-wrap">
+                <div className="tbl-wrap admin-tbl">
                   <table>
-                    <thead><tr><th>Req ID</th><th>Position</th><th>Institution</th><th>Subject</th><th>Location</th><th>Salary</th><th>Applications</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Position</th><th>Institution</th><th>Location</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody>
                       {(() => {
                         const f = jobFilters;
@@ -602,19 +1808,20 @@ function AdminDashboard({ setPage }) {
                           (!f.status           || j.status === f.status)
                         );
                         return filtered.length === 0 ? (
-                          <tr><td colSpan={8} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No jobs match filters</td></tr>
+                          <tr><td colSpan={5} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No jobs match filters</td></tr>
                         ) : filtered.map(j => (
-                        <tr key={j.id}>
-                          <td style={{ fontFamily:"Fira Code,monospace", fontSize:11, color:"#059669" }}>{j.requirement_id||"—"}</td>
+                        <tr key={j.id} onClick={() => setSelectedJob(j)} style={{ cursor:"pointer" }}>
                           <td><strong style={{ color:"#111827" }}>{j.title}</strong></td>
                           <td>{j.institute_name}</td>
-                          <td>{j.subject||"—"}</td>
                           <td>📍 {j.location_city||j.location||"—"}</td>
-                          <td style={{ color:"#059669", fontWeight:600 }}>{j.salary_min ? `₹${Number(j.salary_min).toLocaleString()}` : "—"}</td>
-                          <td>👥 {j.applicant_count||0}</td>
                           <td><span className={"badge "+(j.status==="approved"?"bgreen":j.status==="pending"?"bamber":"bred")}>
                             {j.status==="approved"?"● Live":j.status==="pending"?"⏳ Pending":"✕ Rejected"}
                           </span></td>
+                          <td>
+                            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                              <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedJob(j); }}>👁 View</button>
+                            </div>
+                          </td>
                         </tr>
                       ))})()}
                     </tbody>
@@ -641,9 +1848,9 @@ function AdminDashboard({ setPage }) {
               ]} />
             {loading.schools ? <Loader /> : (
               <div className="card" style={{ padding:0, overflow:"hidden" }}>
-                <div className="tbl-wrap">
+                <div className="tbl-wrap admin-tbl">
                   <table>
-                    <thead><tr><th>Institution</th><th>Email</th><th>Type</th><th>City</th><th>Phone</th><th>Live Jobs</th><th>Pending</th><th>Total Jobs</th><th>Joined</th><th>Status</th><th>Action</th></tr></thead>
+                    <thead><tr><th>Institution</th><th>Email</th><th>City</th><th>Live Jobs</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody>
                       {(() => {
                         const f = schoolFilters;
@@ -655,20 +1862,20 @@ function AdminDashboard({ setPage }) {
                           (f.status === ""   || String(s.is_active) === f.status)
                         );
                         return filtered.length === 0 ? (
-                          <tr><td colSpan={11} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No institutions match filters</td></tr>
+                          <tr><td colSpan={6} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No institutions match filters</td></tr>
                         ) : filtered.map(s => (
                         <tr key={s.id} onClick={() => setSelectedSchool(s)} style={{ cursor:"pointer" }}>
                           <td><strong style={{ color:"#1A56DB", textDecoration:"underline" }}>{s.name}</strong></td>
                           <td style={{ fontSize:12, color:"#6B7280" }}>{s.email}</td>
-                          <td>{s.institute_type||"—"}</td>
                           <td>📍 {s.city||"—"}</td>
-                          <td>{s.phone||"—"}</td>
                           <td><span className="badge bgreen">{s.live_jobs||0}</span></td>
-                          <td><span className="badge bamber">{s.pending_jobs||0}</span></td>
-                          <td>{s.total_jobs||0}</td>
-                          <td style={{ fontSize:11, color:"#9CA3AF" }}>{new Date(s.created_at).toLocaleDateString()}</td>
                           <td><StatusBadge active={s.is_active} /></td>
-                          <td><button className={"btn btn-sm "+(s.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(s.id); }}>{s.is_active?"Deactivate":"Activate"}</button></td>
+                          <td>
+                            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                              <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedSchool(s); }}>👁 View</button>
+                              <button className={"btn btn-sm "+(s.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(s.id); }}>{s.is_active?"Deactivate":"Activate"}</button>
+                            </div>
+                          </td>
                         </tr>
                       ))})()}
                     </tbody>
@@ -684,6 +1891,9 @@ function AdminDashboard({ setPage }) {
           <div className="fadeUp">
             <div className="page-title">Teachers</div>
             <div className="page-sub">All registered teachers — from database</div>
+            <div style={{ margin:"4px 0 16px" }}>
+              <button className="btn btn-primary btn-sm" onClick={() => setAddType("teacher")}>＋ Add Teacher</button>
+            </div>
             <FilterBar filters={teacherFilters} setFilters={setTeacherFilters} fields={[
                 { key:"name",             type:"text",   placeholder:"🔍 Name...",          width:180 },
                 { key:"email",            type:"text",   placeholder:"📧 Email...",          width:180 },
@@ -696,9 +1906,9 @@ function AdminDashboard({ setPage }) {
               ]} />
             {loading.teachers ? <Loader /> : (
               <div className="card" style={{ padding:0, overflow:"hidden" }}>
-                <div className="tbl-wrap">
+                <div className="tbl-wrap admin-tbl">
                   <table>
-                    <thead><tr><th>Photo</th><th>Name</th><th>Email</th><th>Phone</th><th>Specialization</th><th>Experience</th><th>City</th><th>Profile %</th><th>Joined</th><th>Status</th><th>Action</th></tr></thead>
+                    <thead><tr><th>Name</th><th>Email</th><th>Specialization</th><th>City</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody>
                       {(() => {
                         const f = teacherFilters;
@@ -711,33 +1921,20 @@ function AdminDashboard({ setPage }) {
                           (f.status === "" || String(t.is_active) === f.status)
                         );
                         return filtered.length === 0 ? (
-                          <tr><td colSpan={11} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No teachers match filters</td></tr>
+                          <tr><td colSpan={6} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No teachers match filters</td></tr>
                         ) : filtered.map(t => (
                         <tr key={t.id} onClick={() => setSelectedTeacher(t)} style={{ cursor:"pointer" }}>
-                          <td>
-                            <div style={{ width:36, height:36, borderRadius:"50%", overflow:"hidden", background:"#EBF5FF", border:"2px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                              {t.profile_photo
-                                ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + t.profile_photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                                : <span style={{ fontSize:18 }}>👤</span>}
-                            </div>
-                          </td>
                           <td><strong style={{ color:"#1A56DB", textDecoration:"underline" }}>{t.name}</strong></td>
                           <td style={{ fontSize:12, color:"#6B7280" }}>{t.email}</td>
-                          <td>{t.phone||"—"}</td>
                           <td>{t.specialization||"—"}</td>
-                          <td>{t.total_experience||"—"}</td>
                           <td>📍 {t.city||"—"}</td>
+                          <td><StatusBadge active={t.is_active} /></td>
                           <td>
-                            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                              <div style={{ width:50, height:6, background:"#F3F4F6", borderRadius:3, overflow:"hidden" }}>
-                                <div style={{ height:6, borderRadius:3, background: (t.completion_pct||0)>=70?"#059669":(t.completion_pct||0)>=40?"#D97706":"#DC2626", width:`${t.completion_pct||0}%` }} />
-                              </div>
-                              <span style={{ fontSize:11, fontWeight:700, color:(t.completion_pct||0)>=70?"#059669":"#D97706" }}>{t.completion_pct||0}%</span>
+                            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                              <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedTeacher(t); }}>👁 View</button>
+                              <button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(t.id); }}>{t.is_active?"Deactivate":"Activate"}</button>
                             </div>
                           </td>
-                          <td style={{ fontSize:11, color:"#9CA3AF" }}>{new Date(t.created_at).toLocaleDateString()}</td>
-                          <td><StatusBadge active={t.is_active} /></td>
-                          <td><button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(t.id); }}>{t.is_active?"Deactivate":"Activate"}</button></td>
                         </tr>
                       ))})()}
                     </tbody>
@@ -749,89 +1946,25 @@ function AdminDashboard({ setPage }) {
         )}
 
         {/* ══ TEACHER PROFILE DETAIL ══ */}
-        {selectedTeacher && (() => {
-          const t = selectedTeacher;
-          const photo = t.profile_photo ? API_ORIGIN + t.profile_photo : null;
-          const resumeUrl = t.resume_link ? (t.resume_link.startsWith("http") ? t.resume_link : API_ORIGIN + t.resume_link) : null;
-          const Field = ({ label, value, full }) => !value ? null : (
-            <div style={{ background:"#F9FAFB", borderRadius:8, padding:"10px 14px", gridColumn: full?"1/-1":"auto" }}>
-              <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>{label}</div>
-              <div style={{ fontSize:13.5, color:"#111827", fontWeight:600 }}>{value}</div>
-            </div>
-          );
-          return (
-          <div className="overlay" onClick={() => setSelectedTeacher(null)}>
-            <div onClick={e => e.stopPropagation()}
-              style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
-
-              {/* Header */}
-              <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"24px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:16, minWidth:0 }}>
-                    <div style={{ width:64, height:64, borderRadius:"50%", overflow:"hidden", background:"rgba(255,255,255,.15)", border:"2px solid rgba(255,255,255,.5)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                      {photo ? <img src={photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : <span style={{ fontSize:30 }}>👤</span>}
-                    </div>
-                    <div style={{ minWidth:0 }}>
-                      <div style={{ color:"#BFDBFE", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>👩‍🏫 Teacher Profile</div>
-                      <div style={{ color:"#fff", fontSize:20, fontWeight:800, marginBottom:2 }}>{t.name}</div>
-                      <div style={{ color:"#93C5FD", fontSize:13 }}>{t.specialization || t.current_role || "Teacher"}{t.city ? ` · 📍 ${t.city}` : ""}</div>
-                    </div>
-                  </div>
-                  <button onClick={() => setSelectedTeacher(null)} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
-                </div>
-                {/* Actions */}
-                <div style={{ display:"flex", gap:10, marginTop:18, flexWrap:"wrap" }}>
-                  {resumeUrl ? (
-                    <a href={resumeUrl} target="_blank" rel="noopener noreferrer" download
-                      className="btn btn-sm" style={{ flex:1, justifyContent:"center", background:"#059669", color:"#fff", textDecoration:"none", minWidth:160 }}>
-                      ⬇️ Download Resume{t.resume_file_name ? ` (${t.resume_file_name})` : ""}
-                    </a>
-                  ) : (
-                    <span style={{ flex:1, textAlign:"center", color:"#BFDBFE", fontSize:13, fontWeight:600, alignSelf:"center", minWidth:160 }}>No resume uploaded</span>
-                  )}
-                  <button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")}
-                    onClick={() => { toggleUser(t.id); setSelectedTeacher(s => s ? {...s, is_active: s.is_active ? 0 : 1} : s); }}>
-                    {t.is_active ? "Deactivate" : "Activate"}
-                  </button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setSelectedTeacher(null)}>Close</button>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div style={{ padding:"24px 28px" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16, flexWrap:"wrap" }}>
-                  <StatusBadge active={t.is_active} />
-                  {t.profile_status && <span style={{ background:"#EBF5FF", color:"#1A56DB", border:"1px solid #BFDBFE", borderRadius:20, padding:"3px 12px", fontSize:11, fontWeight:700 }}>{t.profile_status}</span>}
-                  <span style={{ fontSize:12, color:"#6B7280", fontWeight:600 }}>Profile {t.completion_pct||0}% complete</span>
-                </div>
-
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                  <Field label="Email" value={t.email} />
-                  <Field label="Phone" value={t.phone || t.mobile} />
-                  <Field label="Specialization" value={t.specialization} />
-                  <Field label="Experience" value={t.total_experience} />
-                  <Field label="Qualification" value={t.qualification} />
-                  <Field label="Current Role" value={t.current_role} />
-                  <Field label="City" value={t.city || t.current_location} />
-                  <Field label="Work Mode" value={t.work_mode} />
-                  <Field label="Gender" value={t.gender} />
-                  <Field label="Languages" value={t.languages} />
-                  <Field label="Subjects" value={t.subjects} full />
-                  <Field label="Grades Handling" value={t.grades_handling} full />
-                  <Field label="Boards Handled" value={t.boards_handled} full />
-                  <Field label="Joined" value={t.created_at ? new Date(t.created_at).toLocaleString() : null} />
-                </div>
-              </div>
-            </div>
-          </div>
-          );
-        })()}
+        {selectedTeacher && (
+          <TeacherEditModal
+            teacher={selectedTeacher}
+            api={API}
+            hdr={hdr}
+            onClose={() => setSelectedTeacher(null)}
+            onToggle={(id) => { toggleUser(id); setSelectedTeacher(s => s ? {...s, is_active: s.is_active ? 0 : 1} : s); }}
+            onSaved={() => fetchData("teachers", "/admin/teachers", setTeachers)}
+          />
+        )}
 
         {/* ══ TUTORS ══ */}
         {tab==="tutors" && (
           <div className="fadeUp">
             <div className="page-title">Tutors</div>
             <div className="page-sub">All registered tutors — from database</div>
+            <div style={{ margin:"4px 0 16px" }}>
+              <button className="btn btn-primary btn-sm" onClick={() => setAddType("tutor")}>＋ Add Tutor</button>
+            </div>
             <FilterBar filters={tutorFilters} setFilters={setTutorFilters} fields={[
                 { key:"name",         type:"text",   placeholder:"🔍 Name...",    width:180 },
                 { key:"email",        type:"text",   placeholder:"📧 Email...",   width:180 },
@@ -844,9 +1977,9 @@ function AdminDashboard({ setPage }) {
               ]} />
             {loading.tutors ? <Loader /> : (
               <div className="card" style={{ padding:0, overflow:"hidden" }}>
-                <div className="tbl-wrap">
+                <div className="tbl-wrap admin-tbl">
                   <table>
-                    <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Subject</th><th>Experience</th><th>Mode</th><th>City</th><th>Joined</th><th>Status</th><th>Action</th></tr></thead>
+                    <thead><tr><th>Name</th><th>Email</th><th>Subject</th><th>City</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody>
                       {(() => {
                         const f = tutorFilters;
@@ -859,19 +1992,20 @@ function AdminDashboard({ setPage }) {
                           (f.status === "" || String(t.is_active) === f.status)
                         );
                         return filtered.length === 0 ? (
-                          <tr><td colSpan={10} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No tutors match filters</td></tr>
+                          <tr><td colSpan={6} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No tutors match filters</td></tr>
                         ) : filtered.map(t => (
                         <tr key={t.id} onClick={() => setSelectedTutor(t)} style={{ cursor:"pointer" }}>
                           <td><strong style={{ color:"#6D28D9", textDecoration:"underline" }}>{t.name}</strong></td>
                           <td style={{ fontSize:12, color:"#6B7280" }}>{t.email}</td>
-                          <td>{t.phone||"—"}</td>
                           <td>{t.subject||"—"}</td>
-                          <td>{t.experience||"—"}</td>
-                          <td>{t.teaching_mode||"—"}</td>
                           <td>📍 {t.city||"—"}</td>
-                          <td style={{ fontSize:11, color:"#9CA3AF" }}>{new Date(t.created_at).toLocaleDateString()}</td>
                           <td><StatusBadge active={t.is_active} /></td>
-                          <td><button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(t.id); }}>{t.is_active?"Deactivate":"Activate"}</button></td>
+                          <td>
+                            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                              <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedTutor(t); }}>👁 View</button>
+                              <button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(t.id); }}>{t.is_active?"Deactivate":"Activate"}</button>
+                            </div>
+                          </td>
                         </tr>
                       ))})()}
                     </tbody>
@@ -887,6 +2021,9 @@ function AdminDashboard({ setPage }) {
           <div className="fadeUp">
             <div className="page-title">Parents / Guardians</div>
             <div className="page-sub">All registered parents — from database</div>
+            <div style={{ margin:"4px 0 16px" }}>
+              <button className="btn btn-primary btn-sm" onClick={() => setAddType("tuition")}>＋ Add Tuition</button>
+            </div>
             <FilterBar filters={parentFilters} setFilters={setParentFilters} fields={[
               { key:"name",          type:"text",   placeholder:"🔍 Parent name...", width:180 },
               { key:"email",         type:"text",   placeholder:"📧 Email...",       width:180 },
@@ -901,9 +2038,9 @@ function AdminDashboard({ setPage }) {
             {loading.parents
               ? <Loader />
               : <div className="card" style={{ padding:0, overflow:"hidden" }}>
-                  <div className="tbl-wrap">
+                  <div className="tbl-wrap admin-tbl">
                     <table>
-                      <thead><tr><th>Parent Name</th><th>Email</th><th>Phone</th><th>Student</th><th>Class</th><th>Board</th><th>Subject</th><th>Location</th><th>Mode</th><th>Time</th><th>Budget</th><th>Tutor Gender</th><th>Exp Req</th><th>Status</th><th>Action</th></tr></thead>
+                      <thead><tr><th>Parent Name</th><th>Email</th><th>Student</th><th>Subject</th><th>Status</th><th>Action</th></tr></thead>
                       <tbody>
                         {(() => {
                           const f = parentFilters;
@@ -916,24 +2053,20 @@ function AdminDashboard({ setPage }) {
                             (!f.status        || (p.status||"Open") === f.status)
                           );
                           return filtered.length === 0
-                            ? <tr><td colSpan={15} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No parents match filters</td></tr>
+                            ? <tr><td colSpan={6} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No parents match filters</td></tr>
                             : filtered.map(p => (
                               <tr key={p.id} onClick={() => setSelectedParent(p)} style={{ cursor:"pointer" }}>
                                 <td><strong style={{ color:"#059669", textDecoration:"underline" }}>{p.name}</strong></td>
                                 <td style={{ fontSize:12, color:"#6B7280" }}>{p.email}</td>
-                                <td>{p.phone||"—"}</td>
                                 <td style={{ fontWeight:600, color:"#1A56DB" }}>{p.student_name||"—"}</td>
-                                <td>{p.student_class||"—"}</td>
-                                <td>{p.board||"—"}</td>
                                 <td>{p.subject||"—"}</td>
-                                <td>📍 {p.location||p.city||"—"}</td>
-                                <td>{p.mode||"—"}</td>
-                                <td>{p.preferred_time||"—"}</td>
-                                <td style={{ color:"#059669", fontWeight:600 }}>{p.budget||"—"}</td>
-                                <td>{p.tutor_gender_pref||"Any"}</td>
-                                <td>{p.experience_req||"Any"}</td>
                                 <td><span className={"badge "+(p.status==="Assigned"?"bgreen":"bamber")}>{p.status||"Open"}</span></td>
-                                <td><button className={"btn btn-sm "+(p.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(p.id); }}>{p.is_active?"Deactivate":"Activate"}</button></td>
+                                <td>
+                                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                                    <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedParent(p); }}>👁 View</button>
+                                    <button className={"btn btn-sm "+(p.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(p.id); }}>{p.is_active?"Deactivate":"Activate"}</button>
+                                  </div>
+                                </td>
                               </tr>
                             ));
                         })()}
@@ -968,157 +2101,40 @@ function AdminDashboard({ setPage }) {
         )}
 
         {/* ══ SCHOOL PROFILE DETAIL ══ */}
-        {selectedSchool && (() => {
-          const s = selectedSchool;
-          const Field = ({ label, value, full }) => !value && value !== 0 ? null : (
-            <div style={{ background:"#F9FAFB", borderRadius:8, padding:"10px 14px", gridColumn: full?"1/-1":"auto" }}>
-              <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>{label}</div>
-              <div style={{ fontSize:13.5, color:"#111827", fontWeight:600 }}>{value}</div>
-            </div>
-          );
-          return (
-          <div className="overlay" onClick={() => setSelectedSchool(null)}>
-            <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
-              <div style={{ background:"linear-gradient(135deg,#0369A1,#0EA5E9)", padding:"24px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:16, minWidth:0 }}>
-                    <div style={{ width:64, height:64, borderRadius:16, background:"rgba(255,255,255,.15)", border:"2px solid rgba(255,255,255,.5)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:30 }}>🏫</div>
-                    <div style={{ minWidth:0 }}>
-                      <div style={{ color:"#BAE6FD", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>🏫 Institution Profile</div>
-                      <div style={{ color:"#fff", fontSize:20, fontWeight:800, marginBottom:2 }}>{s.name}</div>
-                      <div style={{ color:"#E0F2FE", fontSize:13 }}>{s.institute_type || "Institution"}{s.city ? ` · 📍 ${s.city}` : ""}</div>
-                    </div>
-                  </div>
-                  <button onClick={() => setSelectedSchool(null)} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
-                </div>
-                <div style={{ display:"flex", gap:10, marginTop:18, flexWrap:"wrap" }}>
-                  {s.website && <a href={s.website.startsWith("http")?s.website:`https://${s.website}`} target="_blank" rel="noopener noreferrer" className="btn btn-sm" style={{ flex:1, justifyContent:"center", background:"#fff", color:"#0369A1", textDecoration:"none", minWidth:140 }}>🌐 Visit Website</a>}
-                  <button className={"btn btn-sm "+(s.is_active?"btn-danger":"btn-success")} onClick={() => { toggleUser(s.id); setSelectedSchool(x => x ? {...x, is_active: x.is_active ? 0 : 1} : x); }}>{s.is_active?"Deactivate":"Activate"}</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setSelectedSchool(null)}>Close</button>
-                </div>
-              </div>
-              <div style={{ padding:"24px 28px" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}><StatusBadge active={s.is_active} /></div>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                  <Field label="Email" value={s.email} />
-                  <Field label="Phone" value={s.phone} />
-                  <Field label="Institution Type" value={s.institute_type} />
-                  <Field label="City" value={s.city} />
-                  <Field label="Website" value={s.website} />
-                  <Field label="Total Jobs Posted" value={s.total_jobs ?? 0} />
-                  <Field label="Live Jobs" value={s.live_jobs ?? 0} />
-                  <Field label="Pending Jobs" value={s.pending_jobs ?? 0} />
-                  <Field label="Joined" value={s.created_at ? new Date(s.created_at).toLocaleString() : null} full />
-                </div>
-              </div>
-            </div>
-          </div>
-          );
-        })()}
+        {selectedSchool && (
+          <SchoolEditModal
+            school={selectedSchool}
+            api={API}
+            hdr={hdr}
+            onClose={() => setSelectedSchool(null)}
+            onToggle={(id) => { toggleUser(id); setSelectedSchool(s => s ? {...s, is_active: s.is_active ? 0 : 1} : s); }}
+            onSaved={() => fetchData("schools", "/admin/schools", setSchools)}
+          />
+        )}
 
         {/* ══ TUTOR PROFILE DETAIL ══ */}
-        {selectedTutor && (() => {
-          const t = selectedTutor;
-          const Field = ({ label, value, full }) => !value ? null : (
-            <div style={{ background:"#F9FAFB", borderRadius:8, padding:"10px 14px", gridColumn: full?"1/-1":"auto" }}>
-              <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>{label}</div>
-              <div style={{ fontSize:13.5, color:"#111827", fontWeight:600 }}>{value}</div>
-            </div>
-          );
-          return (
-          <div className="overlay" onClick={() => setSelectedTutor(null)}>
-            <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
-              <div style={{ background:"linear-gradient(135deg,#4C1D95,#6D28D9)", padding:"24px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:16, minWidth:0 }}>
-                    <div style={{ width:64, height:64, borderRadius:"50%", background:"rgba(255,255,255,.15)", border:"2px solid rgba(255,255,255,.5)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:30 }}>🧑‍🎓</div>
-                    <div style={{ minWidth:0 }}>
-                      <div style={{ color:"#DDD6FE", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>🧑‍🎓 Tutor Profile</div>
-                      <div style={{ color:"#fff", fontSize:20, fontWeight:800, marginBottom:2 }}>{t.name}</div>
-                      <div style={{ color:"#C4B5FD", fontSize:13 }}>{t.subject || "Tutor"}{t.city ? ` · 📍 ${t.city}` : ""}</div>
-                    </div>
-                  </div>
-                  <button onClick={() => setSelectedTutor(null)} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
-                </div>
-                <div style={{ display:"flex", gap:10, marginTop:18, flexWrap:"wrap" }}>
-                  <button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={() => { toggleUser(t.id); setSelectedTutor(x => x ? {...x, is_active: x.is_active ? 0 : 1} : x); }}>{t.is_active?"Deactivate":"Activate"}</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setSelectedTutor(null)}>Close</button>
-                </div>
-              </div>
-              <div style={{ padding:"24px 28px" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}><StatusBadge active={t.is_active} /></div>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                  <Field label="Email" value={t.email} />
-                  <Field label="Phone" value={t.phone} />
-                  <Field label="Subject" value={t.subject} />
-                  <Field label="Experience" value={t.experience} />
-                  <Field label="Qualification" value={t.qualification} />
-                  <Field label="Teaching Mode" value={t.teaching_mode} />
-                  <Field label="Hourly Rate" value={t.hourly_rate} />
-                  <Field label="City" value={t.city} />
-                  <Field label="Joined" value={t.created_at ? new Date(t.created_at).toLocaleString() : null} full />
-                </div>
-              </div>
-            </div>
-          </div>
-          );
-        })()}
+        {selectedTutor && (
+          <TutorEditModal
+            tutor={selectedTutor}
+            api={API}
+            hdr={hdr}
+            onClose={() => setSelectedTutor(null)}
+            onToggle={(id) => { toggleUser(id); setSelectedTutor(s => s ? {...s, is_active: s.is_active ? 0 : 1} : s); }}
+            onSaved={() => fetchData("tutors", "/admin/tutors", setTutors)}
+          />
+        )}
 
         {/* ══ PARENT PROFILE DETAIL ══ */}
-        {selectedParent && (() => {
-          const p = selectedParent;
-          const Field = ({ label, value, full }) => !value ? null : (
-            <div style={{ background:"#F9FAFB", borderRadius:8, padding:"10px 14px", gridColumn: full?"1/-1":"auto" }}>
-              <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>{label}</div>
-              <div style={{ fontSize:13.5, color:"#111827", fontWeight:600 }}>{value}</div>
-            </div>
-          );
-          return (
-          <div className="overlay" onClick={() => setSelectedParent(null)}>
-            <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
-              <div style={{ background:"linear-gradient(135deg,#065F46,#059669)", padding:"24px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:16, minWidth:0 }}>
-                    <div style={{ width:64, height:64, borderRadius:"50%", background:"rgba(255,255,255,.15)", border:"2px solid rgba(255,255,255,.5)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:30 }}>👨‍👩‍👧</div>
-                    <div style={{ minWidth:0 }}>
-                      <div style={{ color:"#A7F3D0", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>👨‍👩‍👧 Parent Profile</div>
-                      <div style={{ color:"#fff", fontSize:20, fontWeight:800, marginBottom:2 }}>{p.name}</div>
-                      <div style={{ color:"#A7F3D0", fontSize:13 }}>{p.student_name ? `Student: ${p.student_name}` : "Parent / Guardian"}{(p.location||p.city) ? ` · 📍 ${p.location||p.city}` : ""}</div>
-                    </div>
-                  </div>
-                  <button onClick={() => setSelectedParent(null)} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
-                </div>
-                <div style={{ display:"flex", gap:10, marginTop:18, flexWrap:"wrap" }}>
-                  <button className={"btn btn-sm "+(p.is_active?"btn-danger":"btn-success")} onClick={() => { toggleUser(p.id); setSelectedParent(x => x ? {...x, is_active: x.is_active ? 0 : 1} : x); }}>{p.is_active?"Deactivate":"Activate"}</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setSelectedParent(null)}>Close</button>
-                </div>
-              </div>
-              <div style={{ padding:"24px 28px" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16, flexWrap:"wrap" }}>
-                  <StatusBadge active={p.is_active} />
-                  <span style={{ background: p.status==="Assigned"?"#ECFDF5":"#FFFBEB", color: p.status==="Assigned"?"#059669":"#D97706", border:`1px solid ${p.status==="Assigned"?"#A7F3D0":"#FDE68A"}`, borderRadius:20, padding:"3px 12px", fontSize:11, fontWeight:700 }}>{p.status||"Open"}</span>
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                  <Field label="Email" value={p.email} />
-                  <Field label="Phone" value={p.phone} />
-                  <Field label="Student Name" value={p.student_name} />
-                  <Field label="Student Class" value={p.student_class} />
-                  <Field label="Board" value={p.board} />
-                  <Field label="Subject(s)" value={p.subject} />
-                  <Field label="Location" value={p.location || p.city} />
-                  <Field label="Mode" value={p.mode} />
-                  <Field label="Preferred Time" value={p.preferred_time} />
-                  <Field label="Budget" value={p.budget} />
-                  <Field label="Tutor Gender Preference" value={p.tutor_gender_pref} />
-                  <Field label="Experience Required" value={p.experience_req} />
-                  <Field label="Assigned Tutor" value={p.assigned_tutor} />
-                  <Field label="Joined" value={p.created_at ? new Date(p.created_at).toLocaleString() : null} />
-                </div>
-              </div>
-            </div>
-          </div>
-          );
-        })()}
+        {selectedParent && (
+          <ParentEditModal
+            parent={selectedParent}
+            api={API}
+            hdr={hdr}
+            onClose={() => setSelectedParent(null)}
+            onToggle={(id) => { toggleUser(id); setSelectedParent(s => s ? {...s, is_active: s.is_active ? 0 : 1} : s); }}
+            onSaved={() => fetchData("parents", "/admin/parents", setParents)}
+          />
+        )}
 
         {/* ══ FEEDBACKS ══ */}
         {tab==="feedbacks" && (

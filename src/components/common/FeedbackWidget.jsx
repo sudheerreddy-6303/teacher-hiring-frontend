@@ -50,11 +50,20 @@ export default function FeedbackWidget({ page }) {
 
   return (
     <>
+      {/* Blinking animation for the Support button (scoped to this widget) */}
+      <style>{`
+        @keyframes supportBlink {
+          0%, 100% { opacity: 1; box-shadow: 0 8px 24px rgba(26,86,219,.35); }
+          50%      { opacity: .65; box-shadow: 0 0 0 7px rgba(26,86,219,.22), 0 8px 28px rgba(26,86,219,.65); }
+        }
+        .support-blink { animation: supportBlink 1.1s ease-in-out infinite; }
+      `}</style>
       {/* Floating button (bottom-right) */}
       {!open && (
         <button
           onClick={() => { reset(); setOpen(true); }}
           aria-label="Send feedback"
+          className="support-blink"
           style={{
             position:"fixed", right:20, bottom:20, zIndex:10000,
             display:"flex", alignItems:"center", gap:8,

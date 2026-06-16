@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Navbar } from "../components/common/Shared";
+import { useAuth } from "../context/AuthContext";
 import apiBase from "../config/apiBase";
 
 const SUBJECTS  = ["All","Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit"];
@@ -8,6 +9,8 @@ const EXPS      = ["All","Fresher","Less than 1 Year","1–2 Years","2–3 Years
 const MODES     = ["All","Full-time","Part-time","Online","Home Tuition"];
 
 export default function BrowseTeachersPage({ setPage }) {
+  const { user } = useAuth();
+  const [selected, setSelected] = useState(null);
   const [teachers, setTeachers] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
@@ -151,10 +154,10 @@ export default function BrowseTeachersPage({ setPage }) {
 
                   <button
                     style={{ width:"100%", padding:"9px 0", borderRadius:10, border:"1.5px solid #BFDBFE", background:"#EBF5FF", color:"#1A56DB", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s" }}
-                    onClick={() => setPage("signup")}
+                    onClick={() => user ? setSelected(t) : setPage("signup")}
                     onMouseEnter={e => { e.currentTarget.style.background="#1A56DB"; e.currentTarget.style.color="#fff"; }}
                     onMouseLeave={e => { e.currentTarget.style.background="#EBF5FF"; e.currentTarget.style.color="#1A56DB"; }}>
-                    Contact Teacher →
+                    {user ? "View Profile →" : "Contact Teacher →"}
                   </button>
                 </div>
               ))}
@@ -162,6 +165,40 @@ export default function BrowseTeachersPage({ setPage }) {
           )}
         </div>
       </div>
+
+      {selected && (
+        <div onClick={() => setSelected(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, padding:16, backdropFilter:"blur(4px)" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:560, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.25)" }}>
+            <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"22px 26px", borderRadius:"20px 20px 0 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:14 }}>
+              <div style={{ minWidth:0 }}>
+                <div style={{ color:"#93C5FD", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>Teacher Profile</div>
+                <div style={{ color:"#fff", fontSize:20, fontWeight:800 }}>{selected.name || selected.full_name}</div>
+                <div style={{ color:"#BFDBFE", fontSize:13, marginTop:2 }}>{(selected.specialization || selected.subject || "Teacher")}{(selected.current_location || selected.city) ? ` - ${selected.current_location || selected.city}` : ""}</div>
+              </div>
+              <button onClick={() => setSelected(null)} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, flexShrink:0 }}>✕</button>
+            </div>
+            <div style={{ padding:"22px 26px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              {[
+                ["Email", selected.email], ["Phone", selected.phone || selected.mobile],
+                ["Specialization", selected.specialization], ["Subjects", selected.subjects],
+                ["Qualification", selected.qualification], ["Experience", selected.total_experience || selected.experience],
+                ["Current Role", selected.current_role], ["Work Mode", selected.work_mode],
+                ["Teaching Mode", selected.teaching_mode], ["Languages", selected.languages],
+                ["Grades", selected.grades_handling], ["Boards", selected.boards_handled],
+                ["Location", selected.current_location || selected.city], ["Gender", selected.gender],
+              ].map(([label, value]) => value ? (
+                <div key={label} style={{ background:"#F9FAFB", borderRadius:8, padding:"10px 14px" }}>
+                  <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>{label}</div>
+                  <div style={{ fontSize:13.5, color:"#111827", fontWeight:600, wordBreak:"break-word" }}>{value}</div>
+                </div>
+              ) : null)}
+            </div>
+            <div style={{ padding:"0 26px 22px", textAlign:"right" }}>
+              <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

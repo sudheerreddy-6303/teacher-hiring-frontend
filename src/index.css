@@ -120,7 +120,7 @@ textarea.input{resize:vertical;min-height:88px}
 .jcard-footer{border-top:1px solid #E5E7EB;padding-top:14px;display:flex;justify-content:space-between;align-items:center}
 
 /* Dashboard sidebar */
-.sidebar{width:260px;background:#fff;border-right:1px solid #E5E7EB;min-height:100vh;position:fixed;top:0;left:0;z-index:200;overflow-y:auto;display:flex;flex-direction:column;box-shadow:2px 0 8px rgba(0,0,0,.04)}
+.sidebar{width:260px;background:#fff;border-right:1px solid #E5E7EB;height:100vh;max-height:100vh;position:fixed;top:0;left:0;z-index:200;overflow-y:auto;display:flex;flex-direction:column;box-shadow:2px 0 8px rgba(0,0,0,.04)}
 .sidebar-header{padding:20px 22px 18px;border-bottom:1px solid #E5E7EB;background:#fff}
 .sidebar-user{padding:16px 22px 14px;border-bottom:1px solid #E5E7EB;background:#F9FAFB}
 .sidebar-sec{padding:14px 22px 4px;font-size:10px;font-weight:800;color:#9CA3AF;text-transform:uppercase;letter-spacing:2px;font-family:'Nunito',sans-serif}

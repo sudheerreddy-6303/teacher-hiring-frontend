@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Navbar } from "../components/common/Shared";
+import { useAuth } from "../context/AuthContext";
 import apiBase from "../config/apiBase";
 
 const SUBJECTS = ["All","Mathematics","Physics","Chemistry","Biology","English","Hindi","Computer Science","Economics","Accountancy","Social Science"];
@@ -17,6 +18,8 @@ function iconFor(subject) {
 }
 
 export default function BrowseTuitionsPage({ setPage }) {
+  const { user } = useAuth();
+  const [selected, setSelected] = useState(null);
   const [tuitions, setTuitions] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
@@ -170,9 +173,15 @@ export default function BrowseTuitionsPage({ setPage }) {
                     {t.tutor_gender_pref && <span style={{ background:"#FDF2F8", color:"#DB2777", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>👤 {t.tutor_gender_pref}</span>}
                   </div>
 
-                  {t.budget && (
-                    <div style={{ fontWeight:800, fontSize:16, color:"#059669", marginBottom:t.notes?10:14 }}>
-                      💰 {t.budget}
+                  {user ? (
+                    t.budget && (
+                      <div style={{ fontWeight:800, fontSize:16, color:"#059669", marginBottom:t.notes?10:14 }}>
+                        💰 {t.budget}
+                      </div>
+                    )
+                  ) : (
+                    <div style={{ fontWeight:700, fontSize:13, color:"#9CA3AF", marginBottom:t.notes?10:14 }}>
+                      🔒 Login to view budget
                     </div>
                   )}
 
@@ -184,10 +193,10 @@ export default function BrowseTuitionsPage({ setPage }) {
 
                   <button
                     style={{ width:"100%", padding:"9px 0", borderRadius:10, border:"1.5px solid #A5F3FC", background:"#ECFEFF", color:"#0E7490", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s" }}
-                    onClick={() => setPage("signup")}
+                    onClick={() => user ? setSelected(t) : setPage("signup")}
                     onMouseEnter={e => { e.currentTarget.style.background="#0E7490"; e.currentTarget.style.color="#fff"; }}
                     onMouseLeave={e => { e.currentTarget.style.background="#ECFEFF"; e.currentTarget.style.color="#0E7490"; }}>
-                    Respond to Request →
+                    {user ? "View Details →" : "Respond to Request →"}
                   </button>
                 </div>
               );})}
@@ -195,6 +204,46 @@ export default function BrowseTuitionsPage({ setPage }) {
           )}
         </div>
       </div>
+
+      {selected && (
+        <div onClick={() => setSelected(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, padding:16, backdropFilter:"blur(4px)" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:560, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.25)" }}>
+            <div style={{ background:"linear-gradient(135deg,#047857,#059669)", padding:"22px 26px", borderRadius:"20px 20px 0 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:14 }}>
+              <div style={{ minWidth:0 }}>
+                <div style={{ color:"#A7F3D0", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>Tuition Requirement</div>
+                <div style={{ color:"#fff", fontSize:20, fontWeight:800 }}>{selected.subject || "Tuition Request"}</div>
+                <div style={{ color:"#D1FAE5", fontSize:13, marginTop:2 }}>{selected.student_class || ""}{selected.location ? ` - ${selected.location}` : ""}</div>
+              </div>
+              <button onClick={() => setSelected(null)} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, flexShrink:0 }}>✕</button>
+            </div>
+            <div style={{ padding:"22px 26px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              {[
+                ["Parent Name", selected.name], ["Contact Email", selected.email],
+                ["Phone", selected.phone], ["Student Name", selected.student_name],
+                ["Class / Grade", selected.student_class], ["Board", selected.board],
+                ["Subject(s)", selected.subject], ["Location", selected.location],
+                ["Mode", selected.mode], ["Preferred Time", selected.preferred_time],
+                ["Budget", selected.budget], ["Tutor Gender", selected.tutor_gender_pref],
+                ["Experience Required", selected.experience_req],
+              ].map(([label, value]) => value ? (
+                <div key={label} style={{ background:"#F9FAFB", borderRadius:8, padding:"10px 14px" }}>
+                  <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>{label}</div>
+                  <div style={{ fontSize:13.5, color:"#111827", fontWeight:600, wordBreak:"break-word" }}>{value}</div>
+                </div>
+              ) : null)}
+              {selected.notes && (
+                <div style={{ gridColumn:"1/-1", background:"#F9FAFB", borderRadius:8, padding:"10px 14px" }}>
+                  <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>Notes</div>
+                  <div style={{ fontSize:13.5, color:"#111827", fontWeight:600 }}>{selected.notes}</div>
+                </div>
+              )}
+            </div>
+            <div style={{ padding:"0 26px 22px", textAlign:"right" }}>
+              <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

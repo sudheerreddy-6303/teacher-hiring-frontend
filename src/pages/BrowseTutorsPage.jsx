@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Navbar } from "../components/common/Shared";
+import { useAuth } from "../context/AuthContext";
 import apiBase from "../config/apiBase";
 
 const SUBJECTS = ["All","Mathematics","Physics","Chemistry","Biology","English","Hindi","Computer Science","Economics","Accountancy","Social Science"];
@@ -8,12 +9,38 @@ const CITIES   = ["All","Hyderabad","Delhi","Mumbai","Bangalore","Chennai","Pune
 const EXPS     = ["All","Fresher","1 Year","2 Years","3 Years","4 Years","5+ Years"];
 
 export default function BrowseTutorsPage({ setPage }) {
+  const { user } = useAuth();
+  const [selected, setSelected] = useState(null);
   const [tutors,  setTutors]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState("");
   const [filter,  setFilter]  = useState({ subject:"All", mode:"All", city:"All", experience:"All", search:"" });
 
   const API = apiBase();
+
+  // Tutor avatar based on gender — plain monochrome icons (no colour/emoji)
+  const tutorIcon = (g, size = 28, color = "#4B5563") => {
+    const x = (g || "").toLowerCase();
+    const common = { width: size, height: size, viewBox: "0 0 24 24", fill: color, style: { verticalAlign: "middle" } };
+    if (x === "female") return (
+      <svg {...common} aria-label="Female tutor">
+        <circle cx="12" cy="5" r="3" />
+        <path d="M12 9c-2.2 0-3.7 1.5-4.3 3.6L6 19h2.4l.5 3h6.2l.5-3H18l-1.7-6.4C15.7 10.5 14.2 9 12 9z" />
+      </svg>
+    );
+    if (x === "male") return (
+      <svg {...common} aria-label="Male tutor">
+        <circle cx="12" cy="5" r="3" />
+        <path d="M9 9c-1.7 0-3 1.3-3 3v5h2v5h8v-5h2v-5c0-1.7-1.3-3-3-3H9z" />
+      </svg>
+    );
+    return (
+      <svg {...common} aria-label="Tutor">
+        <circle cx="12" cy="7" r="4" />
+        <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7v1H4v-1z" />
+      </svg>
+    );
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -127,7 +154,7 @@ export default function BrowseTutorsPage({ setPage }) {
 
                   <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:16 }}>
                     <div style={{ width:54, height:54, borderRadius:"50%", background:"#F5F3FF", border:"2px solid #DDD6FE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>
-                      🧑‍🎓
+                      {tutorIcon(t.gender)}
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{t.name}</div>
@@ -143,20 +170,27 @@ export default function BrowseTutorsPage({ setPage }) {
                     {t.teaching_mode && <span style={{ background:"#E0F2FE", color:"#0369A1", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>
                       {t.teaching_mode === "Online" ? "💻" : t.teaching_mode === "Offline" ? "🏠" : "🔄"} {t.teaching_mode}
                     </span>}
+                    {t.gender        && <span style={{ background:"#FDF2F8", color:"#DB2777", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>👤 {t.gender}</span>}
                   </div>
 
-                  {t.hourly_rate && (
-                    <div style={{ fontWeight:800, fontSize:16, color:"#059669", marginBottom:14 }}>
-                      💰 {t.hourly_rate}
+                  {user ? (
+                    t.hourly_rate && (
+                      <div style={{ fontWeight:800, fontSize:16, color:"#059669", marginBottom:14 }}>
+                        💰 {t.hourly_rate}
+                      </div>
+                    )
+                  ) : (
+                    <div style={{ fontWeight:700, fontSize:13, color:"#9CA3AF", marginBottom:14 }}>
+                      🔒 Login to view price
                     </div>
                   )}
 
                   <button
                     style={{ width:"100%", padding:"9px 0", borderRadius:10, border:"1.5px solid #DDD6FE", background:"#F5F3FF", color:"#6D28D9", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s" }}
-                    onClick={() => setPage("signup")}
+                    onClick={() => user ? setSelected(t) : setPage("signup")}
                     onMouseEnter={e => { e.currentTarget.style.background="#6D28D9"; e.currentTarget.style.color="#fff"; }}
                     onMouseLeave={e => { e.currentTarget.style.background="#F5F3FF"; e.currentTarget.style.color="#6D28D9"; }}>
-                    Contact Tutor →
+                    {user ? "View Profile →" : "Contact Tutor →"}
                   </button>
                 </div>
               ))}
@@ -164,6 +198,46 @@ export default function BrowseTutorsPage({ setPage }) {
           )}
         </div>
       </div>
+
+      {selected && (
+        <div onClick={() => setSelected(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, padding:16, backdropFilter:"blur(4px)" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:560, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.25)" }}>
+            <div style={{ background:"linear-gradient(135deg,#4C1D95,#6D28D9)", padding:"22px 26px", borderRadius:"20px 20px 0 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:14 }}>
+              <div style={{ minWidth:0 }}>
+                <div style={{ color:"#DDD6FE", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>{tutorIcon(selected.gender, 14, "#DDD6FE")} Tutor Profile</div>
+                <div style={{ color:"#fff", fontSize:20, fontWeight:800 }}>{selected.name}</div>
+                <div style={{ color:"#C4B5FD", fontSize:13, marginTop:2 }}>{(selected.subjects || selected.subject || "Tutor")}{selected.city ? ` · 📍 ${selected.city}` : ""}</div>
+              </div>
+              <button onClick={() => setSelected(null)} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, flexShrink:0 }}>✕</button>
+            </div>
+            <div style={{ padding:"22px 26px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              {[
+                ["Email", selected.email], ["Phone", selected.phone],
+                ["Subjects", selected.subjects || selected.subject], ["Qualifications", selected.qualifications || selected.qualification],
+                ["Experience", selected.experience], ["Hourly Rate", selected.hourly_rate],
+                ["Gender", selected.gender],
+                ["Teaching Mode", selected.teaching_mode], ["Availability", selected.availability],
+                ["Location", selected.location || selected.city], ["Pincode", selected.pincode],
+                ["Address", selected.address], ["Class Link", selected.class_link],
+              ].map(([label, value]) => value ? (
+                <div key={label} style={{ background:"#F9FAFB", borderRadius:8, padding:"10px 14px" }}>
+                  <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>{label}</div>
+                  <div style={{ fontSize:13.5, color:"#111827", fontWeight:600, wordBreak:"break-word" }}>{value}</div>
+                </div>
+              ) : null)}
+              {selected.bio && (
+                <div style={{ gridColumn:"1/-1", background:"#F9FAFB", borderRadius:8, padding:"10px 14px" }}>
+                  <div style={{ fontSize:10, fontWeight:800, color:"#9CA3AF", textTransform:"uppercase", letterSpacing:.8, marginBottom:3 }}>Bio</div>
+                  <div style={{ fontSize:13.5, color:"#111827", fontWeight:600 }}>{selected.bio}</div>
+                </div>
+              )}
+            </div>
+            <div style={{ padding:"0 26px 22px", textAlign:"right" }}>
+              <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

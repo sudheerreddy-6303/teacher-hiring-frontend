@@ -44,6 +44,10 @@
 .auth-panel-left {
   flex: 0 0 420px;
   max-width: 42%;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  align-self: flex-start;
 }
 .auth-panel-right {
   flex: 1;
@@ -131,7 +135,8 @@
   display: flex;
   flex-direction: column;
   transition: transform 0.25s ease, width 0.2s;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   position: fixed;
   top: 0;
   left: 0;
@@ -238,6 +243,8 @@
     flex: none;
     max-width: 100%;
     padding: 32px 24px !important;
+    position: static;
+    height: auto;
   }
   .auth-panel-right {
     padding: 28px 20px !important;

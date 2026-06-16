@@ -4,11 +4,21 @@ import { SUBS } from "../../constants";
 import { Toast, Spinner, JobCard, OtpBoxes, InlineBrowseJobs, FilterBar } from "../../components/common/Shared";
 import './Auth.css';
 
+// Tutor multi-select chip styles
+const tutorChipWrap = { display:"flex", flexWrap:"wrap", gap:8 };
+const tutorChipBox  = { display:"flex", flexWrap:"wrap", gap:8, border:"1px solid #E5E7EB", borderRadius:10, padding:"12px", background:"#FAFBFC" };
+const tutorUpload   = { display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4, textAlign:"center", border:"1.5px dashed #C7D2FE", borderRadius:12, padding:"18px 14px", background:"#F8FAFF", cursor:"pointer" };
+const tutorChip = (on) => ({
+  padding:"7px 13px", borderRadius:20, fontSize:13, fontWeight:600, cursor:"pointer", userSelect:"none",
+  border: on ? "1.5px solid #1A56DB" : "1.5px solid #E5E7EB",
+  background: on ? "#EBF5FF" : "#fff", color: on ? "#1A56DB" : "#374151", transition:"all .15s",
+});
+
 function AuthPage({ mode, setPage }) {
   const { login } = useAuth();
   const [form, setForm] = useState(() => {
     const savedRole = localStorage.getItem("acadhr_selected_role") || "teacher";
-    return { name:"", email:"", password:"", role: savedRole, phone:"", city:"", subject:"", experience:"", qualification:"", bio:"", institute_type:"", est_year:"", student_count:"", website:"", hourly_rate:"", teaching_mode:"Both" };
+    return { name:"", email:"", password:"", role: savedRole, phone:"", city:"", subject:"", experience:"", qualification:"", bio:"", institute_type:"", est_year:"", student_count:"", website:"", hourly_rate:"", teaching_mode:"Both", subjects:[], qualifications:[], availability:[], address:"", tutor_location:"", pincode:"", class_link:"", resume_base64:"", resume_name:"", resume_type:"", preferred_times:[], parent_subjects:[], parent_pincode:"", parent_state:"", parent_landmark:"", hourly_budget:"", institute_name:"", gender:"" };
   });
   const [step, setStep]           = useState(1);
   const [err,  setErr]            = useState("");
@@ -50,6 +60,23 @@ function AuthPage({ mode, setPage }) {
   });
 
   function up(k, v) { setForm(f => ({...f, [k]:v})); }
+
+  // Toggle a value in an array-valued form field (multi-select chips)
+  function toggleMulti(key, val) {
+    const arr = Array.isArray(form[key]) ? form[key] : [];
+    up(key, arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
+  }
+  // Read an uploaded resume file into the form as base64
+  function onResume(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      up("resume_base64", reader.result);
+      up("resume_name", file.name);
+      up("resume_type", file.type || "application/octet-stream");
+    };
+    reader.readAsDataURL(file);
+  }
 
   // ── Resend countdown ────────────────────────────────────────────────────────
   function startResendTimer(setter) {
@@ -197,7 +224,11 @@ function AuthPage({ mode, setPage }) {
       if (form.role === "parent") {
         if (!form.student_name.trim()) { setErr("Please enter your child's name."); return; }
         if (!form.student_class)       { setErr("Please select your child's class."); return; }
-        if (!form.subject_pref.trim()) { setErr("Please enter the subject(s) required."); return; }
+        if (!(form.parent_subjects && form.parent_subjects.length)) { setErr("Please select at least one subject."); return; }
+      }
+      // Validate tutor-specific required fields
+      if (form.role === "tutor") {
+        if (!(form.subjects && form.subjects.length)) { setErr("Please select at least one subject."); return; }
       }
       // Send OTP to email
       setOtpLoading(true);
@@ -226,10 +257,10 @@ function AuthPage({ mode, setPage }) {
         student_name:      form.student_name,
         student_class:     form.student_class,
         board:             form.board_pref,
-        subject:           form.role === "parent" ? form.subject_pref : form.subject,
+        subject:           form.role === "parent" ? (form.parent_subjects||[]).join(", ") : form.subject,
         location:          form.location_pref,
         mode:              form.mode_pref,
-        preferred_time:    form.preferred_time,
+        preferred_time:    Array.isArray(form.preferred_times) ? form.preferred_times.join(", ") : form.preferred_time,
         budget:            form.budget,
         tutor_gender_pref: form.tutor_gender_pref,
         experience_req:    form.experience_req,
@@ -585,29 +616,108 @@ function AuthPage({ mode, setPage }) {
               {/* Step 2 — Professional details */}
               {step===2 && (form.role==="teacher" || form.role==="tutor") && (
                 <>
-                  <div className="fg"><label className="flabel">Subject Specialization</label>
-                    <select className="input" value={form.subject} onChange={e => up("subject", e.target.value)} required>
-                      <option value="">Select subject</option>{SUBS.map(s => <option key={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div className="grid2">
-                    <div className="fg"><label className="flabel">Experience</label>
-                      <select className="input" value={form.experience} onChange={e => up("experience", e.target.value)}>{EXPS.map(s => <option key={s}>{s}</option>)}</select>
-                    </div>
-                    <div className="fg"><label className="flabel">Qualification</label>
-                      <select className="input" value={form.qualification} onChange={e => up("qualification", e.target.value)}>{QUALS.map(s => <option key={s}>{s}</option>)}</select>
-                    </div>
-                  </div>
-                  {form.role==="tutor" && (
-                    <div className="grid2">
-                      <div className="fg"><label className="flabel">Hourly Rate</label><input className="input" placeholder="e.g. ₹800/hr" value={form.hourly_rate} onChange={e => up("hourly_rate", e.target.value)} /></div>
-                      <div className="fg"><label className="flabel">Teaching Mode</label>
-                        <select className="input" value={form.teaching_mode} onChange={e => up("teaching_mode", e.target.value)}>
-                          <option>Online</option><option>Offline</option><option>Both</option>
-                        </select>
+                  {form.role==="teacher" && (
+                    <>
+                      <div className="fg"><label className="flabel">Subject Specialization (select one or more)</label>
+                        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:8, border:"1px solid #E5E7EB", borderRadius:10, padding:"12px", background:"#FAFBFC" }}>
+                          {SUBS.map(s => {
+                            const sel = form.subject ? form.subject.split(",").map(x=>x.trim()).filter(Boolean) : [];
+                            const on = sel.includes(s);
+                            return (
+                              <span key={s} onClick={() => up("subject", (on ? sel.filter(x=>x!==s) : [...sel, s]).join(", "))} style={{ ...tutorChip(on), textAlign:"center" }}>{s}</span>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
+                      <div className="grid2">
+                        <div className="fg"><label className="flabel">Experience</label>
+                          <select className="input" value={form.experience} onChange={e => up("experience", e.target.value)}>{EXPS.map(s => <option key={s}>{s}</option>)}</select>
+                        </div>
+                        <div className="fg"><label className="flabel">Qualification</label>
+                          <select className="input" value={form.qualification} onChange={e => up("qualification", e.target.value)}>{QUALS.map(s => <option key={s}>{s}</option>)}</select>
+                        </div>
+                      </div>
+                    </>
                   )}
+
+                  {form.role==="tutor" && (
+                    <>
+                      <div className="fg"><label className="flabel">Subjects (select one or more)</label>
+                        <div style={tutorChipBox}>
+                          {SUBS.map(s => (
+                            <span key={s} onClick={() => toggleMulti("subjects", s)} style={tutorChip((form.subjects||[]).includes(s))}>{s}</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="fg"><label className="flabel">Qualifications (select one or more)</label>
+                        <div style={tutorChipBox}>
+                          {QUALS.filter(Boolean).map(q => (
+                            <span key={q} onClick={() => toggleMulti("qualifications", q)} style={tutorChip((form.qualifications||[]).includes(q))}>{q}</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid2">
+                        <div className="fg"><label className="flabel">Experience</label>
+                          <select className="input" value={form.experience} onChange={e => up("experience", e.target.value)}>{EXPS.map(s => <option key={s}>{s}</option>)}</select>
+                        </div>
+                        <div className="fg"><label className="flabel">Hourly Charges</label>
+                          <input className="input" placeholder="e.g. ₹800/hr" value={form.hourly_rate} onChange={e => up("hourly_rate", e.target.value)} />
+                        </div>
+                      </div>
+
+                      <div className="grid2">
+                        <div className="fg"><label className="flabel">Gender</label>
+                          <select className="input" value={form.gender} onChange={e => up("gender", e.target.value)}>
+                            <option value="">Select</option>
+                            <option>Male</option><option>Female</option><option>Other</option>
+                          </select>
+                        </div>
+                        <div className="fg"><label className="flabel">Teaching Mode</label>
+                          <select className="input" value={form.teaching_mode} onChange={e => up("teaching_mode", e.target.value)}>
+                            <option>Online</option><option>Offline</option><option>Both</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="fg"><label className="flabel">Available Timings (select one or more)</label>
+                        <div style={tutorChipBox}>
+                          {["Morning","Afternoon","Evening","Any Time"].map(t => (
+                            <span key={t} onClick={() => toggleMulti("availability", t)} style={tutorChip((form.availability||[]).includes(t))}>{t}</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="fg"><label className="flabel">Address</label>
+                        <input className="input" placeholder="House no., street, area" value={form.address} onChange={e => up("address", e.target.value)} />
+                      </div>
+
+                      <div className="grid2">
+                        <div className="fg"><label className="flabel">Location</label>
+                          <input className="input" placeholder="e.g. Banjara Hills, Hyderabad" value={form.tutor_location} onChange={e => up("tutor_location", e.target.value)} />
+                        </div>
+                        <div className="fg"><label className="flabel">Pincode</label>
+                          <input className="input" placeholder="e.g. 500034" value={form.pincode} onChange={e => up("pincode", e.target.value)} />
+                        </div>
+                      </div>
+
+                      <div className="fg"><label className="flabel">Class Link (Google Meet / Zoom)</label>
+                        <input className="input" placeholder="https://meet.google.com/..." value={form.class_link} onChange={e => up("class_link", e.target.value)} />
+                      </div>
+
+                      <div className="fg"><label className="flabel">Resume / CV</label>
+                        <label style={tutorUpload}>
+                          <input type="file" accept=".pdf,.doc,.docx,image/*" onChange={e => onResume(e.target.files && e.target.files[0])} style={{ display:"none" }} />
+                          <span style={{ fontSize:22 }}>📄</span>
+                          <span style={{ fontSize:13, color:"#374151", fontWeight:700 }}>{form.resume_name ? "Change file" : "Tap to upload your resume"}</span>
+                          <span style={{ fontSize:11, color:"#9CA3AF" }}>PDF, DOC or image</span>
+                        </label>
+                        {form.resume_name && <div style={{ fontSize:12, color:"#059669", marginTop:7, fontWeight:700 }}>✓ {form.resume_name} attached</div>}
+                      </div>
+                    </>
+                  )}
+
                   <div className="fg"><label className="flabel">Short Bio (Optional)</label>
                     <textarea className="input" rows={3} placeholder="Tell schools about yourself..." value={form.bio} onChange={e => up("bio", e.target.value)} />
                   </div>
@@ -649,16 +759,19 @@ function AuthPage({ mode, setPage }) {
                     </div>
                   </div>
 
-                  <div className="grid2">
-                    <div className="fg"><label className="flabel">Board</label>
-                      <select className="input" value={form.board_pref} onChange={e => up("board_pref",e.target.value)}>
-                        <option value="">Select board</option>
-                        <option>CBSE</option><option>ICSE</option><option>State Board (AP)</option>
-                        <option>State Board (TS)</option><option>IB</option><option>IGCSE</option>
-                      </select>
-                    </div>
-                    <div className="fg"><label className="flabel">Subject(s) Required *</label>
-                      <input className="input" placeholder="e.g. Mathematics, Physics" value={form.subject_pref} onChange={e => up("subject_pref",e.target.value)} required />
+                  <div className="fg"><label className="flabel">Board</label>
+                    <select className="input" value={form.board_pref} onChange={e => up("board_pref",e.target.value)}>
+                      <option value="">Select board</option>
+                      <option>CBSE</option><option>ICSE</option><option>State Board (AP)</option>
+                      <option>State Board (TS)</option><option>IB</option><option>IGCSE</option>
+                    </select>
+                  </div>
+
+                  <div className="fg"><label className="flabel">Subject(s) Required * (select all that apply)</label>
+                    <div style={tutorChipBox}>
+                      {SUBS.map(s => (
+                        <span key={s} onClick={() => toggleMulti("parent_subjects", s)} style={tutorChip((form.parent_subjects||[]).includes(s))}>{s}</span>
+                      ))}
                     </div>
                   </div>
 
@@ -666,9 +779,26 @@ function AuthPage({ mode, setPage }) {
                     <input className="input" placeholder="e.g. Banjara Hills, Hyderabad" value={form.location_pref} onChange={e => up("location_pref",e.target.value)} />
                   </div>
 
+                  <div className="grid2">
+                    <div className="fg"><label className="flabel">State</label>
+                      <input className="input" placeholder="e.g. Telangana" value={form.parent_state} onChange={e => up("parent_state",e.target.value)} />
+                    </div>
+                    <div className="fg"><label className="flabel">Pincode</label>
+                      <input className="input" placeholder="e.g. 500034" value={form.parent_pincode} onChange={e => up("parent_pincode",e.target.value)} />
+                    </div>
+                  </div>
+
+                  <div className="fg"><label className="flabel">Landmark / Area</label>
+                    <input className="input" placeholder="e.g. Near City Center Mall" value={form.parent_landmark} onChange={e => up("parent_landmark",e.target.value)} />
+                  </div>
+
+                  <div className="fg"><label className="flabel">School / College / Institute Name</label>
+                    <input className="input" placeholder="e.g. Delhi Public School" value={form.institute_name} onChange={e => up("institute_name",e.target.value)} />
+                  </div>
+
                   <div className="fg"><label className="flabel">Tutoring Mode</label>
                     <div style={{ display:"flex", gap:10, marginTop:6 }}>
-                      {["Home","Online","Either"].map(m => (
+                      {["Home","Online","Offline & Online"].map(m => (
                         <label key={m} onClick={() => up("mode_pref",m)}
                           style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"9px 0", borderRadius:10, border:`2px solid ${form.mode_pref===m?"#1A56DB":"#E5E7EB"}`, background:form.mode_pref===m?"#EBF5FF":"#F9FAFB", cursor:"pointer", fontSize:13, fontWeight:700, color:form.mode_pref===m?"#1A56DB":"#6B7280", userSelect:"none" }}>
                           {m==="Home"?"🏠":m==="Online"?"💻":"🔄"} {m}
@@ -677,14 +807,15 @@ function AuthPage({ mode, setPage }) {
                     </div>
                   </div>
 
-                  <div className="grid2">
-                    <div className="fg"><label className="flabel">Preferred Time</label>
-                      <select className="input" value={form.preferred_time} onChange={e => up("preferred_time",e.target.value)}>
-                        <option value="">Select</option>
-                        <option>Morning (6am–12pm)</option><option>Afternoon (12pm–4pm)</option>
-                        <option>Evening (4pm–8pm)</option><option>Flexible</option>
-                      </select>
+                  <div className="fg"><label className="flabel">Preferred Time (select all that apply)</label>
+                    <div style={tutorChipBox}>
+                      {["Morning","Afternoon","Evening","Any time"].map(t => (
+                        <span key={t} onClick={() => toggleMulti("preferred_times", t)} style={tutorChip((form.preferred_times||[]).includes(t))}>{t}</span>
+                      ))}
                     </div>
+                  </div>
+
+                  <div className="grid2">
                     <div className="fg"><label className="flabel">Monthly Budget (₹)</label>
                       <select className="input" value={form.budget} onChange={e => up("budget",e.target.value)}>
                         <option value="">Select range</option>
@@ -692,6 +823,9 @@ function AuthPage({ mode, setPage }) {
                         <option>₹4,000–₹6,000</option><option>₹6,000–₹10,000</option>
                         <option>Above ₹10,000</option>
                       </select>
+                    </div>
+                    <div className="fg"><label className="flabel">Hourly Budget (₹)</label>
+                      <input className="input" type="number" min="0" placeholder="e.g. 500" value={form.hourly_budget} onChange={e => up("hourly_budget",e.target.value)} />
                     </div>
                   </div>
 

@@ -79,8 +79,8 @@ export const authAPI = {
 // PROFILE API
 // ═════════════════════════════════════════════════════════════════════════════
 export const profileAPI = {
-  get:    ()        => request('GET',   '/profile',  null,    true),
-  update: (payload) => request('PATCH', '/profile',  payload, true),
+  get:    ()        => request('GET',   '/teacher/general-profile',  null,    true),
+  update: (payload) => request('PATCH', '/teacher/general-profile',  payload, true),
 };
 
 // ═════════════════════════════════════════════════════════════════════════════

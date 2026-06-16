@@ -959,10 +959,10 @@ function SchoolDashboard({ user, setPage }) {
           );
 
           return (
-            <div style={{ display:"flex", height:"100%", minHeight:"calc(100vh - 130px)" }} className="fadeUp">
+            <div style={{ display:"flex", height:"calc(100vh - 56px)", overflow:"hidden" }} className="fadeUp">
 
               {/* ── Left filter panel ─────────────────────────────────────── */}
-              <div style={{ width:220, flexShrink:0, borderRight:"1px solid #E5E7EB", padding:"20px 16px", background:"#FAFBFC", overflowY:"auto" }}>
+              <div style={{ width:220, flexShrink:0, borderRight:"1px solid #E5E7EB", padding:"20px 16px", background:"#FAFBFC", height:"100%", overflowY:"auto" }}>
 
                 <div style={{ fontWeight:800, fontSize:14, color:"#111827", marginBottom:16 }}>🔍 Filters</div>
 
@@ -1030,7 +1030,7 @@ function SchoolDashboard({ user, setPage }) {
               </div>
 
               {/* ── Right: cards grid ─────────────────────────────────────── */}
-              <div style={{ flex:1, padding:"24px 24px", overflowY:"auto" }}>
+              <div style={{ flex:1, padding:"24px 24px", height:"100%", overflowY:"auto" }}>
                 {/* Header */}
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
                   <div>
@@ -1597,11 +1597,19 @@ function SchoolDashboard({ user, setPage }) {
                     </select>
                   </div>
                   <div className="fg">
-                    <label className="flabel">Subject *</label>
-                    <select className="input" value={form.subject} onChange={e => up("subject",e.target.value)} required>
-                      <option value="">Select subject</option>
-                      {SUBS.map(s => <option key={s}>{s}</option>)}
-                    </select>
+                    <label className="flabel">Subject(s) * (select one or more)</label>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:8, marginTop:6 }}>
+                      {SUBS.map(s => {
+                        const sel = (form.subject ? form.subject.split(",").map(x=>x.trim()).filter(Boolean) : []);
+                        const on = sel.includes(s);
+                        return (
+                          <label key={s} onClick={() => up("subject", (on ? sel.filter(x=>x!==s) : [...sel, s]).join(", "))}
+                            style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"7px 14px", borderRadius:20, border:`1.5px solid ${on?"#1A56DB":"#D1D5DB"}`, background:on?"#EBF5FF":"#fff", cursor:"pointer", fontSize:13, fontWeight:600, color:on?"#1A56DB":"#374151", userSelect:"none" }}>
+                            {on ? "✓ " : ""}{s}
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 

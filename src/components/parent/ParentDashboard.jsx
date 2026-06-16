@@ -10,7 +10,8 @@ function ParentDashboard({ user, setPage }) {
     student_name:"", student_class:"", board:"", subject:"",
     location:"", mode:"", preferred_time:"", budget:"",
     tutor_gender_pref:"", experience_req:"", status:"Open",
-    assigned_tutor:"", notes:""
+    assigned_tutor:"", notes:"",
+    state:"", pincode:"", landmark:"", institute_name:"", hourly_budget:""
   });
   const [editMode, setEditMode] = useState(false);
   const [saved, setSaved]       = useState(false);
@@ -22,7 +23,7 @@ function ParentDashboard({ user, setPage }) {
   useEffect(() => {
     const token = localStorage.getItem("acadhr_token");
     if (!token) return;
-    fetch(API + "/profile", { headers: { Authorization: "Bearer " + token } })
+    fetch(API + "/teacher/general-profile", { headers: { Authorization: "Bearer " + token } })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.profile) {
@@ -42,6 +43,11 @@ function ParentDashboard({ user, setPage }) {
             status:            p.status            || "Open",
             assigned_tutor:    p.assigned_tutor    || "",
             notes:             p.notes             || "",
+            state:             p.state             || "",
+            pincode:           p.pincode           || "",
+            landmark:          p.landmark          || "",
+            institute_name:    p.institute_name    || "",
+            hourly_budget:     p.hourly_budget     || "",
           }));
         }
       }).catch(() => {});
@@ -51,7 +57,7 @@ function ParentDashboard({ user, setPage }) {
     setSaving(true); setSaveError("");
     try {
       const token = localStorage.getItem("acadhr_token");
-      const r = await fetch(API + "/profile", {
+      const r = await fetch(API + "/teacher/general-profile", {
         method: "PATCH",
         headers: { "Content-Type":"application/json", Authorization:"Bearer "+token },
         body: JSON.stringify({
@@ -59,7 +65,9 @@ function ParentDashboard({ user, setPage }) {
           board: profile.board, subject: profile.subject, location: profile.location,
           mode: profile.mode, preferred_time: profile.preferred_time, budget: profile.budget,
           tutor_gender_pref: profile.tutor_gender_pref, experience_req: profile.experience_req,
-          notes: profile.notes
+          notes: profile.notes,
+          state: profile.state, pincode: profile.pincode, landmark: profile.landmark,
+          institute_name: profile.institute_name, hourly_budget: profile.hourly_budget
         })
       });
       const d = await r.json();
@@ -70,6 +78,21 @@ function ParentDashboard({ user, setPage }) {
   }
 
   function up(k,v) { setProfile(p => ({...p, [k]:v})); }
+
+  // Multi-select helpers for comma-separated fields (subject, preferred_time)
+  const csvArr = (key) => (profile[key] || "").split(",").map(s => s.trim()).filter(Boolean);
+  function toggleCsv(key, val) {
+    const arr = csvArr(key);
+    up(key, (arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]).join(", "));
+  }
+  const REQ_SUBS  = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit"];
+  const REQ_TIMES = ["Morning","Afternoon","Evening","Any time"];
+  const reqChip = (on, editable) => ({
+    padding:"6px 12px", borderRadius:20, fontSize:12, fontWeight:600, userSelect:"none",
+    cursor: editable ? "pointer" : "default",
+    border: on ? "1.5px solid #1A56DB" : "1.5px solid #E5E7EB",
+    background: on ? "#EBF5FF" : (editable ? "#fff" : "#F9FAFB"), color: on ? "#1A56DB" : "#374151", transition:"all .15s",
+  });
 
   const MENU = [
     { id:"overview",     icon:"🏠", label:"Overview" },
@@ -231,23 +254,40 @@ function ParentDashboard({ user, setPage }) {
                   </select>
                 </div>
               </div>
-              <div className="grid2">
-                <div className="fg"><label className="flabel">Board</label>
-                  <select className="input" value={profile.board} onChange={e => editMode && up("board",e.target.value)} style={{ pointerEvents:editMode?"auto":"none", background:!editMode?"#F9FAFB":"#fff" }}>
-                    <option value="">Select board</option>
-                    <option>CBSE</option><option>ICSE</option><option>State Board (AP)</option><option>State Board (TS)</option><option>IB</option><option>IGCSE</option>
-                  </select>
-                </div>
-                <div className="fg"><label className="flabel">Subject(s) Required *</label>
-                  <input className="input" readOnly={!editMode} value={profile.subject} onChange={e => up("subject",e.target.value)} placeholder="e.g. Mathematics, Physics" style={{ background:!editMode?"#F9FAFB":"#fff" }} />
+              <div className="fg"><label className="flabel">Board</label>
+                <select className="input" value={profile.board} onChange={e => editMode && up("board",e.target.value)} style={{ pointerEvents:editMode?"auto":"none", background:!editMode?"#F9FAFB":"#fff" }}>
+                  <option value="">Select board</option>
+                  <option>CBSE</option><option>ICSE</option><option>State Board (AP)</option><option>State Board (TS)</option><option>IB</option><option>IGCSE</option>
+                </select>
+              </div>
+              <div className="fg"><label className="flabel">Subject(s) Required * (select all that apply)</label>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:8, border:"1px solid #E5E7EB", borderRadius:10, padding:12, background:!editMode?"#F9FAFB":"#FAFBFC" }}>
+                  {REQ_SUBS.map(s => {
+                    const on = csvArr("subject").includes(s);
+                    return <span key={s} onClick={() => editMode && toggleCsv("subject", s)} style={reqChip(on, editMode)}>{s}</span>;
+                  })}
                 </div>
               </div>
               <div className="fg"><label className="flabel">Location / Area</label>
                 <input className="input" readOnly={!editMode} value={profile.location} onChange={e => up("location",e.target.value)} placeholder="e.g. Banjara Hills, Hyderabad" style={{ background:!editMode?"#F9FAFB":"#fff" }} />
               </div>
+              <div className="grid2">
+                <div className="fg"><label className="flabel">State</label>
+                  <input className="input" readOnly={!editMode} value={profile.state} onChange={e => up("state",e.target.value)} placeholder="e.g. Telangana" style={{ background:!editMode?"#F9FAFB":"#fff" }} />
+                </div>
+                <div className="fg"><label className="flabel">Pincode</label>
+                  <input className="input" readOnly={!editMode} value={profile.pincode} onChange={e => up("pincode",e.target.value)} placeholder="e.g. 500034" style={{ background:!editMode?"#F9FAFB":"#fff" }} />
+                </div>
+              </div>
+              <div className="fg"><label className="flabel">Landmark / Area</label>
+                <input className="input" readOnly={!editMode} value={profile.landmark} onChange={e => up("landmark",e.target.value)} placeholder="e.g. Near City Center Mall" style={{ background:!editMode?"#F9FAFB":"#fff" }} />
+              </div>
+              <div className="fg"><label className="flabel">School / College / Institute Name</label>
+                <input className="input" readOnly={!editMode} value={profile.institute_name} onChange={e => up("institute_name",e.target.value)} placeholder="e.g. Delhi Public School" style={{ background:!editMode?"#F9FAFB":"#fff" }} />
+              </div>
               <div className="fg"><label className="flabel">Tutoring Mode</label>
                 <div style={{ display:"flex", gap:10, marginTop:6 }}>
-                  {["Home","Online","Either"].map(m => (
+                  {["Home","Online","Offline & Online"].map(m => (
                     <label key={m} onClick={() => editMode && up("mode",m)}
                       style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"8px 0", borderRadius:10, border:`2px solid ${profile.mode===m?"#1A56DB":"#E5E7EB"}`, background:profile.mode===m?"#EBF5FF":"#F9FAFB", cursor:editMode?"pointer":"default", fontSize:13, fontWeight:700, color:profile.mode===m?"#1A56DB":"#6B7280", userSelect:"none" }}>
                       {m==="Home"?"🏠":m==="Online"?"💻":"🔄"} {m}
@@ -255,20 +295,24 @@ function ParentDashboard({ user, setPage }) {
                   ))}
                 </div>
               </div>
-              <div className="grid2">
-                <div className="fg"><label className="flabel">Preferred Time</label>
-                  <select className="input" value={profile.preferred_time} onChange={e => editMode && up("preferred_time",e.target.value)} style={{ pointerEvents:editMode?"auto":"none", background:!editMode?"#F9FAFB":"#fff" }}>
-                    <option value="">Select</option>
-                    <option>Morning (6am–12pm)</option><option>Afternoon (12pm–4pm)</option>
-                    <option>Evening (4pm–8pm)</option><option>Flexible</option>
-                  </select>
+              <div className="fg"><label className="flabel">Preferred Time (select all that apply)</label>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:8, border:"1px solid #E5E7EB", borderRadius:10, padding:12, background:!editMode?"#F9FAFB":"#FAFBFC" }}>
+                  {REQ_TIMES.map(t => {
+                    const on = csvArr("preferred_time").includes(t);
+                    return <span key={t} onClick={() => editMode && toggleCsv("preferred_time", t)} style={reqChip(on, editMode)}>{t}</span>;
+                  })}
                 </div>
+              </div>
+              <div className="grid2">
                 <div className="fg"><label className="flabel">Monthly Budget (₹)</label>
                   <select className="input" value={profile.budget} onChange={e => editMode && up("budget",e.target.value)} style={{ pointerEvents:editMode?"auto":"none", background:!editMode?"#F9FAFB":"#fff" }}>
                     <option value="">Select range</option>
                     <option>Under ₹2,000</option><option>₹2,000–₹4,000</option>
                     <option>₹4,000–₹6,000</option><option>₹6,000–₹10,000</option><option>Above ₹10,000</option>
                   </select>
+                </div>
+                <div className="fg"><label className="flabel">Hourly Budget (₹)</label>
+                  <input className="input" type="number" min="0" readOnly={!editMode} value={profile.hourly_budget} onChange={e => up("hourly_budget",e.target.value)} placeholder="e.g. 500" style={{ background:!editMode?"#F9FAFB":"#fff" }} />
                 </div>
               </div>
               <div className="grid2">
@@ -310,7 +354,7 @@ function TutorFinder({ user, profile }) {
   const [tutors,   setTutors]   = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [approved, setApproved] = useState(true); // is_active from backend
-  const [filter,   setFilter]   = useState({ subject:"", city:"" });
+  const [filter,   setFilter]   = useState({ subjects:[], city:"" });
   const [contacted, setContacted] = useState([]);
 
   const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
@@ -318,8 +362,8 @@ function TutorFinder({ user, profile }) {
   useEffect(() => {
     const token = localStorage.getItem("acadhr_token");
     if (!token) { setLoading(false); return; }
-    // Fetch tutors — backend returns 403 if not approved
-    fetch(API + "/tutors" + (profile.subject ? `?subject=${encodeURIComponent(profile.subject)}` : ""), {
+    // Fetch ALL tutors for the parent — backend returns 403 if not approved
+    fetch(API + "/admin/tutors-list", {
       headers: { Authorization: "Bearer " + token }
     })
     .then(async r => {
@@ -331,9 +375,24 @@ function TutorFinder({ user, profile }) {
     .catch(() => setLoading(false));
   }, []);
 
+  // Unique dropdown / chip options derived from the fetched tutors
+  const subjectOptions = Array.from(new Set(tutors.map(t => t.subject).filter(Boolean))).sort();
+  const cityOptions    = Array.from(new Set(tutors.map(t => t.city).filter(Boolean))).sort();
+
+  // Build a WhatsApp link (strip non-digits; assume +91 for 10-digit Indian numbers)
+  const waLink = (phone) => {
+    const d = String(phone || "").replace(/[^0-9]/g, "");
+    return "https://wa.me/" + (d.length === 10 ? "91" + d : d);
+  };
+  const contactRow = {
+    display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+    padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:700,
+    textDecoration:"none", border:"1px solid", cursor:"pointer",
+  };
+
   const filtered = tutors.filter(t =>
-    (!filter.subject || (t.subject||"").toLowerCase().includes(filter.subject.toLowerCase())) &&
-    (!filter.city    || (t.city||"").toLowerCase().includes(filter.city.toLowerCase()))
+    (!filter.subjects.length || filter.subjects.some(s => (t.subject||"").toLowerCase().includes(s.toLowerCase()))) &&
+    (!filter.city || (t.city||"") === filter.city)
   );
 
   if (!approved) return (
@@ -363,23 +422,46 @@ function TutorFinder({ user, profile }) {
   return (
     <div className="fadeUp">
       <div className="page-title">Find Tutors</div>
-      <div className="page-sub">Tutors matching your requirement — {filtered.length} available</div>
+      <div className="page-sub">Browse all tutors — {filtered.length} available</div>
 
       {/* Filters */}
-      <div style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:12, padding:"16px 20px", marginBottom:20, display:"flex", gap:10, flexWrap:"wrap" }}>
-        <input className="input" style={{ maxWidth:220 }} placeholder="📚 Filter by subject..."
-          value={filter.subject} onChange={e => setFilter(f => ({...f, subject:e.target.value}))} />
-        <input className="input" style={{ maxWidth:200 }} placeholder="📍 Filter by city..."
-          value={filter.city} onChange={e => setFilter(f => ({...f, city:e.target.value}))} />
-        {(filter.subject||filter.city) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => setFilter({subject:"",city:""})}>Clear ✕</button>
-        )}
+      <div style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:12, padding:"16px 20px", marginBottom:20 }}>
+        <div style={{ display:"flex", gap:20, flexWrap:"wrap", alignItems:"flex-start" }}>
+          <div style={{ flex:"1 1 320px" }}>
+            <div style={{ fontSize:12, fontWeight:700, color:"#6B7280", marginBottom:8 }}>📚 Filter by subject (select any)</div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+              {subjectOptions.length === 0
+                ? <span style={{ fontSize:12, color:"#9CA3AF" }}>No subjects available</span>
+                : subjectOptions.map(s => {
+                    const on = filter.subjects.includes(s);
+                    return (
+                      <span key={s}
+                        onClick={() => setFilter(f => ({ ...f, subjects: on ? f.subjects.filter(x => x !== s) : [...f.subjects, s] }))}
+                        style={{ padding:"6px 12px", borderRadius:20, fontSize:12, fontWeight:600, cursor:"pointer", userSelect:"none",
+                          border: on ? "1.5px solid #1A56DB" : "1.5px solid #E5E7EB", background: on ? "#EBF5FF" : "#fff", color: on ? "#1A56DB" : "#374151", transition:"all .15s" }}>
+                        {s}
+                      </span>
+                    );
+                  })}
+            </div>
+          </div>
+          <div style={{ flex:"0 0 200px" }}>
+            <div style={{ fontSize:12, fontWeight:700, color:"#6B7280", marginBottom:8 }}>📍 Filter by city</div>
+            <select className="input" value={filter.city} onChange={e => setFilter(f => ({ ...f, city:e.target.value }))}>
+              <option value="">All cities</option>
+              {cityOptions.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+        {(filter.subjects.length || filter.city) ? (
+          <button className="btn btn-ghost btn-sm" style={{ marginTop:14 }} onClick={() => setFilter({ subjects:[], city:"" })}>Clear filters ✕</button>
+        ) : null}
       </div>
 
       {/* Tutor requirement summary */}
       {profile.subject && (
         <div style={{ background:"#EBF5FF", border:"1px solid #BFDBFE", borderRadius:10, padding:"12px 16px", marginBottom:20, fontSize:13, color:"#1E429F" }}>
-          🔍 Showing tutors for: <strong>{profile.subject}</strong>
+          🔍 Your requirement: <strong>{profile.subject}</strong>
           {profile.location && <> · 📍 <strong>{profile.location}</strong></>}
           {profile.budget   && <> · 💰 Budget: <strong>{profile.budget}</strong></>}
         </div>
@@ -414,23 +496,31 @@ function TutorFinder({ user, profile }) {
               {t.bio && <p style={{ fontSize:12, color:"#6B7280", lineHeight:1.6, marginBottom:14 }}>{t.bio.slice(0,100)}{t.bio.length>100?"...":""}</p>}
               <div style={{ borderTop:"1px solid #F3F4F6", paddingTop:14 }}>
                 {contacted.includes(t.id) ? (
-                  <div style={{ textAlign:"center", fontSize:13, color:"#059669", fontWeight:700 }}>✅ Contact request sent!</div>
-                ) : (
-                  <div style={{ display:"flex", gap:8 }}>
-                    <button className="btn btn-primary btn-sm" style={{ flex:1, justifyContent:"center" }}
-                      onClick={() => setContacted(c => [...c, t.id])}>
-                      📞 Contact Tutor
-                    </button>
-                    {(t.phone || t.email) && (
-                      <button className="btn btn-ghost btn-sm" style={{ flex:1, justifyContent:"center" }}
-                        onClick={() => {
-                          setContacted(c => [...c, t.id]);
-                          if (t.phone) window.open("tel:"+t.phone);
-                        }}>
-                        📱 {t.phone||t.email}
-                      </button>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {t.phone && (
+                      <a href={"tel:" + t.phone} style={{ ...contactRow, color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }}>
+                        📞 {t.phone}
+                      </a>
+                    )}
+                    {t.phone && (
+                      <a href={waLink(t.phone)} target="_blank" rel="noreferrer" style={{ ...contactRow, color:"#059669", borderColor:"#A7F3D0", background:"#ECFDF5" }}>
+                        💬 WhatsApp
+                      </a>
+                    )}
+                    {t.email && (
+                      <a href={"mailto:" + t.email} style={{ ...contactRow, color:"#92400E", borderColor:"#FDE68A", background:"#FFFBEB" }}>
+                        ✉️ {t.email}
+                      </a>
+                    )}
+                    {!t.phone && !t.email && (
+                      <div style={{ textAlign:"center", fontSize:12, color:"#9CA3AF" }}>No contact details available</div>
                     )}
                   </div>
+                ) : (
+                  <button className="btn btn-primary btn-sm" style={{ width:"100%", justifyContent:"center" }}
+                    onClick={() => setContacted(c => [...c, t.id])}>
+                    📞 Contact Tutor
+                  </button>
                 )}
               </div>
             </div>
