@@ -212,7 +212,7 @@ export default function BrowseTeachersPage({ setPage }) {
                     onClick={() => user ? setSelected(t) : setPage("signup")}
                     onMouseEnter={e => { e.currentTarget.style.background="#1A56DB"; e.currentTarget.style.color="#fff"; }}
                     onMouseLeave={e => { e.currentTarget.style.background="#EBF5FF"; e.currentTarget.style.color="#1A56DB"; }}>
-                    {user ? "View Profile →" : "Contact Teacher →"}
+                    {user ? "Hire Faculty →" : "Contact Teacher →"}
                   </button>
                 </div>
               ))}

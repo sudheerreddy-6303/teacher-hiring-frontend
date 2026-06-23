@@ -117,6 +117,28 @@ function JobsPage({ setPage }) {
     <div className="browse-page" style={{ paddingTop:66, minHeight:"100vh", background:"#F9FAFB" }}>
       <Navbar setPage={setPage} />
 
+      {/* Hero */}
+      <div style={{ background:"linear-gradient(135deg,#1E3A8A,#1A56DB)", padding:"52px 0 40px" }}>
+        <div className="container" style={{ textAlign:"center" }}>
+          <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(255,255,255,.15)", borderRadius:20, padding:"5px 16px", fontSize:13, color:"#BAE6FD", fontWeight:600, marginBottom:16 }}>
+            💼 {loading ? "..." : jobs.length.toLocaleString()}+ Teaching Jobs
+          </div>
+          <h1 style={{ fontSize:38, fontWeight:900, color:"#fff", marginBottom:12 }}>Browse Teaching Jobs</h1>
+          <p style={{ color:"#93C5FD", fontSize:16, marginBottom:28, maxWidth:520, margin:"0 auto 28px" }}>
+            Find verified teaching positions at schools and coaching institutes across India
+          </p>
+          <div style={{ display:"flex", gap:0, maxWidth:520, margin:"0 auto", background:"#fff", borderRadius:12, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,.15)" }}>
+            <input
+              style={{ flex:1, border:"none", outline:"none", padding:"14px 18px", fontSize:14, fontFamily:"Nunito,sans-serif" }}
+              placeholder="Search by title, school or subject..."
+              value={filter.search}
+              onChange={e => setFilter(f => ({...f, search:e.target.value}))}
+            />
+            <button style={{ background:"#1A56DB", color:"#fff", border:"none", padding:"0 24px", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"Nunito,sans-serif" }}>Search</button>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div style={{ background:"#fff", borderBottom:"1px solid #E5E7EB", padding:"40px 0 0" }}>
         <div className="container">
