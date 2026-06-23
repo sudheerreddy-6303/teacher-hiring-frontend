@@ -1,58 +1,142 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { FilterBar, Toast } from "../common/Shared";
+import SuccessPopup from "../common/SuccessPopup";
 import { SUBS, INDIA_LOCATIONS } from "../../constants";
 import './Admin.css';
 
+/* ── Share an individual profile via WhatsApp. Builds a readable summary from
+   the given [label, value] pairs (blank values are skipped) and opens WhatsApp
+   so the admin can pick any chat to forward it to. ── */
+function shareOnWhatsApp(title, pairs) {
+  const lines = (pairs || [])
+    .filter(([, v]) => v !== undefined && v !== null && String(v).trim() !== "")
+    .map(([k, v]) => `${k}: ${String(v).trim()}`);
+  const text = `${title}\n\n${lines.join("\n")}\n\nShared via AcadHr`;
+  const url = "https://wa.me/?text=" + encodeURIComponent(text);
+  if (typeof window !== "undefined") window.open(url, "_blank", "noopener,noreferrer");
+}
+
+/* Build a public link that opens ONLY this person's profile details. */
+function profileLink(role, id) {
+  if (typeof window === "undefined" || !id) return "";
+  return `${window.location.origin}/?profile=${role}&id=${id}`;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
-   Day-wise registrations & jobs — one individual chart per category, each
-   showing the daily numbers and a 7-day total. Self-contained SVG, no deps.
-   Uses the existing /admin/analytics data (regTrend + jobTrend).
+   Day-wise registrations & jobs (last 30 days) — one individual chart per
+   category, drawn exactly like the original day-wise chart. The cumulative line
+   is seeded with the records that existed before the 30-day window, so it ends
+   at the all-time total shown on the stat cards (counts match). Self-contained
+   SVG, no deps. Uses /admin/analytics data (regTrend30 + jobTrend30 + totals).
 ════════════════════════════════════════════════════════════════════════════ */
 function OverviewTrendChart({ analytics }) {
-  // Build the last 7 calendar days (oldest → newest)
-  const days = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() - i);
-    days.push(d);
-  }
+  // Time range the charts react to: weekly (7 days), monthly (30 days), yearly (12 months)
+  const [period, setPeriod] = useState("monthly");
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo,   setRangeTo]   = useState("");
+
   const key = (d) => {
     const dt = (d instanceof Date) ? d : new Date(d);
     return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
   };
+  const monthKey = (d) => {
+    const dt = (d instanceof Date) ? d : new Date(d);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+  };
 
-  const regTrend = (analytics && analytics.regTrend) || [];
-  const jobTrend = (analytics && analytics.jobTrend) || [];
+  // Build the buckets (x-axis points) and pick the matching dataset for the period.
+  let buckets = [];
+  let bucketKeyOf, rowKeyOf, labelFor, regTrend, jobTrend, rangeLabel;
+  if (period === "yearly") {
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(1); d.setMonth(d.getMonth() - i);
+      buckets.push(d);
+    }
+    bucketKeyOf = (d) => monthKey(d);
+    rowKeyOf    = (r) => String(r.ym || "");
+    labelFor    = (d) => `${d.toLocaleDateString("en-IN", { month: "short" })} ${String(d.getFullYear()).slice(2)}`;
+    regTrend    = (analytics && analytics.regTrendMonthly) || [];
+    jobTrend    = (analytics && analytics.jobTrendMonthly) || [];
+    rangeLabel  = "the last 12 months";
+  } else if (period === "custom") {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const start = rangeFrom ? new Date(rangeFrom) : new Date(today.getTime() - 29 * 86400000);
+    const end   = rangeTo   ? new Date(rangeTo)   : today;
+    start.setHours(0, 0, 0, 0); end.setHours(0, 0, 0, 0);
+    let cur = new Date(start), guard = 0;
+    while (cur <= end && guard < 400) { buckets.push(new Date(cur)); cur.setDate(cur.getDate() + 1); guard++; }
+    if (!buckets.length) buckets.push(new Date(end));
+    bucketKeyOf = (d) => key(d);
+    rowKeyOf    = (r) => key(r.date);
+    labelFor    = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    regTrend    = (analytics && analytics.regTrend30) || [];
+    jobTrend    = (analytics && analytics.jobTrend30) || [];
+    rangeLabel  = `${start.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} – ${end.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`;
+  } else {
+    const DAYS = period === "weekly" ? 7 : 30;
+    for (let i = DAYS - 1; i >= 0; i--) {
+      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+      buckets.push(d);
+    }
+    bucketKeyOf = (d) => key(d);
+    rowKeyOf    = (r) => key(r.date);
+    labelFor    = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    regTrend    = (analytics && analytics.regTrend30) || [];
+    jobTrend    = (analytics && analytics.jobTrend30) || [];
+    rangeLabel  = period === "weekly" ? "the last 7 days" : "the last 30 days";
+  }
+  const regTotals = (analytics && analytics.regTotals)  || [];
+  const jobTotal  = (analytics && (analytics.jobTotal !== undefined && analytics.jobTotal !== null)) ? Number(analytics.jobTotal) : null;
 
-  const sumFor = (rows, dayKey, roleMatch) =>
-    rows.filter(r => key(r.date) === dayKey && (roleMatch ? r.role === roleMatch : true))
+  const sumFor = (rows, bKey, roleMatch) =>
+    rows.filter(r => rowKeyOf(r) === bKey && (roleMatch ? r.role === roleMatch : true))
         .reduce((acc, r) => acc + Number(r.count || 0), 0);
 
+  const totalFor = (role) => {
+    if (role === null) return jobTotal;
+    const row = regTotals.find(r => r.role === role);
+    return row ? Number(row.count || 0) : null;
+  };
+
   const series = [
-    { name: "Teachers", title: "Teacher Registrations", icon: "👩‍🏫", color: "#1A56DB", bg: "#EBF5FF", values: days.map(d => sumFor(regTrend, key(d), "teacher")) },
-    { name: "Tutors",   title: "Tutor Registrations",   icon: "🧑‍🎓", color: "#6D28D9", bg: "#F5F3FF", values: days.map(d => sumFor(regTrend, key(d), "tutor"))   },
-    { name: "Parents",  title: "Parent Registrations",  icon: "👨‍👩‍👧", color: "#D97706", bg: "#FFFBEB", values: days.map(d => sumFor(regTrend, key(d), "parent"))  },
-    { name: "Jobs",     title: "Job Postings",          icon: "💼",   color: "#059669", bg: "#ECFDF5", values: days.map(d => sumFor(jobTrend, key(d), null))      },
+    { name: "Teachers", title: "Teacher Registrations", icon: "👩‍🏫", color: "#1A56DB", bg: "#EBF5FF", role: "teacher", rows: regTrend },
+    { name: "Tutors",   title: "Tutor Registrations",   icon: "🧑‍🎓", color: "#6D28D9", bg: "#F5F3FF", role: "tutor",   rows: regTrend },
+    { name: "Parents",  title: "Parent Registrations",  icon: "👨‍👩‍👧", color: "#D97706", bg: "#FFFBEB", role: "parent",  rows: regTrend },
+    { name: "Jobs",     title: "Job Postings",          icon: "💼",   color: "#059669", bg: "#ECFDF5", role: null,      rows: jobTrend },
   ];
 
   // One individual chart card for a single category
   const renderMini = (s) => {
-    const total = s.values.reduce((a, b) => a + b, 0);
-    // Cumulative running total so the line grows day by day (each day = previous + that day)
+    const dailyAdds = buckets.map(d => sumFor(s.rows, bucketKeyOf(d), s.role));
+    const windowSum = dailyAdds.reduce((a, b) => a + b, 0);
+    const allTime   = totalFor(s.role);
+    // Records that already existed before the 30-day window. Seeding with this
+    // makes the line finish at the all-time total (= the stat card number).
+    const baseline  = (allTime !== null && allTime >= windowSum) ? (allTime - windowSum) : 0;
+
+    // Cumulative running total so the line grows day by day (starts at baseline)
     const cum = [];
-    s.values.reduce((acc, v) => { const t = acc + v; cum.push(t); return t; }, 0);
-    const W = 380, H = 200, padL = 26, padR = 16, padT = 30, padB = 26;
+    dailyAdds.reduce((acc, v) => { const t = acc + v; cum.push(t); return t; }, baseline);
+    const endTotal = cum.length ? cum[cum.length - 1] : baseline;
+
+    const W = 380, H = 230, padL = 26, padR = 16, padT = 30, padB = 52;
     const plotW = W - padL - padR, plotH = H - padT - padB;
     const maxVal = Math.max(1, ...cum);
-    const x = (i) => padL + (plotW * i) / (cum.length - 1);
+    const x = (i) => cum.length === 1 ? padL + plotW / 2 : padL + (plotW * i) / (cum.length - 1);
     const y = (v) => padT + plotH - (plotH * v) / maxVal;
-    const labelFor = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
     const pts  = cum.map((v, i) => `${x(i)},${y(v)}`).join(" ");
     const area = `${padL},${padT + plotH} ${pts} ${padL + plotW},${padT + plotH}`;
-    const hasData = total > 0;
+    const hasData = endTotal > 0;
     const gid = `grad-${s.name}`;
+    // 30 points is a lot — only label a handful of evenly spaced days (plus the
+    // last one) so the numbers and dates don't overlap.
+    const step = Math.max(1, Math.ceil(cum.length / 6));
+    const showLabel = (i) => (i % step === 0) || (i === cum.length - 1);
+    // Show a date tick for EVERY day when the range is small enough to fit (weekly / monthly /
+    // yearly / short custom ranges). For very long custom ranges keep evenly-spaced ticks so the
+    // labels don't collide.
+    const showDate = (i) => (cum.length <= 45) ? true : showLabel(i);
 
     return (
       <div key={s.name} className="card" style={{ padding: 18 }}>
@@ -62,8 +146,8 @@ function OverviewTrendChart({ analytics }) {
             <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>{s.title}</span>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 26, fontWeight: 800, color: s.color, lineHeight: 1, fontFamily: "Playfair Display,serif" }}>{total}</div>
-            <div style={{ fontSize: 10, color: "#9CA3AF", fontWeight: 700, textTransform: "uppercase", letterSpacing: .4 }}>added · last 7 days</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: s.color, lineHeight: 1, fontFamily: "Playfair Display,serif" }}>{endTotal}</div>
+            <div style={{ fontSize: 10, color: "#9CA3AF", fontWeight: 700, textTransform: "uppercase", letterSpacing: .4 }}>total · to date</div>
           </div>
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block" }} preserveAspectRatio="xMidYMid meet">
@@ -78,12 +162,12 @@ function OverviewTrendChart({ analytics }) {
           {hasData && <polyline points={pts} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
           {cum.map((v, i) => (
             <g key={i}>
-              {hasData && <circle cx={x(i)} cy={y(v)} r="3.2" fill="#fff" stroke={s.color} strokeWidth="2" />}
-              <text x={x(i)} y={(hasData ? y(v) : padT + plotH) - 9} textAnchor="middle" fontSize="11" fontWeight="700" fill={s.color}>{v}</text>
-              <text x={x(i)} y={H - 8} textAnchor="middle" fontSize="9" fill="#9CA3AF">{labelFor(days[i])}</text>
+              {hasData && <circle cx={x(i)} cy={y(v)} r="2.6" fill="#fff" stroke={s.color} strokeWidth="2" />}
+              {showLabel(i) && <text x={x(i)} y={(hasData ? y(v) : padT + plotH) - 9} textAnchor="middle" fontSize="11" fontWeight="700" fill={s.color}>{v}</text>}
+              {showDate(i) && <text x={x(i)} y={padT + plotH + 6} textAnchor="start" fontSize="8" fill="#9CA3AF" transform={`rotate(90 ${x(i)} ${padT + plotH + 6})`}>{labelFor(buckets[i])}</text>}
             </g>
           ))}
-          {!hasData && <text x={W / 2} y={padT + plotH / 2} textAnchor="middle" fontSize="12" fill="#9CA3AF">No additions in the last 7 days</text>}
+          {!hasData && <text x={W / 2} y={padT + plotH / 2} textAnchor="middle" fontSize="12" fill="#9CA3AF">No additions in {rangeLabel}</text>}
         </svg>
       </div>
     );
@@ -94,9 +178,38 @@ function OverviewTrendChart({ analytics }) {
       {!analytics ? (
         <div className="card" style={{ padding: 30, textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>Loading charts…</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 18 }}>
-          {series.map(renderMini)}
-        </div>
+        <>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: "#6B7280", fontWeight: 700 }}>Showing data for {rangeLabel}</div>
+            <div style={{ display: "inline-flex", background: "#F3F4F6", borderRadius: 10, padding: 3, gap: 2 }}>
+              {[["weekly", "Weekly"], ["monthly", "Monthly"], ["yearly", "Yearly"], ["custom", "📅 Calendar"]].map(([val, lbl]) => (
+                <button key={val} onClick={() => setPeriod(val)}
+                  style={{ border: "none", cursor: "pointer", borderRadius: 8, padding: "6px 16px", fontSize: 13, fontWeight: 800, fontFamily: "Nunito,sans-serif",
+                    background: period === val ? "#fff" : "transparent",
+                    color: period === val ? "#1A56DB" : "#6B7280",
+                    boxShadow: period === val ? "0 1px 3px rgba(0,0,0,.12)" : "none", transition: "all .15s" }}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </div>
+          {period === "custom" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "#6B7280" }}>From&nbsp;
+                <input type="date" value={rangeFrom} max={rangeTo || undefined} onChange={(e) => setRangeFrom(e.target.value)}
+                  style={{ marginLeft: 4, padding: "6px 10px", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 13, fontFamily: "Nunito,sans-serif", color: "#111827" }} />
+              </label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "#6B7280" }}>To&nbsp;
+                <input type="date" value={rangeTo} min={rangeFrom || undefined} onChange={(e) => setRangeTo(e.target.value)}
+                  style={{ marginLeft: 4, padding: "6px 10px", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 13, fontFamily: "Nunito,sans-serif", color: "#111827" }} />
+              </label>
+              <span style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>Day-wise daily data is available for the last 30 days.</span>
+            </div>
+          )}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 18 }}>
+            {series.map(renderMini)}
+          </div>
+        </>
       )}
     </div>
   );
@@ -355,7 +468,7 @@ function AdminTeacherForm({ form, up }) {
       <div className="card" style={card}>
         <div style={head}>🎓 Qualifications & Experience</div>
         <div className="fg"><label className="flabel">Qualification * (B.Sc / M.Sc / B.Tech etc)</label>
-          <PillRadio options={["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","M.Sc + B.Ed","B.Tech + B.Ed","PhD","Diploma"]} value={form.qualification} onChange={v=>up("qualification",v)} />
+          <PillMulti options={["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil"]} value={form.qualification} onChange={v=>up("qualification",v)} />
         </div>
         <div className="grid2">
           <div className="fg"><label className="flabel">Specialization / Subject * (select at least 3)</label>
@@ -584,6 +697,15 @@ function AdminTutorForm({ form, up }) {
 
 /* ── Tuition requirement form — mirrors ParentDashboard → My Requirement ── */
 function AdminTuitionForm({ form, up }) {
+  // Multi-select chip helpers (store the picks as a comma-separated string)
+  const chipBox = { display:"flex", flexWrap:"wrap", gap:8, padding:12, background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:10 };
+  const chip = (on) => ({ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${on?"#1A56DB":"#E5E7EB"}`, background:on?"#EBF5FF":"#fff", color:on?"#1A56DB":"#374151", fontSize:13, fontWeight:700, cursor:"pointer", userSelect:"none" });
+  const inCsv  = (field, v) => (form[field]||"").split(",").map(s=>s.trim()).filter(Boolean).includes(v);
+  const togCsv = (field, v) => {
+    const arr = (form[field]||"").split(",").map(s=>s.trim()).filter(Boolean);
+    const next = arr.includes(v) ? arr.filter(x=>x!==v) : [...arr, v];
+    up(field, next.join(", "));
+  };
   return (
     <>
       <div style={{ ...SECTION, marginTop:0 }}>👨‍👩‍👧 Parent Account</div>
@@ -593,8 +715,9 @@ function AdminTuitionForm({ form, up }) {
       </div>
       <div className="grid2">
         <div className="fg"><label className="flabel">Phone</label><input className="input" value={form.phone} onChange={e=>up("phone",e.target.value)} placeholder="+91 98765 43210" /></div>
-        <div className="fg"><label className="flabel">Login Password</label><input className="input" value={form.password} onChange={e=>up("password",e.target.value)} /></div>
+        <div className="fg"><label className="flabel">City</label><input className="input" value={form.city} onChange={e=>up("city",e.target.value)} placeholder="e.g. Hyderabad" /></div>
       </div>
+      <div className="fg"><label className="flabel">Login Password</label><input className="input" value={form.password} onChange={e=>up("password",e.target.value)} /></div>
 
       <div style={SECTION}>📋 Tutor Requirement</div>
       <div className="grid2">
@@ -603,6 +726,13 @@ function AdminTuitionForm({ form, up }) {
           <select className="input" value={form.student_class} onChange={e=>up("student_class",e.target.value)}>
             <option value="">Select class</option>{["Pre-Primary (Nursery–KG)","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12","Degree"].map(c=><option key={c}>{c}</option>)}
           </select>
+        </div>
+      </div>
+      <div className="fg"><label className="flabel">Course(s) (select all that apply)</label>
+        <div style={chipBox}>
+          {["JEE","NEET","Foundation","Olympiad","School Tuition","Spoken English","Coding / Programming","Competitive Exams","Abacus / Vedic Maths","Hobby Classes"].map(c => (
+            <span key={c} onClick={()=>togCsv("courses",c)} style={chip(inCsv("courses",c))}>{c}</span>
+          ))}
         </div>
       </div>
       <div className="grid2">
@@ -614,9 +744,15 @@ function AdminTuitionForm({ form, up }) {
         <div className="fg"><label className="flabel">Subject(s) Required *</label><input className="input" value={form.subject} onChange={e=>up("subject",e.target.value)} placeholder="e.g. Mathematics, Physics" /></div>
       </div>
       <div className="fg"><label className="flabel">Location / Area</label><input className="input" value={form.location} onChange={e=>up("location",e.target.value)} placeholder="e.g. Banjara Hills, Hyderabad" /></div>
+      <div className="grid2">
+        <div className="fg"><label className="flabel">State</label><input className="input" value={form.state} onChange={e=>up("state",e.target.value)} placeholder="e.g. Telangana" /></div>
+        <div className="fg"><label className="flabel">Pincode</label><input className="input" value={form.pincode} onChange={e=>up("pincode",e.target.value)} placeholder="e.g. 500034" /></div>
+      </div>
+      <div className="fg"><label className="flabel">Landmark / Area</label><input className="input" value={form.landmark} onChange={e=>up("landmark",e.target.value)} placeholder="e.g. Near City Center Mall" /></div>
+      <div className="fg"><label className="flabel">School / College / Institute Name</label><input className="input" value={form.institute_name} onChange={e=>up("institute_name",e.target.value)} placeholder="e.g. Delhi Public School" /></div>
       <div className="fg"><label className="flabel">Tutoring Mode</label>
         <div style={{ display:"flex", gap:10, marginTop:6 }}>
-          {["Home","Online","Either"].map(m => (
+          {["Home","Online","Offline & Online"].map(m => (
             <label key={m} onClick={()=>up("mode",m)} style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"8px 0", borderRadius:10, border:`2px solid ${form.mode===m?"#1A56DB":"#E5E7EB"}`, background:form.mode===m?"#EBF5FF":"#F9FAFB", cursor:"pointer", fontSize:13, fontWeight:700, color:form.mode===m?"#1A56DB":"#6B7280", userSelect:"none" }}>
               {m==="Home"?"🏠":m==="Online"?"💻":"🔄"} {m}
             </label>
@@ -633,6 +769,14 @@ function AdminTuitionForm({ form, up }) {
           <select className="input" value={form.budget} onChange={e=>up("budget",e.target.value)}>
             <option value="">Select range</option><option>Under ₹2,000</option><option>₹2,000–₹4,000</option><option>₹4,000–₹6,000</option><option>₹6,000–₹10,000</option><option>Above ₹10,000</option>
           </select>
+        </div>
+      </div>
+      <div className="fg"><label className="flabel">Hourly Budget (₹)</label><input className="input" type="number" min="0" value={form.hourly_budget} onChange={e=>up("hourly_budget",e.target.value)} placeholder="e.g. 500" /></div>
+      <div className="fg"><label className="flabel">Preferred Days (select all that apply)</label>
+        <div style={chipBox}>
+          {["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(d => (
+            <span key={d} onClick={()=>togCsv("preferred_days",d)} style={chip(inCsv("preferred_days",d))}>{d}</span>
+          ))}
         </div>
       </div>
       <div className="grid2">
@@ -725,6 +869,27 @@ function AdminJobForm({ form, up }) {
           <label className="flabel">Requirement Type *</label>
           <select className="input" value={form.requirement_type} onChange={e => up("requirement_type",e.target.value)}>
             <option>Teacher</option><option>Faculty</option><option>Tutor</option>
+            <optgroup label="Non-Teaching / Administrative">
+              <option>Principal</option>
+              <option>Vice Principal</option>
+              <option>Academic Counsellor</option>
+              <option>Career Counsellor</option>
+              <option>Academic Coordinator</option>
+              <option>Administrative Officer</option>
+              <option>Office Assistant / Clerk</option>
+              <option>Front Office / Receptionist</option>
+              <option>Accountant</option>
+              <option>HR Manager</option>
+              <option>Librarian</option>
+              <option>Lab Assistant</option>
+              <option>IT / Technical Support</option>
+              <option>Examination Coordinator</option>
+              <option>Sports / Physical Education In-charge</option>
+              <option>Warden</option>
+              <option>Transport In-charge</option>
+              <option>Security Staff</option>
+              <option>Housekeeping Staff</option>
+            </optgroup>
           </select>
         </div>
         <div className="fg">
@@ -878,7 +1043,7 @@ const ADD_REQUIRED = {
 const ADD_INIT = {
   teacher: { full_name:"", email:"", mobile:"", password:"Welcome@123", gender:"", dob:"", current_location:"", preferred_locations:"", qualification:"", specialization:"", total_experience:"", relevant_experience:"", current_role:"", current_org:"", current_salary:"", expected_salary:"", notice_period:"", available_from:"", certifications:"", work_mode:"", tutor_type:"", subjects:"", grades_handling:"", boards_handled:"", competitive_exams:"", teaching_mode:"", languages:"", demo_available:"", demo_link:"", residential_pref:"", relocation_ready:"", accommodation_req:"", aadhaar_verified:"", resume_link:"", resume_file_name:"", profile_status:"Active", remarks:"", terms_accepted:"" },
   tutor:   { name:"", email:"", phone:"", password:"Welcome@123", subject:"", city:"", experience:"", qualification:"", hourly_rate:"", teaching_mode:"Both", bio:"" },
-  tuition: { name:"", email:"", phone:"", password:"Welcome@123", student_name:"", student_class:"", board:"", subject:"", location:"", mode:"Home", preferred_time:"", budget:"", tutor_gender_pref:"", experience_req:"", notes:"" },
+  tuition: { name:"", email:"", phone:"", city:"", password:"Welcome@123", student_name:"", student_class:"", board:"", subject:"", courses:"", preferred_days:"", location:"", state:"", pincode:"", landmark:"", institute_name:"", mode:"Home", preferred_time:"", budget:"", hourly_budget:"", tutor_gender_pref:"", experience_req:"", notes:"" },
   job:     { institution_name:"", institution_type:"", location_state:"", location_city:"", contact_person:"", contact_number:"", contact_email:"", requirement_type:"Teacher", subject:"", grades:[], board:"CBSE", experience:"", salary_min:"", salary_max:"", joining_timeline:"Immediate", work_mode:"Full-time", residential:"No", accommodation:"Not Provided", gender_preference:"No Preference", interview_mode:"Online", demo_required:"No", positions:1, status:"Open", assigned_recruiter:"", notes:"" },
 };
 
@@ -948,6 +1113,7 @@ function TeacherEditModal({ teacher, api, hdr, onClose, onToggle, onSaved }) {
 
   return (
     <div className="overlay" onClick={onClose}>
+      <SuccessPopup show={msg.startsWith("✓")} onClose={onClose} />
       <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
         {/* Header */}
         <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
@@ -969,6 +1135,19 @@ function TeacherEditModal({ teacher, api, hdr, onClose, onToggle, onSaved }) {
               {teacher.is_active ? "Deactivate" : "Activate"}
             </button>
             <div style={{ flex:1 }} />
+            <button className="btn btn-sm" style={{ color:"#fff", background:"#25D366", border:"none" }}
+              onClick={() => shareOnWhatsApp("👩‍🏫 Teacher Profile — AcadHr", [
+                ["Name", form.full_name || teacher.name],
+                ["Specialization", form.specialization],
+                ["Subjects", form.subjects],
+                ["Qualification", form.qualification],
+                ["Experience", form.total_experience],
+                ["Location", form.current_location],
+                ["Teaching Mode", form.teaching_mode || form.work_mode],
+                ["Email", form.email],
+                ["Phone", form.mobile],
+                ["View Profile", profileLink("teacher", teacher.id)],
+              ])}>💬 Share on WhatsApp</button>
             <button className="btn btn-ghost" onClick={onClose}>Close</button>
             <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Changes ✓"}</button>
           </div>
@@ -982,7 +1161,7 @@ function TeacherEditModal({ teacher, api, hdr, onClose, onToggle, onSaved }) {
    with the selected tutor's data, and lets the admin update & save it.        ── */
 function TutorEditModal({ tutor, api, hdr, onClose, onToggle, onSaved }) {
   const EXPS  = ["Fresher (0-1 year)","1-3 years","3-5 years","5-10 years","10+ years"];
-  const QUALS = ["B.Ed","M.Ed","M.Sc + B.Ed","B.Tech + B.Ed","M.Tech + B.Ed","PhD","Diploma in Education"];
+  const QUALS = ["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil"];
   const TIMES = ["Morning","Afternoon","Evening","Any Time"];
   const [form, setForm] = useState(() => ({
     name:          tutor.name || "",
@@ -1028,6 +1207,7 @@ function TutorEditModal({ tutor, api, hdr, onClose, onToggle, onSaved }) {
 
   return (
     <div className="overlay" onClick={onClose}>
+      <SuccessPopup show={msg.startsWith("✓")} onClose={onClose} />
       <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
         <div style={{ background:"linear-gradient(135deg,#5B21B6,#7C3AED)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
@@ -1097,6 +1277,19 @@ function TutorEditModal({ tutor, api, hdr, onClose, onToggle, onSaved }) {
               {tutor.is_active ? "Deactivate" : "Activate"}
             </button>
             <div style={{ flex:1 }} />
+            <button className="btn btn-sm" style={{ color:"#fff", background:"#25D366", border:"none" }}
+              onClick={() => shareOnWhatsApp("🧑‍🎓 Tutor Profile — AcadHr", [
+                ["Name", form.name],
+                ["Subjects", form.subjects],
+                ["Qualifications", form.qualifications],
+                ["Experience", form.experience],
+                ["Hourly Rate", form.hourly_rate],
+                ["Teaching Mode", form.teaching_mode],
+                ["City", form.city || form.location],
+                ["Email", form.email],
+                ["Phone", form.phone],
+                ["View Profile", profileLink("tutor", tutor.id)],
+              ])}>💬 Share on WhatsApp</button>
             <button className="btn btn-ghost" onClick={onClose}>Close</button>
             <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Changes ✓"}</button>
           </div>
@@ -1139,6 +1332,7 @@ function SchoolEditModal({ school, api, hdr, onClose, onToggle, onSaved }) {
 
   return (
     <div className="overlay" onClick={onClose}>
+      <SuccessPopup show={msg.startsWith("✓")} onClose={onClose} />
       <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:720, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
         <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
@@ -1183,6 +1377,17 @@ function SchoolEditModal({ school, api, hdr, onClose, onToggle, onSaved }) {
           <div style={{ display:"flex", gap:10, alignItems:"center", marginTop:8, paddingTop:18, borderTop:"1px solid #E5E7EB" }}>
             <button className={"btn btn-sm " + (school.is_active ? "btn-danger" : "btn-success")} onClick={() => onToggle(school.id)}>{school.is_active ? "Deactivate" : "Activate"}</button>
             <div style={{ flex:1 }} />
+            <button className="btn btn-sm" style={{ color:"#fff", background:"#25D366", border:"none" }}
+              onClick={() => shareOnWhatsApp("🏫 Institution — AcadHr", [
+                ["Name", form.name],
+                ["Type", form.institute_type],
+                ["City", form.city],
+                ["Students", form.student_count],
+                ["Website", form.website],
+                ["Email", form.email],
+                ["Phone", form.phone],
+                ["View Profile", profileLink("school", school.id)],
+              ])}>💬 Share on WhatsApp</button>
             <button className="btn btn-ghost" onClick={onClose}>Close</button>
             <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Changes ✓"}</button>
           </div>
@@ -1216,10 +1421,22 @@ function ParentEditModal({ parent, api, hdr, onClose, onToggle, onSaved }) {
     landmark:          parent.landmark || "",
     institute_name:    parent.institute_name || "",
     hourly_budget:     parent.hourly_budget || "",
+    courses:           parent.courses || "",
+    preferred_days:    parent.preferred_days || "",
   }));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg]       = useState("");
   const up = (k, v) => setForm(s => ({ ...s, [k]: v }));
+
+  // Multi-select chip helpers (store the picks as a comma-separated string)
+  const chipBox = { display:"flex", flexWrap:"wrap", gap:8, padding:12, background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:10 };
+  const chip = (on) => ({ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${on?"#059669":"#E5E7EB"}`, background:on?"#ECFDF5":"#fff", color:on?"#059669":"#374151", fontSize:13, fontWeight:700, cursor:"pointer", userSelect:"none" });
+  const inCsv  = (field, v) => (form[field]||"").split(",").map(s=>s.trim()).filter(Boolean).includes(v);
+  const togCsv = (field, v) => {
+    const arr = (form[field]||"").split(",").map(s=>s.trim()).filter(Boolean);
+    const next = arr.includes(v) ? arr.filter(x=>x!==v) : [...arr, v];
+    up(field, next.join(", "));
+  };
 
   async function save() {
     if (!String(form.name).trim() || !String(form.email).trim()) { setMsg("⚠️ Name and Email are required."); return; }
@@ -1236,6 +1453,7 @@ function ParentEditModal({ parent, api, hdr, onClose, onToggle, onSaved }) {
 
   return (
     <div className="overlay" onClick={onClose}>
+      <SuccessPopup show={msg.startsWith("✓")} onClose={onClose} />
       <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:720, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
         <div style={{ background:"linear-gradient(135deg,#047857,#059669)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
@@ -1268,6 +1486,13 @@ function ParentEditModal({ parent, api, hdr, onClose, onToggle, onSaved }) {
               <select className="input" value={form.student_class} onChange={e=>up("student_class",e.target.value)}>
                 <option value="">Select class</option>{["Pre-Primary (Nursery–KG)","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12","Degree"].map(c=><option key={c}>{c}</option>)}
               </select>
+            </div>
+          </div>
+          <div className="fg"><label className="flabel">Course(s) (select all that apply)</label>
+            <div style={chipBox}>
+              {["JEE","NEET","Foundation","Olympiad","School Tuition","Spoken English","Coding / Programming","Competitive Exams","Abacus / Vedic Maths","Hobby Classes"].map(c => (
+                <span key={c} onClick={()=>togCsv("courses",c)} style={chip(inCsv("courses",c))}>{c}</span>
+              ))}
             </div>
           </div>
           <div className="grid2">
@@ -1305,6 +1530,13 @@ function ParentEditModal({ parent, api, hdr, onClose, onToggle, onSaved }) {
             </div>
           </div>
           <div className="fg"><label className="flabel">Hourly Budget (₹)</label><input className="input" type="number" min="0" placeholder="e.g. 500" value={form.hourly_budget} onChange={e=>up("hourly_budget",e.target.value)} /></div>
+          <div className="fg"><label className="flabel">Preferred Days (select all that apply)</label>
+            <div style={chipBox}>
+              {["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(d => (
+                <span key={d} onClick={()=>togCsv("preferred_days",d)} style={chip(inCsv("preferred_days",d))}>{d}</span>
+              ))}
+            </div>
+          </div>
           <div className="grid2">
             <div className="fg"><label className="flabel">Tutor Gender Preference</label>
               <select className="input" value={form.tutor_gender_pref} onChange={e=>up("tutor_gender_pref",e.target.value)}>
@@ -1322,6 +1554,19 @@ function ParentEditModal({ parent, api, hdr, onClose, onToggle, onSaved }) {
           <div style={{ display:"flex", gap:10, alignItems:"center", marginTop:8, paddingTop:18, borderTop:"1px solid #E5E7EB" }}>
             <button className={"btn btn-sm " + (parent.is_active ? "btn-danger" : "btn-success")} onClick={() => onToggle(parent.id)}>{parent.is_active ? "Deactivate" : "Activate"}</button>
             <div style={{ flex:1 }} />
+            <button className="btn btn-sm" style={{ color:"#fff", background:"#25D366", border:"none" }}
+              onClick={() => shareOnWhatsApp("👪 Tuition Requirement — AcadHr", [
+                ["Parent", form.name],
+                ["Student", form.student_name],
+                ["Class", form.student_class],
+                ["Board", form.board],
+                ["Subject(s)", form.subject],
+                ["Location", form.location || form.city],
+                ["Mode", form.mode],
+                ["Budget", form.budget || form.hourly_budget],
+                ["Phone", form.phone],
+                ["View Profile", profileLink("parent", parent.id)],
+              ])}>💬 Share on WhatsApp</button>
             <button className="btn btn-ghost" onClick={onClose}>Close</button>
             <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Changes ✓"}</button>
           </div>
@@ -1590,11 +1835,11 @@ function AdminDashboard({ setPage }) {
   const MENU = [
     { id:"overview",   icon:"📊", label:"Overview" },
     { id:"pending",    icon:"⏳", label:"Pending Review", badge: pending.length },
-    { id:"jobs",       icon:"💼", label:"All Positions" },
+    { id:"jobs",       icon:"💼", label:"Jobs" },
     { id:"schools",    icon:"🏫", label:"Schools / Institutions" },
     { id:"teachers",   icon:"👩‍🏫", label:"Teachers" },
     { id:"tutors",     icon:"🧑‍🎓", label:"Tutors" },
-    { id:"parents",    icon:"👨‍👩‍👧", label:"Parents" },
+    { id:"parents",    icon:"👨‍👩‍👧", label:"Tuitions" },
     { id:"payments",   icon:"💳", label:"Payments" },
     { id:"analytics",  icon:"📈", label:"Analytics" },
     { id:"feedbacks",  icon:"💬", label:"Feedbacks" },
@@ -1668,7 +1913,7 @@ function AdminDashboard({ setPage }) {
                 { label:"Pending Review",  value: stats?.pendingJobs     ?? "...", icon:"⏳",   color:"#D97706", bg:"#FFFBEB", tab:"pending"   },
                 { label:"Applications",    value: stats?.totalApplications?? "...", icon:"📋", color:"#DC2626", bg:"#FEF2F2", tab:"jobs"      },
                 { label:"Payments",        value: "₹0",                            icon:"💳",   color:"#059669", bg:"#ECFDF5", tab:"payments"  },
-                { label:"Parents",         value: "0",                             icon:"👨‍👩‍👧", color:"#D97706", bg:"#FFFBEB", tab:"parents"   },
+                { label:"Tuitions",        value: stats?.parents         ?? "...", icon:"👨‍👩‍👧", color:"#D97706", bg:"#FFFBEB", tab:"parents"   },
               ].map(s => (
                 <div key={s.label} onClick={() => setTab(s.tab)}
                   style={{ background:s.bg, border:`1px solid ${s.color}30`, borderRadius:14, padding:"20px 18px", cursor:"pointer", transition:"transform .18s, box-shadow .18s" }}
@@ -1991,7 +2236,15 @@ function AdminDashboard({ setPage }) {
             {loading.tutors ? <Loader /> : (
               <div className="card" style={{ padding:0, overflow:"hidden" }}>
                 <div className="tbl-wrap admin-tbl">
-                  <table>
+                  <table style={{ tableLayout:"fixed" }}>
+                    <colgroup>
+                      <col style={{ width:"15%" }} />
+                      <col style={{ width:"21%" }} />
+                      <col style={{ width:"25%" }} />
+                      <col style={{ width:"14%" }} />
+                      <col style={{ width:"10%" }} />
+                      <col style={{ width:"15%" }} />
+                    </colgroup>
                     <thead><tr><th>Name</th><th>Email</th><th>Subject</th><th>City</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody>
                       {(() => {

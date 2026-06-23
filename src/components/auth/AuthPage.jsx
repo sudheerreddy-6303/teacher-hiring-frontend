@@ -18,7 +18,7 @@ function AuthPage({ mode, setPage }) {
   const { login } = useAuth();
   const [form, setForm] = useState(() => {
     const savedRole = localStorage.getItem("acadhr_selected_role") || "teacher";
-    return { name:"", email:"", password:"", role: savedRole, phone:"", city:"", subject:"", experience:"", qualification:"", bio:"", institute_type:"", est_year:"", student_count:"", website:"", hourly_rate:"", teaching_mode:"Both", subjects:[], qualifications:[], availability:[], address:"", tutor_location:"", pincode:"", class_link:"", resume_base64:"", resume_name:"", resume_type:"", preferred_times:[], parent_subjects:[], parent_pincode:"", parent_state:"", parent_landmark:"", hourly_budget:"", institute_name:"", gender:"" };
+    return { name:"", email:"", password:"", role: savedRole, phone:"", city:"", subject:"", experience:"", qualification:"", bio:"", institute_type:"", est_year:"", student_count:"", website:"", hourly_rate:"", teaching_mode:"Both", subjects:[], qualifications:[], availability:[], address:"", tutor_location:"", pincode:"", class_link:"", resume_base64:"", resume_name:"", resume_type:"", preferred_times:[], parent_subjects:[], parent_courses:[], parent_days:[], parent_pincode:"", parent_state:"", parent_landmark:"", hourly_budget:"", institute_name:"", gender:"" };
   });
   const [step, setStep]           = useState(1);
   const [err,  setErr]            = useState("");
@@ -65,6 +65,11 @@ function AuthPage({ mode, setPage }) {
   function toggleMulti(key, val) {
     const arr = Array.isArray(form[key]) ? form[key] : [];
     up(key, arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
+  }
+  // Toggle a value in a comma-separated string field (multi-select chips, stored as text)
+  function toggleCsv(key, val) {
+    const arr = (form[key] || "").split(",").map(x => x.trim()).filter(Boolean);
+    up(key, (arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]).join(", "));
   }
   // Read an uploaded resume file into the form as base64
   function onResume(file) {
@@ -258,6 +263,8 @@ function AuthPage({ mode, setPage }) {
         student_class:     form.student_class,
         board:             form.board_pref,
         subject:           form.role === "parent" ? (form.parent_subjects||[]).join(", ") : form.subject,
+        courses:           (form.parent_courses||[]).join(", "),
+        preferred_days:    (form.parent_days||[]).join(", "),
         location:          form.location_pref,
         mode:              form.mode_pref,
         preferred_time:    Array.isArray(form.preferred_times) ? form.preferred_times.join(", ") : form.preferred_time,
@@ -287,7 +294,7 @@ function AuthPage({ mode, setPage }) {
 
   const SUBS   = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit"];
   const EXPS   = ["Fresher (0-1 year)","1-3 years","3-5 years","5-10 years","10+ years"];
-  const QUALS  = ["B.Ed","M.Ed","M.Sc + B.Ed","B.Tech + B.Ed","M.Tech + B.Ed","PhD","Diploma in Education"];
+  const QUALS  = ["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil"];
   const ITYPES = ["School (CBSE)","School (ICSE)","School (State Board)","Junior College","Degree College","Coaching Institute","Tuition Centre","Online Platform"];
   const stepLabels = ["Your Info","Details","Verify Email"];
 
@@ -633,8 +640,12 @@ function AuthPage({ mode, setPage }) {
                         <div className="fg"><label className="flabel">Experience</label>
                           <select className="input" value={form.experience} onChange={e => up("experience", e.target.value)}>{EXPS.map(s => <option key={s}>{s}</option>)}</select>
                         </div>
-                        <div className="fg"><label className="flabel">Qualification</label>
-                          <select className="input" value={form.qualification} onChange={e => up("qualification", e.target.value)}>{QUALS.map(s => <option key={s}>{s}</option>)}</select>
+                        <div className="fg"><label className="flabel">Qualification (select one or more)</label>
+                          <div style={tutorChipBox}>
+                            {QUALS.map(q => (
+                              <span key={q} onClick={() => toggleCsv("qualification", q)} style={tutorChip((form.qualification||"").split(",").map(x=>x.trim()).filter(Boolean).includes(q))}>{q}</span>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </>
@@ -759,6 +770,14 @@ function AuthPage({ mode, setPage }) {
                     </div>
                   </div>
 
+                  <div className="fg"><label className="flabel">Course(s) (select all that apply)</label>
+                    <div style={tutorChipBox}>
+                      {["JEE","NEET","Foundation","Olympiad","School Tuition","Spoken English","Coding / Programming","Competitive Exams","Abacus / Vedic Maths","Hobby Classes"].map(c => (
+                        <span key={c} onClick={() => toggleMulti("parent_courses", c)} style={tutorChip((form.parent_courses||[]).includes(c))}>{c}</span>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="fg"><label className="flabel">Board</label>
                     <select className="input" value={form.board_pref} onChange={e => up("board_pref",e.target.value)}>
                       <option value="">Select board</option>
@@ -811,6 +830,14 @@ function AuthPage({ mode, setPage }) {
                     <div style={tutorChipBox}>
                       {["Morning","Afternoon","Evening","Any time"].map(t => (
                         <span key={t} onClick={() => toggleMulti("preferred_times", t)} style={tutorChip((form.preferred_times||[]).includes(t))}>{t}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="fg"><label className="flabel">Preferred Days (select all that apply)</label>
+                    <div style={tutorChipBox}>
+                      {["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(d => (
+                        <span key={d} onClick={() => toggleMulti("parent_days", d)} style={tutorChip((form.parent_days||[]).includes(d))}>{d}</span>
                       ))}
                     </div>
                   </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { SUBS, INDIA_LOCATIONS } from "../../constants";
 import { Toast, InlineBrowseJobs, FilterBar } from "../common/Shared";
+import SuccessPopup from "../common/SuccessPopup";
 import './Teacher.css';
 
 function TeacherDashboard({ user, setPage }) {
@@ -9,6 +10,7 @@ function TeacherDashboard({ user, setPage }) {
   const [tab, setTab]         = useState("overview");
   const [editMode, setEditMode]     = useState(false);
   const [saved, setSaved]           = useState(false);
+  const [showSavePopup, setShowSavePopup] = useState(false);
   const [saving, setSaving]         = useState(false);
   const [saveError, setSaveError]   = useState("");
   const [profileLoading, setProfileLoading] = useState(true);
@@ -222,6 +224,7 @@ function TeacherDashboard({ user, setPage }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Save failed");
       setSaved(true);
+      setShowSavePopup(true);
       setEditMode(false);
       localStorage.setItem("acadhr_teacher_completion", String(completion));
     } catch (err) {
@@ -281,7 +284,7 @@ function TeacherDashboard({ user, setPage }) {
   ];
 
   const SUBS  = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit"];
-  const QUALS = ["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","M.Sc + B.Ed","B.Tech + B.Ed","PhD","Diploma"];
+  const QUALS = ["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil"];
   const GRADES= ["Pre-Primary","1–5","6–8","9–10","11–12","All Grades","Degree"];
   const BOARDS= ["CBSE","ICSE","State Board","IB","IGCSE","All Boards"];
   const EXAMS = ["NEET","JEE","Olympiad","UPSC","CA Foundation","None"];
@@ -289,6 +292,8 @@ function TeacherDashboard({ user, setPage }) {
   const [navOpen, setNavOpen] = useState(false);
   return (
     <div style={{ display:"flex", width:"100vw", overflowX:"hidden", minHeight:"100vh" }}>
+
+      <SuccessPopup show={showSavePopup} onClose={() => setShowSavePopup(false)} />
 
       {/* Mobile nav toggle + backdrop */}
       <button className="mobile-nav-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
@@ -816,16 +821,19 @@ function TeacherDashboard({ user, setPage }) {
                 🎓 Qualifications & Experience
               </div>
 
-              {/* Qualification — pill radio */}
+              {/* Qualification — multi-select pills */}
               <div className="fg">
-                <label className="flabel">Qualification * (B.Sc / M.Sc / B.Tech etc)</label>
+                <label className="flabel">Qualification * (B.Sc / M.Sc / B.Tech etc — select one or more)</label>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
-                  {["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","M.Sc + B.Ed","B.Tech + B.Ed","PhD","Diploma"].map(q => (
-                    <label key={q} onClick={() => editMode && up("qualification",q)}
-                      style={{ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${profile.qualification===q?"#1A56DB":"#D1D5DB"}`, background:profile.qualification===q?"#EBF5FF":"#fff", cursor:editMode?"pointer":"default", fontSize:12, fontWeight:700, color:profile.qualification===q?"#1A56DB":"#374151", transition:"all .15s", userSelect:"none" }}>
-                      {profile.qualification===q?"✓ ":""}{q}
+                  {["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil"].map(q => {
+                    const on = (profile.qualification||"").split(",").map(x=>x.trim()).filter(Boolean).includes(q);
+                    return (
+                    <label key={q} onClick={() => editMode && up("qualification", ((profile.qualification||"").split(",").map(x=>x.trim()).filter(Boolean).includes(q) ? (profile.qualification||"").split(",").map(x=>x.trim()).filter(Boolean).filter(x=>x!==q) : [...(profile.qualification||"").split(",").map(x=>x.trim()).filter(Boolean), q]).join(", "))}
+                      style={{ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${on?"#1A56DB":"#D1D5DB"}`, background:on?"#EBF5FF":"#fff", cursor:editMode?"pointer":"default", fontSize:12, fontWeight:700, color:on?"#1A56DB":"#374151", transition:"all .15s", userSelect:"none" }}>
+                      {on?"✓ ":""}{q}
                     </label>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

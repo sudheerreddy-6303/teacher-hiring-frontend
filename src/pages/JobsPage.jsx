@@ -12,6 +12,7 @@ function JobsPage({ setPage }) {
   const [selected,   setSelected]   = useState(null);
   const [applied,    setApplied]    = useState([]);
   const [loginAlert, setLoginAlert] = useState(false);
+  const [shareToast, setShareToast] = useState(false);
 
   const API = apiBase();
 
@@ -49,6 +50,46 @@ function JobsPage({ setPage }) {
     }
     setSelected(job);
     if (!applied.includes(job.id)) setApplied(a => [...a, job.id]);
+  }
+
+  // ── Share a job (button visible only after login) ──────────────────────────
+  async function shareJob(job, e) {
+    if (e) e.stopPropagation();
+    const url = window.location.origin;
+
+    // Build the full job details to share — EVERYTHING except the phone number.
+    // job.contact_number (the phone) is intentionally left out below.
+    const lines = [];
+    if (job.title)            lines.push(`📌 ${job.title}`);
+    const inst = job.institution_name || job.posted_by_name;
+    if (inst)                 lines.push(`🏫 ${inst}${job.institution_type ? " (" + job.institution_type + ")" : ""}`);
+    if (job.requirement_id)   lines.push(`🔖 Job ID: ${job.requirement_id}`);
+    if (job.subject)          lines.push(`📚 Subject: ${job.subject}`);
+    if (job.grades)           lines.push(`📖 Grades: ${job.grades}`);
+    if (job.board)            lines.push(`🏷️ Board: ${job.board}`);
+    if (job.experience)       lines.push(`🎓 Experience: ${job.experience}`);
+    const jtype = [job.job_type, job.work_mode].filter(Boolean).join(" · ");
+    if (jtype)                lines.push(`💼 Type: ${jtype}`);
+    lines.push(`💰 Salary: ${fmtSalary(job)}`);
+    if (job.joining_timeline) lines.push(`📅 Joining: ${job.joining_timeline}`);
+    if (Number(job.positions) > 1) lines.push(`👥 Positions: ${job.positions}`);
+    const loc = [job.location_city, job.location_state].filter(Boolean).join(", ");
+    if (loc)                  lines.push(`📍 Location: ${loc}`);
+    if (job.contact_person)   lines.push(`👤 Contact: ${job.contact_person}`);
+    if (job.description)      lines.push(`📝 ${job.description}`);
+    // (job.contact_number — phone — and job.contact_email are deliberately NOT included)
+
+    const text = lines.join("\n") + `\n\nApply on AcadHr: ${url}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: job.title ? `AcadHr · ${job.title}` : "AcadHr Job", text, url });
+      } else {
+        await navigator.clipboard.writeText(text);
+        setShareToast(true);
+        setTimeout(() => setShareToast(false), 1800);
+      }
+    } catch (_) { /* user cancelled or share unavailable — no-op */ }
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -172,6 +213,19 @@ function JobsPage({ setPage }) {
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
                         <div style={{ width:44, height:44, borderRadius:12, background:"#EBF5FF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>🏫</div>
                         <div style={{ display:"flex", gap:5, flexWrap:"wrap", justifyContent:"flex-end" }}>
+                          {user && (
+                            <button
+                              onClick={(e) => shareJob(job, e)}
+                              title="Share this job"
+                              style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#EBF5FF", color:"#1A56DB", border:"1px solid #BFDBFE", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:700, cursor:"pointer", lineHeight:1.4 }}
+                            >
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                                <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" /><line x1="15.4" y1="6.5" x2="8.6" y2="10.5" />
+                              </svg>
+                              Share
+                            </button>
+                          )}
                           <span style={{ background:tb.bg, color:tb.color, borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:700 }}>{tb.label}</span>
                           <span style={{ background:sb.bg, color:sb.color, border:`1px solid ${sb.border}`, borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:700 }}>{sb.label}</span>
                         </div>
@@ -247,6 +301,13 @@ function JobsPage({ setPage }) {
                 onClick={() => setSelected(null)}>Browse More</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Share confirmation toast (clipboard fallback) */}
+      {shareToast && (
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#111827", color:"#fff", padding:"10px 18px", borderRadius:10, fontSize:13, fontWeight:600, zIndex:99999, boxShadow:"0 8px 24px rgba(0,0,0,.25)" }}>
+          ✓ Job link copied to clipboard
         </div>
       )}
     </div>

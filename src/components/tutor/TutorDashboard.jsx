@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { profileAPI } from "../../api";
 
 import { Toast, Divider, InlineBrowseJobs } from "../../components/common/Shared";
+import SuccessPopup from "../../components/common/SuccessPopup";
 import './Tutor.css';
 
 function TutorDashboard({ user, setPage }) {
@@ -20,6 +21,7 @@ function TutorDashboard({ user, setPage }) {
   });
   const [editMode, setEditMode] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showSavePopup, setShowSavePopup] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Persist profile edits to the database
@@ -47,6 +49,7 @@ function TutorDashboard({ user, setPage }) {
       });
       setEditMode(false);
       setSaved(true);
+      setShowSavePopup(true);
       await loadProfile();   // re-fetch from DB so the form shows the saved data
     } catch (e) {
       setSaved(false);
@@ -61,7 +64,7 @@ function TutorDashboard({ user, setPage }) {
     setProfile(p => ({ ...p, [key]: (arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]).join(", ") }));
   }
   const PROF_SUBS  = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit"];
-  const PROF_QUALS = ["B.Ed","M.Ed","M.Sc + B.Ed","B.Tech + B.Ed","M.Tech + B.Ed","PhD","Diploma in Education"];
+  const PROF_QUALS = ["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil"];
   const PROF_EXPS  = ["Fresher (0-1 year)","1-3 years","3-5 years","5-10 years","10+ years"];
   const PROF_TIMES = ["Morning","Afternoon","Evening","Any Time"];
   const profChip = (on, editable) => ({
@@ -128,6 +131,7 @@ function TutorDashboard({ user, setPage }) {
   const [navOpen, setNavOpen] = useState(false);
   return (
     <div style={{ display:"flex", width:"100vw", overflowX:"hidden", minHeight:"100vh" }}>
+      <SuccessPopup show={showSavePopup} onClose={() => setShowSavePopup(false)} />
       {/* Mobile nav toggle + backdrop */}
       <button className="mobile-nav-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
       <div className={"sidebar-backdrop" + (navOpen ? " show" : "")} onClick={() => setNavOpen(false)} />

@@ -18,6 +18,7 @@ import TutorDashboard     from "./components/tutor/TutorDashboard";
 import ParentDashboard    from "./components/parent/ParentDashboard";
 import SchoolDashboard    from "./components/school/SchoolDashboard";
 import FeedbackWidget     from "./components/common/FeedbackWidget";
+import PublicProfile      from "./pages/PublicProfile";
 
 export default function App() {
   const [user, setUser]   = useState(null);
@@ -71,6 +72,15 @@ export default function App() {
     if (user.role === "school")  return <SchoolDashboard  user={user} setPage={setPage} />;
     if (user.role === "parent")  return <ParentDashboard  user={user} setPage={setPage} />;
     return null;
+  }
+
+  // Deep link from a shared WhatsApp profile link: ?profile=<role>&id=<id>.
+  // Show ONLY that person's public details, nothing else.
+  if (typeof window !== "undefined") {
+    const sp = new URLSearchParams(window.location.search);
+    const spRole = sp.get("profile");
+    const spId   = sp.get("id");
+    if (spRole && spId) return <PublicProfile role={spRole} id={spId} />;
   }
 
   return (

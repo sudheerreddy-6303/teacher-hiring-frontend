@@ -20,6 +20,7 @@ function iconFor(subject) {
 export default function BrowseTuitionsPage({ setPage }) {
   const { user } = useAuth();
   const [selected, setSelected] = useState(null);
+  const [shareToast, setShareToast] = useState(false);
   const [tuitions, setTuitions] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
@@ -64,6 +65,35 @@ export default function BrowseTuitionsPage({ setPage }) {
       (t.student_class||"").toLowerCase().includes(filter.search.toLowerCase()) ||
       (t.notes||"").toLowerCase().includes(filter.search.toLowerCase()))
   );
+
+  // Share a tuition requirement — everything EXCEPT phone, email & student name
+  async function shareTuition(t, e) {
+    if (e) e.stopPropagation();
+    const url = window.location.origin;
+    const lines = [];
+    if (t.subject)            lines.push(`📚 Subject: ${t.subject}`);
+    const cls = [t.student_class, t.board].filter(Boolean).join(" · ");
+    if (cls)                  lines.push(`🎓 Class: ${cls}`);
+    if (t.mode)               lines.push(`💼 Mode: ${t.mode}`);
+    if (t.preferred_time)     lines.push(`🕐 Preferred time: ${t.preferred_time}`);
+    if (t.experience_req)     lines.push(`⏳ Experience required: ${t.experience_req}`);
+    if (t.tutor_gender_pref)  lines.push(`🧑 Tutor preference: ${t.tutor_gender_pref}`);
+    if (t.budget)             lines.push(`💰 Budget: ${t.budget}`);
+    if (cityOf(t))            lines.push(`📍 Location: ${cityOf(t)}`);
+    if (t.name)               lines.push(`👤 Posted by: ${t.name}`);
+    if (t.notes)              lines.push(`📝 ${t.notes}`);
+    // (student name, phone & email are deliberately NOT included)
+    const text = lines.join("\n") + `\n\nView tuition requirements on AcadHr: ${url}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: t.subject ? `AcadHr · ${t.subject} Tuition` : "AcadHr Tuition", text, url });
+      } else {
+        await navigator.clipboard.writeText(text);
+        setShareToast(true);
+        setTimeout(() => setShareToast(false), 1800);
+      }
+    } catch (_) { /* cancelled / unavailable — no-op */ }
+  }
 
   return (
     <div className="browse-page" style={{ minHeight:"100vh", background:"#F9FAFB" }}>
@@ -139,7 +169,7 @@ export default function BrowseTuitionsPage({ setPage }) {
               </p>
             </div>
           ) : (
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:20 }}>
+            <div className="responsive-grid-4" style={{ display:"grid", gap:20 }}>
               {filtered.map(t => {
                 const sub  = [t.student_class, t.board].filter(Boolean).join(" · ");
                 return (
@@ -157,6 +187,13 @@ export default function BrowseTuitionsPage({ setPage }) {
                       {sub && <div style={{ fontSize:12, color:"#0E7490", fontWeight:600, marginTop:2 }}>{sub}</div>}
                       <div style={{ fontSize:11, color:"#6B7280", marginTop:1 }}>Posted by {t.name || "a parent"}</div>
                     </div>
+                    {user && (
+                      <button onClick={(e) => shareTuition(t, e)} title="Share this requirement"
+                        style={{ flexShrink:0, display:"inline-flex", alignItems:"center", gap:4, background:"#ECFEFF", color:"#0E7490", border:"1px solid #A5F3FC", borderRadius:20, padding:"3px 9px", fontSize:11, fontWeight:700, cursor:"pointer", lineHeight:1.4 }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.6" y1="13.5" x2="15.4" y2="17.5" /><line x1="15.4" y1="6.5" x2="8.6" y2="10.5" /></svg>
+                        Share
+                      </button>
+                    )}
                     <span style={{ background:"#ECFDF5", color:"#059669", border:"1px solid #A7F3D0", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:700, flexShrink:0 }}>
                       {t.status || "Open"}
                     </span>
@@ -242,6 +279,12 @@ export default function BrowseTuitionsPage({ setPage }) {
               <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {shareToast && (
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#111827", color:"#fff", padding:"10px 18px", borderRadius:10, fontSize:13, fontWeight:600, zIndex:99999, boxShadow:"0 8px 24px rgba(0,0,0,.25)" }}>
+          ✓ Tuition details copied to clipboard
         </div>
       )}
     </div>

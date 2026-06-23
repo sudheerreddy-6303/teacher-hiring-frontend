@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { Toast, Divider } from "../common/Shared";
+import SuccessPopup from "../common/SuccessPopup";
 import './Parent.css';
 
 function ParentDashboard({ user, setPage }) {
@@ -15,6 +16,7 @@ function ParentDashboard({ user, setPage }) {
   });
   const [editMode, setEditMode] = useState(false);
   const [saved, setSaved]       = useState(false);
+  const [showSavePopup, setShowSavePopup] = useState(false);
   const [saving, setSaving]     = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -72,7 +74,7 @@ function ParentDashboard({ user, setPage }) {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.message);
-      setSaved(true); setEditMode(false);
+      setSaved(true); setShowSavePopup(true); setEditMode(false);
     } catch(err) { setSaveError(err.message); }
     finally { setSaving(false); }
   }
@@ -104,6 +106,7 @@ function ParentDashboard({ user, setPage }) {
   const [navOpen, setNavOpen] = useState(false);
   return (
     <div style={{ display:"flex", width:"100vw", minHeight:"100vh" }}>
+      <SuccessPopup show={showSavePopup} onClose={() => setShowSavePopup(false)} message="Your requirement has been saved." />
       {/* Mobile nav toggle + backdrop */}
       <button className="mobile-nav-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
       <div className={"sidebar-backdrop" + (navOpen ? " show" : "")} onClick={() => setNavOpen(false)} />

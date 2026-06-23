@@ -597,6 +597,7 @@ function HeroArt() {
 }
 
 function HomePage({ setPage }) {
+  const { user } = useAuth();
   const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
   useEffect(() => {
     const onResize = () => setVw(window.innerWidth);
@@ -611,6 +612,22 @@ function HomePage({ setPage }) {
       .then(r => (r.ok ? r.json() : []))
       .then(data => setHomeTuitions(Array.isArray(data) ? data.slice(0, 6) : []))
       .catch(() => setHomeTuitions([]));
+  }, []);
+
+  // Live profiles for the community section (fetched from DB; falls back to samples if a category is empty)
+  const [liveTeachers, setLiveTeachers] = useState([]);
+  const [liveTutors,   setLiveTutors]   = useState([]);
+  const [liveSchools,  setLiveSchools]  = useState([]);
+  const [liveParents,  setLiveParents]  = useState([]);
+  useEffect(() => {
+    const j = (p) => fetch(`${apiBase()}${p}`)
+      .then(r => (r.ok ? r.json() : []))
+      .then(d => (Array.isArray(d) ? d : []))
+      .catch(() => []);
+    j("/admin/public/teachers").then(setLiveTeachers);
+    j("/admin/public/tutors").then(setLiveTutors);
+    j("/admin/public/schools").then(setLiveSchools);
+    j("/admin/public/parents").then(setLiveParents);
   }, []);
   const isMobile = vw <= 640;
   const isTablet = vw <= 1024;
@@ -670,6 +687,110 @@ function HomePage({ setPage }) {
     },
   ];
 
+  // Map real DB records into the same card shape this section renders (samples used as fallback)
+  const _subs = (v) => Array.isArray(v)
+    ? v.filter(Boolean).slice(0, 3)
+    : (typeof v === "string" && v.trim() ? v.split(",").map(s => s.trim()).filter(Boolean).slice(0, 3) : []);
+  const _pal = [
+    { color:"#EBF5FF", accent:"#1A56DB" }, { color:"#ECFDF5", accent:"#059669" },
+    { color:"#FFF7ED", accent:"#C2410C" }, { color:"#F5F3FF", accent:"#6D28D9" },
+    { color:"#EFF6FF", accent:"#1D4ED8" }, { color:"#FDF2F8", accent:"#DB2777" },
+  ];
+  const _pick = (i) => _pal[i % _pal.length];
+
+  const liveCardsFor = (key) => {
+    if (key === "schools") return liveSchools.slice(0, 3).map((r, i) => ({
+      name: r.institute_name || r.name || "School",
+      role: r.institute_type ? `${r.institute_type} · School` : "School",
+      city: r.city || "",
+      exp: `${r.live_jobs || 0} Openings`,
+      qual: r.est_year ? `Est. ${r.est_year}` : "Institute",
+      details: [
+        ["Type", r.institute_type],
+        ["City", r.city],
+        ["Openings", `${r.live_jobs || 0}`],
+        ["Established", r.est_year],
+        ["Students", r.student_count],
+        ["Website", r.website],
+      ],
+      subjects: [], emoji:"🏫", rating:null,
+      statusText: (r.live_jobs > 0 ? "Hiring Now" : "Hiring Soon"),
+      statusDot: (r.live_jobs > 0 ? "#059669" : "#D97706"),
+      ..._pick(i),
+    }));
+    if (key === "teachers") return liveTeachers.slice(0, 3).map((r, i) => ({
+      name: r.name || r.full_name || "Teacher",
+      role: r.specialization || r.current_role || "Teacher",
+      city: r.current_location || r.city || "",
+      exp: r.total_experience || "\u2014",
+      qual: r.qualification || "\u2014",
+      details: [
+        ["Specialization", r.specialization],
+        ["Subjects", r.subjects],
+        ["Experience", r.total_experience || r.experience],
+        ["Teaching Mode", r.teaching_mode],
+        ["Languages", r.languages],
+        ["Grades", r.grades_handling],
+        ["Boards", r.boards_handled],
+        ["Location", r.current_location || r.city],
+      ],
+      subjects: _subs(r.subjects || r.specialization), emoji:"👩‍🏫", rating:null,
+      statusText:"Available Now", statusDot:"#059669",
+      ..._pick(i),
+    }));
+    if (key === "parents") return liveParents.slice(0, 3).map((r, i) => ({
+      name: r.name || "Parent",
+      role: "Parent · Seeking Tutor",
+      city: r.location || r.city || "",
+      exp: r.student_class ? `Class ${r.student_class}` : (r.board || "\u2014"),
+      qual: r.mode || r.board || "Tuition",
+      details: [
+        ["Student", r.student_name],
+        ["Class", r.student_class],
+        ["Board", r.board],
+        ["Subject", r.subject || r.courses],
+        ["Mode", r.mode],
+        ["Preferred Time", r.preferred_time],
+        ["Location", r.location || r.city],
+        ["Budget", r.budget || r.hourly_budget],
+      ],
+      subjects: _subs(r.subject || r.courses), emoji:"👪", rating:null,
+      statusText:"Looking Now", statusDot:"#059669",
+      ..._pick(i),
+    }));
+    if (key === "tutors") return liveTutors.slice(0, 3).map((r, i) => {
+      const subj = (r.subject || r.subjects || "").toString();
+      const first = (subj.split(",")[0] || "").trim();
+      return {
+        name: r.name || "Tutor",
+        role: first ? `${first} Tutor` : "Tutor",
+        city: r.location || r.city || "",
+        exp: r.experience || "\u2014",
+        qual: r.qualification || r.qualifications || "\u2014",
+        details: [
+          ["Subjects", r.subjects || r.subject],
+          ["Qualifications", r.qualifications || r.qualification],
+          ["Experience", r.experience],
+          ["Teaching Mode", r.teaching_mode],
+          ["Availability", r.availability],
+          ["Gender", r.gender],
+          ["Location", r.location || r.city],
+          ["Pincode", r.pincode],
+          ["Address", r.address],
+          ["Class Link", r.class_link],
+        ],
+        subjects: _subs(r.subjects || r.subject), emoji:"📚", rating:null,
+        statusText:"Available Now", statusDot:"#059669",
+        ..._pick(i),
+      };
+    });
+    return [];
+  };
+  const GROUPS_LIVE = GROUPS.map(g => {
+    const live = liveCardsFor(g.key);
+    return live.length ? { ...g, cards: live } : g;
+  });
+
   return (
     <div className="home-page">
       <Navbar setPage={setPage} />
@@ -693,7 +814,7 @@ function HomePage({ setPage }) {
                   {/* Eyebrow */}
                   <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"#fff", border:"1px solid #E2E8F0", borderRadius:30, padding:"7px 15px", marginBottom:22, boxShadow:"0 1px 2px rgba(15,23,42,.05)" }}>
                     <span style={{ width:7, height:7, borderRadius:"50%", background:"#059669", display:"inline-block" }} />
-                    <span style={{ fontSize:12, fontWeight:800, color:"#334155", letterSpacing:.3 }}>LIVE · 3,200+ Schools Hiring Now</span>
+                    <span style={{ fontSize:12, fontWeight:800, color:"#334155", letterSpacing:.3 }}>LIVE · Top Schools Are Hiring Now</span>
                   </div>
 
                   {/* Headline with quotes */}
@@ -851,7 +972,7 @@ function HomePage({ setPage }) {
             <p style={{ color:"#6B7280", fontSize:15, marginTop:10 }}>Schools hiring, teachers and tutors available, and parents finding the right match</p>
           </div>
 
-          {GROUPS.map(group => (
+          {GROUPS_LIVE.map(group => (
             <div key={group.key} style={{ marginBottom:40 }}>
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:18 }}>
                 <span style={{ fontSize:20 }}>{group.icon}</span>
@@ -892,12 +1013,23 @@ function HomePage({ setPage }) {
                       ))}
                     </div>
 
+                    {Array.isArray(t.details) && (
+                      <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
+                        {t.details.map(([label, value]) => value ? (
+                          <div key={label} style={{ display:"flex", gap:8, fontSize:12, lineHeight:1.4 }}>
+                            <span style={{ flexShrink:0, color:"#9CA3AF", fontWeight:700, minWidth:96 }}>{label}</span>
+                            <span style={{ color:"#374151", fontWeight:600, wordBreak:"break-word" }}>{value}</span>
+                          </div>
+                        ) : null)}
+                      </div>
+                    )}
+
                     <div style={{ borderTop:"1px solid #F3F4F6", paddingTop:14, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                       <div style={{ display:"flex", alignItems:"center", gap:5 }}>
                         <span style={{ width:7, height:7, borderRadius:"50%", background: t.statusDot || (t.avail==="Immediate"?"#059669":"#D97706"), display:"inline-block" }} />
                         <span style={{ fontSize:11, color:"#6B7280", fontWeight:600 }}>{t.statusText || (t.avail==="Immediate"?"Available Now":`Avail. in ${t.avail}`)}</span>
                       </div>
-                      <button className="btn btn-primary btn-sm" onClick={() => setPage("signup")}>View Profile</button>
+                      <button className="btn btn-primary btn-sm" onClick={() => { if (!user) { setPage("login"); return; } setPage(group.key === "teachers" ? "teachers" : group.key === "tutors" ? "tutors" : group.key === "parents" ? "tuitions" : "jobs"); }}>View Profile</button>
                     </div>
                   </div>
                 ))}
@@ -1175,6 +1307,26 @@ function HomePage({ setPage }) {
           <p style={{ color:"#9CA3AF", fontSize:12, textAlign:"center" }}>© 2025 AcadHr. All rights reserved. Made with ❤️ in Hyderabad, India.</p>
         </div>
       </footer>
+
+      {/* Social links — sits just above the floating Support button (home page only) */}
+      <div style={{ position:"fixed", right:22, bottom:74, zIndex:10000, display:"flex", flexDirection:"column", gap:10 }}>
+        <a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"
+          style={{ width:42, height:42, borderRadius:"50%", background:"#0A66C2", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 18px rgba(10,102,194,.35)", textDecoration:"none" }}
+          onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; }}
+          onMouseLeave={e => { e.currentTarget.style.transform="none"; }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45C23.2 24 24 23.23 24 22.27V1.73C24 .77 23.2 0 22.22 0z"/>
+          </svg>
+        </a>
+        <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"
+          style={{ width:42, height:42, borderRadius:"50%", background:"linear-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 18px rgba(214,41,118,.35)", textDecoration:"none" }}
+          onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; }}
+          onMouseLeave={e => { e.currentTarget.style.transform="none"; }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.43.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.43.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.43-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.43-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16zM12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.31-1.46.72-2.13 1.38C1.35 2.68.94 3.35.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.31.79.72 1.46 1.38 2.13.67.66 1.34 1.07 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.31 1.46-.72 2.13-1.38.66-.67 1.07-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.31-.79-.72-1.46-1.38-2.13C21.32 1.35 20.65.94 19.86.63 19.1.33 18.22.13 16.95.07 15.67.01 15.26 0 12 0zm0 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zM12 16a4 4 0 1 1 4-4 4 4 0 0 1-4 4zm6.41-10.85a1.44 1.44 0 1 0 1.44 1.44 1.44 1.44 0 0 0-1.44-1.44z"/>
+          </svg>
+        </a>
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { INDIA_LOCATIONS, SUBS } from "../../constants";
 import { Toast, Divider, FilterBar } from "../../components/common/Shared";
+import SuccessPopup from "../../components/common/SuccessPopup";
 import './School.css';
 
 function SchoolDashboard({ user, setPage }) {
@@ -194,6 +195,7 @@ function SchoolDashboard({ user, setPage }) {
   });
   const [profileEditMode, setProfileEditMode] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [showSavePopup, setShowSavePopup] = useState(false);
   const upProfile = (k, v) => setSchoolProfile(p => ({...p, [k]:v}));
 
   const liveJobs  = myJobs.filter(j => j.status === "approved");
@@ -215,6 +217,8 @@ function SchoolDashboard({ user, setPage }) {
 
   return (
     <div className="school-layout" style={{ background:"#F7F8FA", fontFamily:"Nunito,sans-serif" }}>
+
+      <SuccessPopup show={showSavePopup} onClose={() => setShowSavePopup(false)} />
 
       <button type="button" className="mobile-nav-toggle school-mobile-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
       <div className={"sidebar-backdrop" + (navOpen ? " show" : "")} onClick={() => setNavOpen(false)} />
@@ -584,7 +588,7 @@ function SchoolDashboard({ user, setPage }) {
                   </div>
                   <div style={{ display:"flex", gap:10 }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => { setProfileEditMode(false); setProfileSaved(false); }}>✕ Cancel</button>
-                    <button className="btn btn-primary btn-sm" onClick={() => { setProfileEditMode(false); setProfileSaved(true); }}>Save ✓</button>
+                    <button className="btn btn-primary btn-sm" onClick={() => { setProfileEditMode(false); setProfileSaved(true); setShowSavePopup(true); }}>Save ✓</button>
                   </div>
                 </div>
 
@@ -681,7 +685,7 @@ function SchoolDashboard({ user, setPage }) {
 
                 <div style={{ display:"flex", gap:10, marginBottom:20 }}>
                   <button className="btn btn-ghost" style={{ flex:1, justifyContent:"center" }} onClick={() => { setProfileEditMode(false); setProfileSaved(false); }}>Cancel</button>
-                  <button className="btn btn-primary" style={{ flex:2, justifyContent:"center" }} onClick={() => { setProfileEditMode(false); setProfileSaved(true); }}>Save All Changes ✓</button>
+                  <button className="btn btn-primary" style={{ flex:2, justifyContent:"center" }} onClick={() => { setProfileEditMode(false); setProfileSaved(true); setShowSavePopup(true); }}>Save All Changes ✓</button>
                 </div>
               </>
             )}
@@ -1594,6 +1598,27 @@ function SchoolDashboard({ user, setPage }) {
                     <label className="flabel">Requirement Type *</label>
                     <select className="input" value={form.requirement_type} onChange={e => up("requirement_type",e.target.value)}>
                       <option>Teacher</option><option>Faculty</option><option>Tutor</option>
+                      <optgroup label="Non-Teaching / Administrative">
+                        <option>Principal</option>
+                        <option>Vice Principal</option>
+                        <option>Academic Counsellor</option>
+                        <option>Career Counsellor</option>
+                        <option>Academic Coordinator</option>
+                        <option>Administrative Officer</option>
+                        <option>Office Assistant / Clerk</option>
+                        <option>Front Office / Receptionist</option>
+                        <option>Accountant</option>
+                        <option>HR Manager</option>
+                        <option>Librarian</option>
+                        <option>Lab Assistant</option>
+                        <option>IT / Technical Support</option>
+                        <option>Examination Coordinator</option>
+                        <option>Sports / Physical Education In-charge</option>
+                        <option>Warden</option>
+                        <option>Transport In-charge</option>
+                        <option>Security Staff</option>
+                        <option>Housekeeping Staff</option>
+                      </optgroup>
                     </select>
                   </div>
                   <div className="fg">

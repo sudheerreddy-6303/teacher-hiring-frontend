@@ -11,6 +11,7 @@ const EXPS     = ["All","Fresher","1 Year","2 Years","3 Years","4 Years","5+ Yea
 export default function BrowseTutorsPage({ setPage }) {
   const { user } = useAuth();
   const [selected, setSelected] = useState(null);
+  const [shareToast, setShareToast] = useState(false);
   const [tutors,  setTutors]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState("");
@@ -69,6 +70,32 @@ export default function BrowseTutorsPage({ setPage }) {
                        (t.subject||"").toLowerCase().includes(filter.search.toLowerCase()) ||
                        (t.qualification||"").toLowerCase().includes(filter.search.toLowerCase()))
   );
+
+  // Share a tutor's details — everything EXCEPT phone & email
+  async function shareTutor(t, e) {
+    if (e) e.stopPropagation();
+    const url = window.location.origin;
+    const lines = [];
+    if (t.name)               lines.push(`👤 ${t.name}`);
+    if (t.subjects || t.subject) lines.push(`📚 Subjects: ${t.subjects || t.subject}`);
+    if (t.qualifications || t.qualification) lines.push(`🎓 Qualification: ${t.qualifications || t.qualification}`);
+    if (t.experience)         lines.push(`⏳ Experience: ${t.experience}`);
+    if (t.teaching_mode)      lines.push(`💼 Mode: ${t.teaching_mode}`);
+    if (t.hourly_rate)        lines.push(`💰 Rate: ${t.hourly_rate}`);
+    if (t.location || t.city) lines.push(`📍 Location: ${t.location || t.city}`);
+    if (t.gender)             lines.push(`🧑 Gender: ${t.gender}`);
+    // (phone & email are deliberately NOT included)
+    const text = lines.join("\n") + `\n\nFind tutors on AcadHr: ${url}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: t.name ? `AcadHr · ${t.name}` : "AcadHr Tutor", text, url });
+      } else {
+        await navigator.clipboard.writeText(text);
+        setShareToast(true);
+        setTimeout(() => setShareToast(false), 1800);
+      }
+    } catch (_) { /* cancelled / unavailable — no-op */ }
+  }
 
   return (
     <div className="browse-page" style={{ minHeight:"100vh", background:"#F9FAFB" }}>
@@ -145,7 +172,7 @@ export default function BrowseTutorsPage({ setPage }) {
               </p>
             </div>
           ) : (
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:20 }}>
+            <div className="responsive-grid-4" style={{ display:"grid", gap:20 }}>
               {filtered.map(t => (
                 <div key={t.id}
                   style={{ background:"#fff", borderRadius:16, border:"1px solid #E5E7EB", padding:24, transition:"all .2s" }}
@@ -154,13 +181,20 @@ export default function BrowseTutorsPage({ setPage }) {
 
                   <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:16 }}>
                     <div style={{ width:54, height:54, borderRadius:"50%", background:"#F5F3FF", border:"2px solid #DDD6FE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>
-                      {tutorIcon(t.gender)}
+                      {tutorIcon("")}
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{t.name}</div>
                       <div style={{ fontSize:12, color:"#6D28D9", fontWeight:600, marginTop:2 }}>{t.subject || "Tutor"}</div>
                       {t.qualification && <div style={{ fontSize:11, color:"#6B7280", marginTop:1 }}>{t.qualification}</div>}
                     </div>
+                    {user && (
+                      <button onClick={(e) => shareTutor(t, e)} title="Share this tutor"
+                        style={{ alignSelf:"flex-start", flexShrink:0, display:"inline-flex", alignItems:"center", gap:4, background:"#F5F3FF", color:"#6D28D9", border:"1px solid #DDD6FE", borderRadius:20, padding:"3px 9px", fontSize:11, fontWeight:700, cursor:"pointer", lineHeight:1.4 }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.6" y1="13.5" x2="15.4" y2="17.5" /><line x1="15.4" y1="6.5" x2="8.6" y2="10.5" /></svg>
+                        Share
+                      </button>
+                    )}
                   </div>
 
                   {/* Tags */}
@@ -173,17 +207,26 @@ export default function BrowseTutorsPage({ setPage }) {
                     {t.gender        && <span style={{ background:"#FDF2F8", color:"#DB2777", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>👤 {t.gender}</span>}
                   </div>
 
-                  {user ? (
-                    t.hourly_rate && (
-                      <div style={{ fontWeight:800, fontSize:16, color:"#059669", marginBottom:14 }}>
-                        💰 {t.hourly_rate}
+                  {/* Details */}
+                  <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:14 }}>
+                    {[
+                      ["Subjects",       t.subjects || t.subject],
+                      ["Qualifications", t.qualifications || t.qualification],
+                      ["Experience",     t.experience],
+                      ["Teaching Mode",  t.teaching_mode],
+                      ["Availability",   t.availability],
+                      ["Gender",         t.gender],
+                      ["Location",       t.location || t.city],
+                      ["Pincode",        t.pincode],
+                      ["Address",        t.address],
+                      ["Class Link",     t.class_link],
+                    ].map(([label, value]) => value ? (
+                      <div key={label} style={{ display:"flex", gap:8, fontSize:12, lineHeight:1.4 }}>
+                        <span style={{ flexShrink:0, color:"#9CA3AF", fontWeight:700, minWidth:96 }}>{label}</span>
+                        <span style={{ color:"#374151", fontWeight:600, wordBreak:"break-word" }}>{value}</span>
                       </div>
-                    )
-                  ) : (
-                    <div style={{ fontWeight:700, fontSize:13, color:"#9CA3AF", marginBottom:14 }}>
-                      🔒 Login to view price
-                    </div>
-                  )}
+                    ) : null)}
+                  </div>
 
                   <button
                     style={{ width:"100%", padding:"9px 0", borderRadius:10, border:"1.5px solid #DDD6FE", background:"#F5F3FF", color:"#6D28D9", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s" }}
@@ -236,6 +279,12 @@ export default function BrowseTutorsPage({ setPage }) {
               <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {shareToast && (
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#111827", color:"#fff", padding:"10px 18px", borderRadius:10, fontSize:13, fontWeight:600, zIndex:99999, boxShadow:"0 8px 24px rgba(0,0,0,.25)" }}>
+          ✓ Tutor details copied to clipboard
         </div>
       )}
     </div>
