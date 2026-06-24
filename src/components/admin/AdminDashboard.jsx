@@ -206,7 +206,7 @@ function OverviewTrendChart({ analytics }) {
               <span style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>Day-wise daily data is available for the last 30 days.</span>
             </div>
           )}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 18 }}>
             {series.map(renderMini)}
           </div>
         </>
@@ -1733,6 +1733,7 @@ function AdminDashboard({ setPage }) {
   const [analytics, setAnalytics] = useState(null);
   const [parents,   setParents]   = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
+  const [leads,     setLeads]     = useState([]);
   const [loading,   setLoading]   = useState({});
 
   const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
@@ -1795,6 +1796,7 @@ function AdminDashboard({ setPage }) {
     if (tab === "analytics" && !analytics)             fetchData("analytics", "/admin/analytics", setAnalytics);
     if (tab === "parents"   && parents.length   === 0) fetchData("parents",   "/admin/parents",   setParents);
     if (tab === "feedbacks" && feedbacks.length === 0) fetchData("feedbacks", "/feedback",        setFeedbacks);
+    if (tab === "leads"     && leads.length     === 0) fetchData("leads",     "/contact-sales",   setLeads);
   }, [tab]);
 
   async function approveJob(job) {
@@ -1843,6 +1845,7 @@ function AdminDashboard({ setPage }) {
     { id:"payments",   icon:"💳", label:"Payments" },
     { id:"analytics",  icon:"📈", label:"Analytics" },
     { id:"feedbacks",  icon:"💬", label:"Feedbacks" },
+    { id:"leads",      icon:"🏢", label:"Enterprise Leads" },
   ];
 
   function Loader() {
@@ -2306,7 +2309,7 @@ function AdminDashboard({ setPage }) {
               : <div className="card" style={{ padding:0, overflow:"hidden" }}>
                   <div className="tbl-wrap admin-tbl">
                     <table>
-                      <thead><tr><th>Parent Name</th><th>Email</th><th>Student</th><th>Subject</th><th>Status</th><th>Action</th></tr></thead>
+                      <thead><tr><th>Parent Name</th><th>Email</th><th>Student</th><th>Class / Grade</th><th>Subject</th><th>Status</th><th>Action</th></tr></thead>
                       <tbody>
                         {(() => {
                           const f = parentFilters;
@@ -2319,12 +2322,13 @@ function AdminDashboard({ setPage }) {
                             (!f.status        || (p.status||"Open") === f.status)
                           );
                           return filtered.length === 0
-                            ? <tr><td colSpan={6} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No parents match filters</td></tr>
+                            ? <tr><td colSpan={7} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No parents match filters</td></tr>
                             : filtered.map(p => (
                               <tr key={p.id} onClick={() => setSelectedParent(p)} style={{ cursor:"pointer" }}>
                                 <td><strong style={{ color:"#059669", textDecoration:"underline" }}>{p.name}</strong></td>
                                 <td style={{ fontSize:12, color:"#6B7280" }}>{p.email}</td>
                                 <td style={{ fontWeight:600, color:"#1A56DB" }}>{p.student_name||"—"}</td>
+                                <td>{p.student_class||"—"}</td>
                                 <td>{p.subject||"—"}</td>
                                 <td><span className={"badge "+(p.status==="Assigned"?"bgreen":"bamber")}>{p.status||"Open"}</span></td>
                                 <td>
@@ -2444,6 +2448,46 @@ function AdminDashboard({ setPage }) {
                         <span style={{ fontSize:11, color:"#1A56DB", fontWeight:700 }}>🖼️ Open screenshot</span>
                       </a>
                     )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab==="leads" && (
+          <div className="fadeUp">
+            <div className="page-title">Enterprise Leads</div>
+            <div className="page-sub">Contact Sales enquiries from the pricing page — from database</div>
+            {loading.leads ? <Loader /> : leads.length === 0 ? (
+              <div className="card" style={{ padding:48, textAlign:"center", color:"#9CA3AF" }}>
+                <div style={{ fontSize:48, marginBottom:12 }}>🏢</div>
+                <h3 style={{ fontSize:18, color:"#111827", marginBottom:6 }}>No enquiries yet</h3>
+                <p style={{ fontSize:14 }}>Enterprise "Contact Sales" submissions will appear here.</p>
+              </div>
+            ) : (
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:18 }}>
+                {leads.map(l => (
+                  <div key={l.id} className="card" style={{ padding:20, display:"flex", flexDirection:"column", gap:10 }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                      <span style={{ background:"#F5F3FF", color:"#6D28D9", border:"1px solid #DDD6FE", borderRadius:20, padding:"3px 12px", fontSize:11, fontWeight:700 }}>
+                        {l.plan || "Enterprise"}
+                      </span>
+                      <span style={{ fontSize:11, color:"#9CA3AF", fontWeight:600 }}>
+                        {l.created_at ? new Date(l.created_at).toLocaleString() : ""}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize:16, fontWeight:800, color:"#111827" }}>{l.school_name}</div>
+
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:8, fontSize:12.5, color:"#374151" }}>
+                      {l.contact_person && <span>👤 {l.contact_person}</span>}
+                      {l.phone && <span>📞 {l.phone}</span>}
+                      {l.email && <span>✉️ {l.email}</span>}
+                      {l.num_schools && <span>🏫 {l.num_schools} schools</span>}
+                    </div>
+
+                    {l.message && <p style={{ fontSize:14, color:"#374151", lineHeight:1.55, margin:0, whiteSpace:"pre-wrap" }}>{l.message}</p>}
                   </div>
                 ))}
               </div>

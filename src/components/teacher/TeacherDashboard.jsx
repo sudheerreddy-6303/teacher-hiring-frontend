@@ -387,8 +387,8 @@ function TeacherDashboard({ user, setPage }) {
             </div>
 
             {/* KPI cards */}
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18, marginBottom:26 }}>
-              {[["Applied","3","📋","#1A56DB"],["Shortlisted","1","⭐","#059669"],["Profile Views","28","👁️","#D97706"]].map(([l,v,i,c]) => (
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:18, marginBottom:26 }}>
+              {[["Applied",applications.length,"📋","#1A56DB"],["Shortlisted",applications.filter(a=>a.status==="Shortlisted").length,"⭐","#059669"]].map(([l,v,i,c]) => (
                 <div key={l} className="card kpi">
                   <div className="kpi-icon">{i}</div>
                   <div className="kpi-num" style={{ color:c }}>{v}</div>

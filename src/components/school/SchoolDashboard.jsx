@@ -356,7 +356,7 @@ function SchoolDashboard({ user, setPage }) {
             </div>
 
             {/* Applicants + Live Jobs row */}
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:22 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:20, marginBottom:22, alignItems:"start" }}>
               {/* Recent Applicants */}
               <div style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:14, overflow:"hidden" }}>
                 <div style={{ padding:"14px 20px", borderBottom:"1px solid #F3F4F6", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -385,7 +385,6 @@ function SchoolDashboard({ user, setPage }) {
                   </div>
                 ))}
               </div>
-            </div>
 
             {/* Live Jobs grid */}
             <div style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:14, overflow:"hidden" }}>
@@ -434,6 +433,7 @@ function SchoolDashboard({ user, setPage }) {
                   <span style={{ fontSize:13, fontWeight:700 }}>Post New Job</span>
                 </div>
               </div>
+            </div>
             </div>
           </div>
         )}

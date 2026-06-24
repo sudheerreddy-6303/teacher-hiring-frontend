@@ -240,6 +240,8 @@
 
 import { useState } from "react";
 import { Navbar } from "../components/common/Shared";
+import { useAuth } from "../context/AuthContext";
+import apiBase from "../config/apiBase";
 
 const PLANS = {
   school: [
@@ -522,6 +524,30 @@ const FAQ = [
 ];
 
 export default function PricingPage({ setPage }) {
+  const { user } = useAuth();
+  const [showContact, setShowContact] = useState(false);
+  const [cs, setCs] = useState({ school_name:"", contact_person:"", phone:"", email:"", num_schools:"", message:"" });
+  const [csStatus, setCsStatus] = useState({ loading:false, ok:"", err:"" });
+  const submitContact = async () => {
+    if (!cs.school_name.trim() || !cs.phone.trim() || !cs.email.trim()) {
+      setCsStatus({ loading:false, ok:"", err:"Please fill school name, mobile number and email." });
+      return;
+    }
+    setCsStatus({ loading:true, ok:"", err:"" });
+    try {
+      const r = await fetch(`${apiBase()}/contact-sales`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ ...cs, plan:"Enterprise" }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.message || "Could not submit. Please try again.");
+      setCsStatus({ loading:false, ok: d.message || "Thanks! Our team will contact you shortly.", err:"" });
+      setCs({ school_name:"", contact_person:"", phone:"", email:"", num_schools:"", message:"" });
+    } catch (e) {
+      setCsStatus({ loading:false, ok:"", err: e.message });
+    }
+  };
   const [tab, setTab] = useState("school");
   const [openFaq, setOpenFaq] = useState(null);
   const [billing, setBilling] = useState("1m");
@@ -536,6 +562,46 @@ export default function PricingPage({ setPage }) {
   return (
     <div className="fw-page" style={{ minHeight:"100vh", background:"#F9FAFB" }}>
       <Navbar setPage={setPage} />
+      {showContact && (
+        <div onClick={() => setShowContact(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:18, padding:28, width:"100%", maxWidth:440, boxShadow:"0 20px 60px rgba(0,0,0,.3)", fontFamily:"Nunito,sans-serif", maxHeight:"90vh", overflowY:"auto" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+              <h3 style={{ fontSize:20, fontWeight:800, color:"#111827", margin:0 }}>Contact Sales</h3>
+              <button onClick={() => setShowContact(false)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:"#9CA3AF", lineHeight:1 }}>×</button>
+            </div>
+            <p style={{ fontSize:13, color:"#6B7280", marginTop:0, marginBottom:18 }}>Tell us about your group and our team will reach out.</p>
+            {csStatus.ok ? (
+              <div style={{ background:"#ECFDF5", color:"#059669", borderRadius:10, padding:"16px", fontWeight:700, fontSize:14, textAlign:"center" }}>{csStatus.ok}</div>
+            ) : (
+              <>
+                {[
+                  ["School / Group Name *","school_name","text","e.g. PV Group of Schools"],
+                  ["Contact Person","contact_person","text","Your name"],
+                  ["Mobile Number *","phone","tel","10-digit mobile"],
+                  ["School Email ID *","email","email","name@school.com"],
+                  ["Number of Schools","num_schools","text","e.g. 5"],
+                ].map(([label,key,type,ph]) => (
+                  <div key={key} style={{ marginBottom:12 }}>
+                    <label style={{ display:"block", fontSize:12, fontWeight:700, color:"#374151", marginBottom:5 }}>{label}</label>
+                    <input type={type} value={cs[key]} onChange={e => setCs(s => ({ ...s, [key]:e.target.value }))} placeholder={ph}
+                      style={{ width:"100%", padding:"10px 12px", border:"1px solid #E5E7EB", borderRadius:10, fontSize:14, fontFamily:"Nunito,sans-serif", boxSizing:"border-box" }} />
+                  </div>
+                ))}
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ display:"block", fontSize:12, fontWeight:700, color:"#374151", marginBottom:5 }}>Message</label>
+                  <textarea value={cs.message} onChange={e => setCs(s => ({ ...s, message:e.target.value }))} placeholder="Anything you'd like us to know..." rows={3}
+                    style={{ width:"100%", padding:"10px 12px", border:"1px solid #E5E7EB", borderRadius:10, fontSize:14, fontFamily:"Nunito,sans-serif", boxSizing:"border-box", resize:"vertical" }} />
+                </div>
+                {csStatus.err && <div style={{ color:"#DC2626", fontSize:13, fontWeight:600, marginBottom:12 }}>{csStatus.err}</div>}
+                <button onClick={submitContact} disabled={csStatus.loading}
+                  style={{ width:"100%", padding:"13px 0", borderRadius:12, border:"none", cursor: csStatus.loading?"default":"pointer", fontWeight:800, fontSize:15, fontFamily:"Nunito,sans-serif", background:"#6D28D9", color:"#fff", opacity: csStatus.loading?0.7:1 }}>
+                  {csStatus.loading ? "Submitting..." : "Submit →"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       <div style={{ paddingTop:90 }}>
 
         {/* Hero */}
@@ -636,7 +702,7 @@ export default function PricingPage({ setPage }) {
                   })}
                 </ul>
 
-                <button onClick={() => setPage("signup")}
+                <button onClick={() => { if (plan.cta === "Contact Sales") { setCsStatus({ loading:false, ok:"", err:"" }); setShowContact(true); return; } setPage(user ? "dashboard" : "login"); }}
                   style={{ width:"100%", padding:"13px 0", borderRadius:12, border:"none", cursor:"pointer", fontWeight:800, fontSize:15, fontFamily:"Nunito,sans-serif", transition:"all .15s", ...plan.ctaStyle }}>
                   {plan.cta} →
                 </button>
