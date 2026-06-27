@@ -1310,7 +1310,7 @@ function HomePage({ setPage }) {
 
       {/* Social links — sits just above the floating Support button (home page only) */}
       <div style={{ position:"fixed", right:22, bottom:74, zIndex:10000, display:"flex", flexDirection:"column", gap:10 }}>
-        <a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"
+        <a href="https://www.linkedin.com/company/acad-hr/?viewAsMember=true" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"
           style={{ width:42, height:42, borderRadius:"50%", background:"#0A66C2", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 18px rgba(10,102,194,.35)", textDecoration:"none" }}
           onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; }}
           onMouseLeave={e => { e.currentTarget.style.transform="none"; }}>

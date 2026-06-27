@@ -552,12 +552,17 @@ export default function PricingPage({ setPage }) {
   const [openFaq, setOpenFaq] = useState(null);
   const [billing, setBilling] = useState("1m");
 
-  // Apply the selected billing period (1 month / 3 months) to plans that offer both
-  const plans = PLANS[tab].map(p =>
-    p.prices
-      ? { ...p, price: p.prices[billing].price, period: p.prices[billing].period, note: p.prices[billing].note || p.note }
-      : p
-  );
+  // Apply the selected billing period (monthly / 3 months / yearly) to plans that offer pricing
+  const plans = PLANS[tab].map(p => {
+    if (!p.prices) return p;
+    if (billing === "12m" && tab === "school") {
+      const monthly = parseInt((p.prices["1m"].price || "").replace(/[^\d]/g, ""), 10) || 0;
+      const yearly = monthly * 10; // pay for 10 months — 2 months free
+      return { ...p, price: "₹" + yearly.toLocaleString("en-IN"), period: "+ GST / year", note: "2 months free" };
+    }
+    const pr = p.prices[billing] || p.prices["1m"];
+    return { ...p, price: pr.price, period: pr.period, note: pr.note || p.note };
+  });
 
   return (
     <div className="fw-page" style={{ minHeight:"100vh", background:"#F9FAFB" }}>
@@ -636,7 +641,7 @@ export default function PricingPage({ setPage }) {
           {plans.some(p => p.prices) && (
             <div style={{ display:"flex", justifyContent:"center", marginBottom:30 }}>
               <div style={{ display:"inline-flex", background:"#fff", borderRadius:12, padding:4, gap:4, border:"1px solid #E5E7EB", boxShadow:"0 2px 8px rgba(0,0,0,.05)" }}>
-                {[["1m","1 Month"],["3m","3 Months · save 10%"]].map(([id, label]) => (
+                {[["1m","1 Month"],["3m","3 Months · save 10%"], ...(tab === "school" ? [["12m","Yearly · 2 months free"]] : [])].map(([id, label]) => (
                   <button key={id} onClick={() => setBilling(id)}
                     style={{ padding:"9px 20px", borderRadius:9, border:"none", cursor:"pointer", fontWeight:700, fontSize:13.5, fontFamily:"Nunito,sans-serif", transition:"all .2s",
                       background: billing===id ? "#1A56DB" : "transparent",

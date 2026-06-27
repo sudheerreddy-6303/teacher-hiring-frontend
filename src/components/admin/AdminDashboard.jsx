@@ -17,6 +17,113 @@ function shareOnWhatsApp(title, pairs) {
   if (typeof window !== "undefined") window.open(url, "_blank", "noopener,noreferrer");
 }
 
+/* ── Targeted WhatsApp: send a tuition requirement to ONE tutor's number. ──
+   Normalizes Indian numbers to wa.me format (digits only, 91 country code). ── */
+function waNormalizeIndianPhone(raw) {
+  if (raw === undefined || raw === null) return "";
+  let d = String(raw).replace(/\D/g, "");
+  if (!d) return "";
+  if (d.length === 11 && d.startsWith("0")) d = d.slice(1);
+  if (d.length === 12 && d.startsWith("91")) return d;
+  if (d.length === 10) return "91" + d;
+  return d;
+}
+function waSendToNumber(phone, message) {
+  const num = waNormalizeIndianPhone(phone);
+  if (!num) return false;
+  const url = "https://wa.me/" + num + "?text=" + encodeURIComponent(message || "");
+  if (typeof window !== "undefined") window.open(url, "_blank", "noopener,noreferrer");
+  return true;
+}
+/* Subject-only match: a tutor matches the job when the job's subject appears in
+   the tutor's subject or subjects field (case-insensitive). */
+function waTutorMatchesSubject(tutor, subject) {
+  const s = (subject || "").trim().toLowerCase();
+  if (!s) return false;
+  const a = (tutor.subject  || "").toLowerCase();
+  const b = (tutor.subjects || "").toLowerCase();
+  return a === s || a.includes(s) || b.includes(s) || (!!a && s.includes(a));
+}
+/* Build the WhatsApp message body from the tuition requirement's real details. */
+function waBuildTuitionMessage(job, tutor) {
+  const L = [];
+  L.push("Hi" + (tutor && tutor.name ? " " + tutor.name : "") + ",");
+  L.push("");
+  L.push("We have a tuition requirement matching your subject:");
+  if (job.subject)                       L.push("- Subject: " + job.subject);
+  if (job.grades)                        L.push("- Class/Grade: " + job.grades);
+  if (job.board)                         L.push("- Board: " + job.board);
+  if (job.title)                         L.push("- Title: " + job.title);
+  if (job.location_city || job.location) L.push("- Location: " + (job.location_city || job.location));
+  if (job.work_mode || job.job_type)     L.push("- Mode: " + (job.work_mode || job.job_type));
+  if (job.salary_min || job.salary_max)  L.push("- Fees: \u20B9" + (job.salary_min || "") + (job.salary_max ? " - \u20B9" + job.salary_max : ""));
+  if (job.requirement_id)                L.push("- Ref: " + job.requirement_id);
+  L.push("");
+  L.push("Please reply if you are available and interested. - AcadHr");
+  return L.join("\n");
+}
+/* Build the WhatsApp message body from a TUITION (parent) record's details. */
+function waBuildTuitionFromParent(p, tutor) {
+  const origin = (typeof window !== "undefined" && window.location && window.location.origin) ? window.location.origin : "";
+  const L = [];
+  if (p.subject)                   L.push("📚 Subject: " + p.subject);
+  const cls = [p.student_class, p.board].filter(Boolean).join(" · ");
+  if (cls)                         L.push("🎓 Class: " + cls);
+  if (p.mode)                      L.push("💼 Mode: " + p.mode);
+  if (p.preferred_time)            L.push("🕐 Preferred time: " + p.preferred_time);
+  if (p.experience_req)            L.push("⏳ Experience required: " + p.experience_req);
+  if (p.tutor_gender_pref)         L.push("🧑 Tutor preference: " + p.tutor_gender_pref);
+  if (p.budget || p.hourly_budget) L.push("💰 Budget: " + (p.budget || p.hourly_budget));
+  if (p.location || p.city)        L.push("📍 Location: " + (p.location || p.city));
+  if (p.name)                      L.push("👤 Posted by: " + p.name);
+  if (p.notes)                     L.push("📝 " + p.notes);
+  L.push("");
+  L.push("View tuition requirements on AcadHr: " + origin);
+  return L.join("\n");
+}
+/* Subject-only match for TEACHERS: teachers store subject in `subjects` /
+   `specialization` (no single `subject` field), so check both. */
+function waTeacherMatchesSubject(teacher, subject) {
+  const s = (subject || "").trim().toLowerCase();
+  if (!s) return false;
+  const a = (teacher.subjects || "").toLowerCase();
+  const b = (teacher.specialization || "").toLowerCase();
+  return a.includes(s) || b.includes(s) || (!!b && s.includes(b)) || (!!a && s.includes(a));
+}
+/* Build the WhatsApp message body for a JOB sent to a TEACHER. */
+function waBuildJobMessage(job, teacher) {
+  const origin = (typeof window !== "undefined" && window.location && window.location.origin) ? window.location.origin : "";
+  const L = [];
+  if (job.title)                         L.push("📋 Position: " + job.title);
+  if (job.subject)                       L.push("📚 Subject: " + job.subject);
+  if (job.institute_name)                L.push("🏫 Institution: " + job.institute_name);
+  if (job.grades)                        L.push("🎓 Grades: " + job.grades);
+  if (job.board)                         L.push("🧭 Board: " + job.board);
+  if (job.work_mode || job.job_type)     L.push("💼 Mode: " + (job.work_mode || job.job_type));
+  if (job.salary_min || job.salary_max)  L.push("💰 Salary: ₹" + (job.salary_min || "") + (job.salary_max ? " - ₹" + job.salary_max : ""));
+  if (job.location_city || job.location) L.push("📍 Location: " + (job.location_city || job.location));
+  if (job.requirement_id)                L.push("🔖 Ref: " + job.requirement_id);
+  L.push("");
+  L.push("View job requirements on AcadHr: " + origin);
+  return L.join("\n");
+}
+/* Build the WhatsApp message body for a TUTOR profile sent to a tuition (parent). */
+function waBuildTutorProfile(tutor) {
+  const origin = (typeof window !== "undefined" && window.location && window.location.origin) ? window.location.origin : "";
+  const L = [];
+  L.push("👩‍🏫 Tutor available for your tuition:");
+  if (tutor.name)                                  L.push("👤 Name: " + tutor.name);
+  if (tutor.subject || tutor.subjects)             L.push("📚 Subjects: " + (tutor.subject || tutor.subjects));
+  if (tutor.qualification || tutor.qualifications) L.push("🎓 Qualification: " + (tutor.qualification || tutor.qualifications));
+  if (tutor.experience)                            L.push("⏳ Experience: " + tutor.experience);
+  if (tutor.teaching_mode)                         L.push("💼 Mode: " + tutor.teaching_mode);
+  if (tutor.hourly_rate)                           L.push("💰 Rate: ₹" + tutor.hourly_rate);
+  if (tutor.city || tutor.location)                L.push("📍 City: " + (tutor.city || tutor.location));
+  L.push("");
+  L.push("View tutor profiles on AcadHr: " + origin);
+  return L.join("\n");
+}
+
 /* Build a public link that opens ONLY this person's profile details. */
 function profileLink(role, id) {
   if (typeof window === "undefined" || !id) return "";
@@ -1829,6 +1936,71 @@ function AdminDashboard({ setPage }) {
   const [parentFilters,  setParentFilters]  = useState({ name:"", email:"", student_class:"", board:"", subject:"", status:"" });
   const [jobFilters,     setJobFilters]     = useState({ title:"", institute_name:"", subject:"", location_city:"", status:"", requirement_type:"" });
   const [selectedJob, setSelectedJob] = useState(null);
+
+  // ── WhatsApp: send a tuition requirement to tutors of the same subject ──
+  const [waJob,     setWaJob]     = useState(null);   // job whose matching-tutors modal is open
+  const [waLoading, setWaLoading] = useState(false);  // true while tutors are being fetched
+  async function openMatchTutors(job) {
+    if (!job) return;
+    if (!tutors.length) {
+      try {
+        setWaLoading(true);
+        const r = await fetch(API + "/admin/tutors", { headers: hdr });
+        const data = r.ok ? await r.json() : [];
+        setTutors(Array.isArray(data) ? data : []);
+      } catch (_) { /* ignore — modal simply shows no matches */ }
+      finally { setWaLoading(false); }
+    }
+    setWaJob(job);
+  }
+
+  // ── WhatsApp: send a JOB to TEACHERS of the same subject (jobs → teachers) ──
+  const [waJobTeachers, setWaJobTeachers] = useState(null);  // job whose matching-teachers modal is open
+  async function openMatchTeachersForJob(job) {
+    if (!job) return;
+    if (!teachers.length) {
+      try {
+        setWaLoading(true);
+        const r = await fetch(API + "/admin/teachers", { headers: hdr });
+        const data = r.ok ? await r.json() : [];
+        setTeachers(Array.isArray(data) ? data : []);
+      } catch (_) { /* ignore — modal simply shows no matches */ }
+      finally { setWaLoading(false); }
+    }
+    setWaJobTeachers(job);
+  }
+
+  // ── WhatsApp: send a TUTOR profile to matching TUITIONS/parents (tutors → tuitions) ──
+  const [waTutor, setWaTutor] = useState(null);   // tutor whose matching-tuitions modal is open
+  async function openMatchTuitionsForTutor(tutor) {
+    if (!tutor) return;
+    if (!parents.length) {
+      try {
+        setWaLoading(true);
+        const r = await fetch(API + "/admin/parents", { headers: hdr });
+        const data = r.ok ? await r.json() : [];
+        setParents(Array.isArray(data) ? data : []);
+      } catch (_) { /* ignore — modal simply shows no matches */ }
+      finally { setWaLoading(false); }
+    }
+    setWaTutor(tutor);
+  }
+
+  // ── WhatsApp: send a TUITION (parent) requirement to tutors of the same subject ──
+  const [waTuition, setWaTuition] = useState(null);   // tuition whose matching-tutors modal is open
+  async function openMatchTutorsForTuition(p) {
+    if (!p) return;
+    if (!tutors.length) {
+      try {
+        setWaLoading(true);
+        const r = await fetch(API + "/admin/tutors", { headers: hdr });
+        const data = r.ok ? await r.json() : [];
+        setTutors(Array.isArray(data) ? data : []);
+      } catch (_) { /* ignore — modal simply shows no matches */ }
+      finally { setWaLoading(false); }
+    }
+    setWaTuition(p);
+  }
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [selectedSchool,  setSelectedSchool]  = useState(null);
   const [selectedTutor,   setSelectedTutor]   = useState(null);
@@ -2081,6 +2253,9 @@ function AdminDashboard({ setPage }) {
                           <td>
                             <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                               <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedJob(j); }}>👁 View</button>
+                              {j.subject && (
+                                <button className="btn btn-sm" style={{ color:"#0F6E56", borderColor:"#9FE1CB", background:"#E1F5EE" }} onClick={(e) => { e.stopPropagation(); openMatchTeachersForJob(j); }} title={"Send this job to " + j.subject + " teachers on WhatsApp"}>📲 Send to teachers</button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -2270,8 +2445,11 @@ function AdminDashboard({ setPage }) {
                           <td>📍 {t.city||"—"}</td>
                           <td><StatusBadge active={t.is_active} /></td>
                           <td>
-                            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                            <div style={{ display:"flex", gap:8, flexWrap:"nowrap", alignItems:"center" }}>
                               <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedTutor(t); }}>👁 View</button>
+                              {(t.subject || t.subjects) && (
+                                <button className="btn btn-sm" style={{ color:"#0F6E56", borderColor:"#9FE1CB", background:"#E1F5EE", display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"6px 10px" }} onClick={(e) => { e.stopPropagation(); openMatchTuitionsForTutor(t); }} title="Send this tutor's profile to matching tuitions on WhatsApp" aria-label="Send to tuitions on WhatsApp"><svg width="17" height="17" viewBox="0 0 24 24" fill="#25D366"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-5.9c-.2-.1-1.4-.7-1.7-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8.9-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7.3 7.3 0 0 1-1.4-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4c.1-.1 0-.3 0-.4l-.8-1.9c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 4 3.4.6.3 1 .4 1.4.5.6.2 1.1.2 1.5.1.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1 0-.1-.2-.2-.4-.3z"/></svg></button>
+                              )}
                               <button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(t.id); }}>{t.is_active?"Deactivate":"Activate"}</button>
                             </div>
                           </td>
@@ -2334,6 +2512,9 @@ function AdminDashboard({ setPage }) {
                                 <td>
                                   <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                                     <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedParent(p); }}>👁 View</button>
+                                    {p.subject && (
+                                      <button className="btn btn-sm" style={{ color:"#0F6E56", borderColor:"#9FE1CB", background:"#E1F5EE" }} onClick={(e) => { e.stopPropagation(); openMatchTutorsForTuition(p); }} title={"Send this tuition to " + p.subject + " tutors on WhatsApp"}>📲 Send to tutors</button>
+                                    )}
                                     <button className={"btn btn-sm "+(p.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(p.id); }}>{p.is_active?"Deactivate":"Activate"}</button>
                                   </div>
                                 </td>
@@ -2557,6 +2738,296 @@ function AdminDashboard({ setPage }) {
         )}
 
       </div>
+
+      {waJob && (() => {
+        const matched   = tutors.filter(t => waTutorMatchesSubject(t, waJob.subject));
+        const withPhone = matched.filter(t => waNormalizeIndianPhone(t.phone));
+        return (
+          <div onClick={() => setWaJob(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:99999, padding:16 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:16, width:"100%", maxWidth:560, maxHeight:"88vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.25)" }}>
+              <div style={{ background:"linear-gradient(135deg,#0F6E56,#1D9E75)", padding:"18px 22px", borderRadius:"16px 16px 0 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ color:"#D1FAE5", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.4, marginBottom:4 }}>Send tuition requirement</div>
+                  <div style={{ color:"#fff", fontSize:18, fontWeight:800 }}>{waJob.subject}{waJob.title ? " · " + waJob.title : ""}</div>
+                  <div style={{ color:"#A7F3D0", fontSize:12, marginTop:3 }}>
+                    {matched.length} {waJob.subject} tutor{matched.length!==1?"s":""} matched · {withPhone.length} with phone
+                  </div>
+                </div>
+                <button onClick={() => setWaJob(null)} style={{ background:"rgba(255,255,255,.18)", border:"none", color:"#fff", width:32, height:32, borderRadius:"50%", cursor:"pointer", fontSize:17, flexShrink:0 }}>✕</button>
+              </div>
+
+              <div style={{ padding:"14px 22px" }}>
+                {waLoading ? (
+                  <div style={{ textAlign:"center", padding:"30px 0", color:"#6B7280", fontWeight:600 }}>Loading tutors…</div>
+                ) : matched.length === 0 ? (
+                  <div style={{ textAlign:"center", padding:"30px 0", color:"#6B7280" }}>
+                    <div style={{ fontSize:40, marginBottom:8 }}>🔍</div>
+                    <div style={{ fontWeight:700, color:"#111827" }}>No {waJob.subject} tutors found</div>
+                    <div style={{ fontSize:13, marginTop:4 }}>Tutors registered with subject “{waJob.subject}” will appear here.</div>
+                  </div>
+                ) : (
+                  <>
+                    {withPhone.length > 0 && (
+                      <button onClick={() => {
+                          const ok = window.confirm(`Open WhatsApp for ${withPhone.length} ${waJob.subject} tutor(s)?\n\nYour browser may only open the first if pop-ups are blocked — use each row's button in that case.`);
+                          if (!ok) return;
+                          withPhone.forEach(t => waSendToNumber(t.phone, waBuildTuitionMessage(waJob, t)));
+                          showToast(`Opened WhatsApp for ${withPhone.length} tutor(s).`);
+                        }}
+                        style={{ width:"100%", marginBottom:12, padding:"10px 0", borderRadius:10, border:"none", background:"#25D366", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer", display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                        📲 Send to all {withPhone.length} matched
+                      </button>
+                    )}
+                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                      {matched.map(t => {
+                        const has = !!waNormalizeIndianPhone(t.phone);
+                        return (
+                          <div key={t.id} style={{ display:"flex", alignItems:"center", gap:10, border:"1px solid #E5E7EB", borderRadius:10, padding:"9px 12px" }}>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ fontWeight:700, fontSize:13.5, color:"#111827" }}>{t.name || "Tutor"}</div>
+                              <div style={{ fontSize:11.5, color:"#6B7280", marginTop:1 }}>
+                                {(t.subject || t.subjects || "—")}{t.city ? " · " + t.city : ""}{t.phone ? " · " + t.phone : " · no phone"}
+                              </div>
+                            </div>
+                            <button disabled={!has} onClick={() => {
+                                if (!waSendToNumber(t.phone, waBuildTuitionMessage(waJob, t))) showToast("No valid phone for this tutor.");
+                              }}
+                              style={{ flexShrink:0, padding:"7px 12px", borderRadius:8, border:"none", background: has ? "#25D366" : "#E5E7EB", color: has ? "#fff" : "#9CA3AF", fontWeight:700, fontSize:12.5, cursor: has ? "pointer" : "not-allowed", display:"inline-flex", alignItems:"center", gap:5 }}>
+                              📲 Send
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div style={{ padding:"0 22px 18px", textAlign:"right" }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => setWaJob(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {waTuition && (() => {
+        const matched   = tutors.filter(t => waTutorMatchesSubject(t, waTuition.subject));
+        const withPhone = matched.filter(t => waNormalizeIndianPhone(t.phone));
+        return (
+          <div onClick={() => setWaTuition(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:99999, padding:16 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:16, width:"100%", maxWidth:560, maxHeight:"88vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.25)" }}>
+              <div style={{ background:"linear-gradient(135deg,#0F6E56,#1D9E75)", padding:"18px 22px", borderRadius:"16px 16px 0 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ color:"#D1FAE5", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.4, marginBottom:4 }}>Send tuition to tutors</div>
+                  <div style={{ color:"#fff", fontSize:18, fontWeight:800 }}>{waTuition.subject}{waTuition.student_class ? " · " + waTuition.student_class : ""}</div>
+                  <div style={{ color:"#A7F3D0", fontSize:12, marginTop:3 }}>
+                    {matched.length} {waTuition.subject} tutor{matched.length!==1?"s":""} matched · {withPhone.length} with phone
+                  </div>
+                </div>
+                <button onClick={() => setWaTuition(null)} style={{ background:"rgba(255,255,255,.18)", border:"none", color:"#fff", width:32, height:32, borderRadius:"50%", cursor:"pointer", fontSize:17, flexShrink:0 }}>✕</button>
+              </div>
+
+              <div style={{ padding:"14px 22px" }}>
+                {waLoading ? (
+                  <div style={{ textAlign:"center", padding:"30px 0", color:"#6B7280", fontWeight:600 }}>Loading tutors…</div>
+                ) : matched.length === 0 ? (
+                  <div style={{ textAlign:"center", padding:"30px 0", color:"#6B7280" }}>
+                    <div style={{ fontSize:40, marginBottom:8 }}>🔍</div>
+                    <div style={{ fontWeight:700, color:"#111827" }}>No {waTuition.subject} tutors found</div>
+                    <div style={{ fontSize:13, marginTop:4 }}>Tutors registered with subject “{waTuition.subject}” will appear here.</div>
+                  </div>
+                ) : (
+                  <>
+                    {withPhone.length > 0 && (
+                      <button onClick={() => {
+                          const ok = window.confirm(`Open WhatsApp for ${withPhone.length} ${waTuition.subject} tutor(s)?\n\nYour browser may only open the first if pop-ups are blocked — use each row's button in that case.`);
+                          if (!ok) return;
+                          withPhone.forEach(t => waSendToNumber(t.phone, waBuildTuitionFromParent(waTuition, t)));
+                          showToast(`Opened WhatsApp for ${withPhone.length} tutor(s).`);
+                        }}
+                        style={{ width:"100%", marginBottom:12, padding:"10px 0", borderRadius:10, border:"none", background:"#25D366", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer", display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                        📲 Send to all {withPhone.length} matched
+                      </button>
+                    )}
+                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                      {matched.map(t => {
+                        const has = !!waNormalizeIndianPhone(t.phone);
+                        return (
+                          <div key={t.id} style={{ display:"flex", alignItems:"center", gap:10, border:"1px solid #E5E7EB", borderRadius:10, padding:"9px 12px" }}>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ fontWeight:700, fontSize:13.5, color:"#111827" }}>{t.name || "Tutor"}</div>
+                              <div style={{ fontSize:11.5, color:"#6B7280", marginTop:1 }}>
+                                {(t.subject || t.subjects || "—")}{t.city ? " · " + t.city : ""}{t.phone ? " · " + t.phone : " · no phone"}
+                              </div>
+                            </div>
+                            <button disabled={!has} onClick={() => {
+                                if (!waSendToNumber(t.phone, waBuildTuitionFromParent(waTuition, t))) showToast("No valid phone for this tutor.");
+                              }}
+                              style={{ flexShrink:0, padding:"7px 12px", borderRadius:8, border:"none", background: has ? "#25D366" : "#E5E7EB", color: has ? "#fff" : "#9CA3AF", fontWeight:700, fontSize:12.5, cursor: has ? "pointer" : "not-allowed", display:"inline-flex", alignItems:"center", gap:5 }}>
+                              📲 Send
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div style={{ padding:"0 22px 18px", textAlign:"right" }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => setWaTuition(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {waJobTeachers && (() => {
+        const ph        = (t) => t.phone || t.mobile;
+        const matched   = teachers.filter(t => waTeacherMatchesSubject(t, waJobTeachers.subject));
+        const withPhone = matched.filter(t => waNormalizeIndianPhone(ph(t)));
+        return (
+          <div onClick={() => setWaJobTeachers(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:99999, padding:16 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:16, width:"100%", maxWidth:560, maxHeight:"88vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.25)" }}>
+              <div style={{ background:"linear-gradient(135deg,#0F6E56,#1D9E75)", padding:"18px 22px", borderRadius:"16px 16px 0 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ color:"#D1FAE5", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.4, marginBottom:4 }}>Send job to teachers</div>
+                  <div style={{ color:"#fff", fontSize:18, fontWeight:800 }}>{waJobTeachers.subject}{waJobTeachers.title ? " · " + waJobTeachers.title : ""}</div>
+                  <div style={{ color:"#A7F3D0", fontSize:12, marginTop:3 }}>
+                    {matched.length} {waJobTeachers.subject} teacher{matched.length!==1?"s":""} matched · {withPhone.length} with phone
+                  </div>
+                </div>
+                <button onClick={() => setWaJobTeachers(null)} style={{ background:"rgba(255,255,255,.18)", border:"none", color:"#fff", width:32, height:32, borderRadius:"50%", cursor:"pointer", fontSize:17, flexShrink:0 }}>✕</button>
+              </div>
+
+              <div style={{ padding:"14px 22px" }}>
+                {waLoading ? (
+                  <div style={{ textAlign:"center", padding:"30px 0", color:"#6B7280", fontWeight:600 }}>Loading teachers…</div>
+                ) : matched.length === 0 ? (
+                  <div style={{ textAlign:"center", padding:"30px 0", color:"#6B7280" }}>
+                    <div style={{ fontSize:40, marginBottom:8 }}>🔍</div>
+                    <div style={{ fontWeight:700, color:"#111827" }}>No {waJobTeachers.subject} teachers found</div>
+                    <div style={{ fontSize:13, marginTop:4 }}>Teachers registered with subject “{waJobTeachers.subject}” will appear here.</div>
+                  </div>
+                ) : (
+                  <>
+                    {withPhone.length > 0 && (
+                      <button onClick={() => {
+                          const ok = window.confirm(`Open WhatsApp for ${withPhone.length} ${waJobTeachers.subject} teacher(s)?\n\nYour browser may only open the first if pop-ups are blocked — use each row's button in that case.`);
+                          if (!ok) return;
+                          withPhone.forEach(t => waSendToNumber(ph(t), waBuildJobMessage(waJobTeachers, t)));
+                          showToast(`Opened WhatsApp for ${withPhone.length} teacher(s).`);
+                        }}
+                        style={{ width:"100%", marginBottom:12, padding:"10px 0", borderRadius:10, border:"none", background:"#25D366", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer", display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                        📲 Send to all {withPhone.length} matched
+                      </button>
+                    )}
+                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                      {matched.map(t => {
+                        const has = !!waNormalizeIndianPhone(ph(t));
+                        return (
+                          <div key={t.id} style={{ display:"flex", alignItems:"center", gap:10, border:"1px solid #E5E7EB", borderRadius:10, padding:"9px 12px" }}>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ fontWeight:700, fontSize:13.5, color:"#111827" }}>{t.name || t.full_name || "Teacher"}</div>
+                              <div style={{ fontSize:11.5, color:"#6B7280", marginTop:1 }}>
+                                {(t.subjects || t.specialization || "—")}{t.city ? " · " + t.city : ""}{ph(t) ? " · " + ph(t) : " · no phone"}
+                              </div>
+                            </div>
+                            <button disabled={!has} onClick={() => {
+                                if (!waSendToNumber(ph(t), waBuildJobMessage(waJobTeachers, t))) showToast("No valid phone for this teacher.");
+                              }}
+                              style={{ flexShrink:0, padding:"7px 12px", borderRadius:8, border:"none", background: has ? "#25D366" : "#E5E7EB", color: has ? "#fff" : "#9CA3AF", fontWeight:700, fontSize:12.5, cursor: has ? "pointer" : "not-allowed", display:"inline-flex", alignItems:"center", gap:5 }}>
+                              📲 Send
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div style={{ padding:"0 22px 18px", textAlign:"right" }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => setWaJobTeachers(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {waTutor && (() => {
+        const matched   = parents.filter(p => p.subject && waTutorMatchesSubject(waTutor, p.subject));
+        const withPhone = matched.filter(p => waNormalizeIndianPhone(p.phone));
+        return (
+          <div onClick={() => setWaTutor(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:99999, padding:16 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:16, width:"100%", maxWidth:560, maxHeight:"88vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.25)" }}>
+              <div style={{ background:"linear-gradient(135deg,#0F6E56,#1D9E75)", padding:"18px 22px", borderRadius:"16px 16px 0 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ color:"#D1FAE5", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.4, marginBottom:4 }}>Send tutor to tuitions</div>
+                  <div style={{ color:"#fff", fontSize:18, fontWeight:800 }}>{waTutor.name}{(waTutor.subject || waTutor.subjects) ? " · " + (waTutor.subject || waTutor.subjects) : ""}</div>
+                  <div style={{ color:"#A7F3D0", fontSize:12, marginTop:3 }}>
+                    {matched.length} matching tuition{matched.length!==1?"s":""} · {withPhone.length} with phone
+                  </div>
+                </div>
+                <button onClick={() => setWaTutor(null)} style={{ background:"rgba(255,255,255,.18)", border:"none", color:"#fff", width:32, height:32, borderRadius:"50%", cursor:"pointer", fontSize:17, flexShrink:0 }}>✕</button>
+              </div>
+
+              <div style={{ padding:"14px 22px" }}>
+                {waLoading ? (
+                  <div style={{ textAlign:"center", padding:"30px 0", color:"#6B7280", fontWeight:600 }}>Loading tuitions…</div>
+                ) : matched.length === 0 ? (
+                  <div style={{ textAlign:"center", padding:"30px 0", color:"#6B7280" }}>
+                    <div style={{ fontSize:40, marginBottom:8 }}>🔍</div>
+                    <div style={{ fontWeight:700, color:"#111827" }}>No matching tuitions found</div>
+                    <div style={{ fontSize:13, marginTop:4 }}>Tuitions whose subject matches this tutor will appear here.</div>
+                  </div>
+                ) : (
+                  <>
+                    {withPhone.length > 0 && (
+                      <button onClick={() => {
+                          const ok = window.confirm(`Open WhatsApp for ${withPhone.length} matching tuition(s)?\n\nYour browser may only open the first if pop-ups are blocked — use each row's button in that case.`);
+                          if (!ok) return;
+                          withPhone.forEach(p => waSendToNumber(p.phone, waBuildTutorProfile(waTutor)));
+                          showToast(`Opened WhatsApp for ${withPhone.length} tuition(s).`);
+                        }}
+                        style={{ width:"100%", marginBottom:12, padding:"10px 0", borderRadius:10, border:"none", background:"#25D366", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer", display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                        📲 Send to all {withPhone.length} matched
+                      </button>
+                    )}
+                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                      {matched.map(p => {
+                        const has = !!waNormalizeIndianPhone(p.phone);
+                        return (
+                          <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, border:"1px solid #E5E7EB", borderRadius:10, padding:"9px 12px" }}>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ fontWeight:700, fontSize:13.5, color:"#111827" }}>{p.subject || "Tuition"}{p.student_class ? " · " + p.student_class : ""}</div>
+                              <div style={{ fontSize:11.5, color:"#6B7280", marginTop:1 }}>
+                                {(p.name || "Parent")}{(p.location || p.city) ? " · " + (p.location || p.city) : ""}{p.phone ? " · " + p.phone : " · no phone"}
+                              </div>
+                            </div>
+                            <button disabled={!has} onClick={() => {
+                                if (!waSendToNumber(p.phone, waBuildTutorProfile(waTutor))) showToast("No valid phone for this tuition.");
+                              }}
+                              style={{ flexShrink:0, padding:"7px 12px", borderRadius:8, border:"none", background: has ? "#25D366" : "#E5E7EB", color: has ? "#fff" : "#9CA3AF", fontWeight:700, fontSize:12.5, cursor: has ? "pointer" : "not-allowed", display:"inline-flex", alignItems:"center", gap:5 }}>
+                              📲 Send
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div style={{ padding:"0 22px 18px", textAlign:"right" }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => setWaTutor(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
     </div>
   );
 }
