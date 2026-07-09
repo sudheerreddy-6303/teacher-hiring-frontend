@@ -11,6 +11,7 @@ function SchoolDashboard({ user, setPage }) {
   const [reqIdLoading, setReqIdLoading] = useState(false);
   const [toast, setToast] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false); // off-canvas sidebar toggle for phones/tablets
   const [form, setForm] = useState({
     // Basic
     institution_name:"", institution_type:"",
@@ -124,10 +125,15 @@ function SchoolDashboard({ user, setPage }) {
 
 
   return (
-    <div style={{ display:"flex", width:"100vw", minHeight:"100vh", background:"#F7F8FA", fontFamily:"Nunito,sans-serif" }}>
+    <div className="school-layout" style={{ display:"flex", width:"100vw", minHeight:"100vh", background:"#F7F8FA", fontFamily:"Nunito,sans-serif" }}>
+
+      {/* Mobile drawer backdrop */}
+      {mobileDrawerOpen && (
+        <div onClick={() => setMobileDrawerOpen(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.4)", zIndex:299, display:"none" }} className="school-drawer-backdrop" />
+      )}
 
       {/* Sidebar */}
-      <div style={{ width:sidebarOpen?210:64, flexShrink:0, background:"#fff", borderRight:"1px solid #E5E7EB", display:"flex", flexDirection:"column", transition:"width .2s", overflow:"hidden", position:"fixed", top:0, left:0, bottom:0, zIndex:300 }}>
+      <div className={"school-sidebar" + (mobileDrawerOpen ? " drawer-open" : "")} style={{ width:sidebarOpen?210:64, flexShrink:0, background:"#fff", borderRight:"1px solid #E5E7EB", display:"flex", flexDirection:"column", transition:"width .2s", overflow:"hidden", position:"fixed", top:0, left:0, bottom:0, zIndex:300 }}>
         <div style={{ padding:"14px 16px", borderBottom:"1px solid #E5E7EB", display:"flex", alignItems:"center", justifyContent:"space-between", minHeight:56 }}>
           {sidebarOpen && <div style={{ cursor:"pointer" }} onClick={() => setPage("home")}><img src="/acadhr-logo.png" alt="AcadHr" style={{ height:32, objectFit:"contain" }} /></div>}
           <button onClick={() => setSidebarOpen(o => !o)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, color:"#6B7280", padding:4 }}>{sidebarOpen ? "◀" : "▶"}</button>
@@ -138,7 +144,7 @@ function SchoolDashboard({ user, setPage }) {
         </div>
         <div style={{ flex:1, paddingTop:8 }}>
           {MENU.map(m => (
-            <div key={m.id} onClick={() => setTab(m.id)} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 16px", cursor:"pointer", borderLeft:`3px solid ${tab===m.id?"#1A56DB":"transparent"}`, background:tab===m.id?"#EBF5FF":"transparent", color:tab===m.id?"#1A56DB":"#374151", fontWeight:tab===m.id?700:600, fontSize:14, transition:"all .15s" }}>
+            <div key={m.id} onClick={() => { setTab(m.id); setMobileDrawerOpen(false); }} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 16px", cursor:"pointer", borderLeft:`3px solid ${tab===m.id?"#1A56DB":"transparent"}`, background:tab===m.id?"#EBF5FF":"transparent", color:tab===m.id?"#1A56DB":"#374151", fontWeight:tab===m.id?700:600, fontSize:14, transition:"all .15s" }}>
               <span style={{ fontSize:17, flexShrink:0 }}>{m.icon}</span>
               {sidebarOpen && <span style={{ whiteSpace:"nowrap" }}>{m.label}</span>}
               {sidebarOpen && m.id==="jobs" && <span style={{ marginLeft:"auto", background:"#1A56DB", color:"#fff", borderRadius:20, padding:"1px 7px", fontSize:10, fontWeight:800 }}>{myJobs.length}</span>}
@@ -170,11 +176,14 @@ function SchoolDashboard({ user, setPage }) {
       </div>
 
       {/* Main */}
-      <div style={{ marginLeft:sidebarOpen?210:64, flex:1, transition:"margin-left .2s" }}>
+      <div className="school-main" style={{ marginLeft:sidebarOpen?210:64, flex:1, transition:"margin-left .2s" }}>
         {/* Top bar */}
-        <div style={{ background:"#fff", borderBottom:"1px solid #E5E7EB", padding:"0 28px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:200 }}>
-          <div style={{ fontWeight:700, fontSize:15, color:"#111827" }}>{tab==="home"?"Home":tab==="jobs"?"Jobs":tab==="database"?"Database":tab==="credits"?"Credits":"More"}</div>
-          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+        <div className="school-topbar" style={{ background:"#fff", borderBottom:"1px solid #E5E7EB", padding:"0 28px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:200 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <button className="school-mobile-toggle" aria-label="Open menu" onClick={() => setMobileDrawerOpen(true)} style={{ background:"#F3F4F6", border:"1px solid #E5E7EB", borderRadius:8, width:36, height:36, alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:16, color:"#374151" }}>☰</button>
+            <div style={{ fontWeight:700, fontSize:15, color:"#111827" }}>{tab==="home"?"Home":tab==="jobs"?"Jobs":tab==="database"?"Database":tab==="credits"?"Credits":"More"}</div>
+          </div>
+          <div className="school-topbar-actions" style={{ display:"flex", alignItems:"center", gap:16 }}>
             <div style={{ display:"flex", alignItems:"center", gap:6, background:"#FFF7ED", border:"1px solid #FDE68A", borderRadius:20, padding:"4px 14px", fontSize:13, fontWeight:700, color:"#D97706" }}><span>🪙</span> 0 +</div>
             <button className="btn btn-primary btn-sm" onClick={async () => {
               setShowPost(true);
@@ -196,7 +205,7 @@ function SchoolDashboard({ user, setPage }) {
 
         {/* HOME */}
         {tab==="home" && (
-          <div style={{ padding:"28px 28px", maxWidth:1000 }} className="fadeUp">
+          <div style={{ padding:"28px 28px", maxWidth:1000 }} className="fadeUp school-content">
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
               <h1 style={{ fontSize:22, fontWeight:800, color:"#111827" }}>Welcome back, {user.name.split(" ")[0]}!</h1>
               <button className="btn btn-primary" onClick={async () => {
@@ -312,7 +321,7 @@ function SchoolDashboard({ user, setPage }) {
 
         {/* JOBS */}
         {tab==="jobs" && (
-          <div style={{ padding:"28px 28px" }} className="fadeUp">
+          <div style={{ padding:"28px 28px" }} className="fadeUp school-content">
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:22 }}>
               <h2 style={{ fontSize:20, fontWeight:800, color:"#111827" }}>All Job Postings</h2>
               <button className="btn btn-primary" onClick={() => setShowPost(true)}>+ Post New Position</button>
@@ -366,7 +375,7 @@ function SchoolDashboard({ user, setPage }) {
 
         {/* DATABASE */}
         {tab==="database" && (
-          <div style={{ padding:"28px 28px" }} className="fadeUp">
+          <div style={{ padding:"28px 28px" }} className="fadeUp school-content">
             <h2 style={{ fontSize:20, fontWeight:800, color:"#111827", marginBottom:22 }}>Candidate Database</h2>
             <div style={{ display:"flex", gap:10, marginBottom:20, flexWrap:"wrap" }}>
               <input className="input" style={{ maxWidth:220 }} placeholder="🔍 Search by name..." />
@@ -402,14 +411,15 @@ function SchoolDashboard({ user, setPage }) {
                     <button className="btn btn-danger btn-sm"  onClick={() => setAppStatus(s => { const n=[...s]; n[i]="rejected";    return n; })}>✕ Reject</button>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
 
         {/* CREDITS */}
         {tab==="credits" && (
-          <div style={{ padding:"28px 28px" }} className="fadeUp">
+          <div style={{ padding:"28px 28px" }} className="fadeUp school-content">
             <h2 style={{ fontSize:20, fontWeight:800, color:"#111827", marginBottom:22 }}>Credits</h2>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, marginBottom:28 }}>
               {[["Available Credits","0","🪙","#D97706"],["Credits Used","0","📊","#1A56DB"],["Jobs Boosted","0","🚀","#059669"]].map(([l,v,i,c]) => (
@@ -431,7 +441,7 @@ function SchoolDashboard({ user, setPage }) {
 
         {/* MORE / PROFILE */}
         {tab==="more" && (
-          <div style={{ padding:"28px 28px" }} className="fadeUp">
+          <div style={{ padding:"28px 28px" }} className="fadeUp school-content">
             <h2 style={{ fontSize:20, fontWeight:800, color:"#111827", marginBottom:22 }}>Institute Profile</h2>
             <div style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:14, padding:28, maxWidth:560 }}>
               <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:24 }}>

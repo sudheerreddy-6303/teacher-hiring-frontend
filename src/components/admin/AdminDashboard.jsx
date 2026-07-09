@@ -1221,7 +1221,7 @@ function TeacherEditModal({ teacher, api, hdr, onClose, onToggle, onSaved }) {
   return (
     <div className="overlay" onClick={onClose}>
       <SuccessPopup show={msg.startsWith("✓")} onClose={onClose} />
-      <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
         {/* Header */}
         <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
@@ -1315,7 +1315,7 @@ function TutorEditModal({ tutor, api, hdr, onClose, onToggle, onSaved }) {
   return (
     <div className="overlay" onClick={onClose}>
       <SuccessPopup show={msg.startsWith("✓")} onClose={onClose} />
-      <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
         <div style={{ background:"linear-gradient(135deg,#5B21B6,#7C3AED)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
             <div style={{ minWidth:0 }}>
@@ -1440,7 +1440,7 @@ function SchoolEditModal({ school, api, hdr, onClose, onToggle, onSaved }) {
   return (
     <div className="overlay" onClick={onClose}>
       <SuccessPopup show={msg.startsWith("✓")} onClose={onClose} />
-      <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:720, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:720, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
         <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
             <div style={{ minWidth:0 }}>
@@ -1561,7 +1561,7 @@ function ParentEditModal({ parent, api, hdr, onClose, onToggle, onSaved }) {
   return (
     <div className="overlay" onClick={onClose}>
       <SuccessPopup show={msg.startsWith("✓")} onClose={onClose} />
-      <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:720, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:720, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
         <div style={{ background:"linear-gradient(135deg,#047857,#059669)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
             <div style={{ minWidth:0 }}>
@@ -1734,7 +1734,7 @@ function JobEditModal({ job, api, hdr, onClose, onApprove, onReject, onSaved }) 
 
   return (
     <div className="overlay" onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:760, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:760, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
         <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
             <div style={{ minWidth:0 }}>
@@ -1842,6 +1842,7 @@ function AdminDashboard({ setPage }) {
   const [feedbacks, setFeedbacks] = useState([]);
   const [leads,     setLeads]     = useState([]);
   const [loading,   setLoading]   = useState({});
+  const [openActionMenu, setOpenActionMenu] = useState(null); // e.g. "parents-12" — which row's Action dropdown is open
 
   const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
   const API_ORIGIN = API.replace(/\/api\/?$/, "");
@@ -1893,6 +1894,14 @@ function AdminDashboard({ setPage }) {
     fetchData("pending",  "/admin/pending-jobs", setPending);
     fetchData("analytics", "/admin/analytics", setAnalytics);
   }, []);
+
+  // Close any open row-action dropdown when clicking elsewhere
+  useEffect(() => {
+    if (!openActionMenu) return;
+    const closeIt = () => setOpenActionMenu(null);
+    window.addEventListener("click", closeIt);
+    return () => window.removeEventListener("click", closeIt);
+  }, [openActionMenu]);
 
   // Load tab-specific data on tab change
   useEffect(() => {
@@ -2079,7 +2088,7 @@ function AdminDashboard({ setPage }) {
             <div className="page-sub">Live platform overview — all data from database</div>
 
             {/* Stats grid */}
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:18, marginBottom:26 }}>
+            <div className="kpi-row" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:18, marginBottom:26 }}>
               {[
                 { label:"Teachers",        value: stats?.teachers        ?? "...", icon:"👩‍🏫", color:"#1A56DB", bg:"#EBF5FF", tab:"teachers"  },
                 { label:"Tutors",          value: stats?.tutors          ?? "...", icon:"🧑‍🎓", color:"#6D28D9", bg:"#F5F3FF", tab:"tutors"    },
@@ -2251,13 +2260,13 @@ function AdminDashboard({ setPage }) {
                           <tr><td colSpan={5} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No jobs match filters</td></tr>
                         ) : filtered.map(j => (
                         <tr key={j.id} onClick={() => setSelectedJob(j)} style={{ cursor:"pointer" }}>
-                          <td style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={j.title||""}><strong style={{ color:"#111827" }}>{j.title}</strong></td>
-                          <td style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={j.institute_name||""}>{j.institute_name}</td>
-                          <td style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={j.location_city||j.location||""}>📍 {j.location_city||j.location||"—"}</td>
-                          <td style={{ whiteSpace:"nowrap" }}><span className={"badge "+(j.status==="approved"?"bgreen":j.status==="pending"?"bamber":"bred")} style={{ whiteSpace:"nowrap" }}>
+                          <td data-label="Position" style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={j.title||""}><strong style={{ color:"#111827" }}>{j.title}</strong></td>
+                          <td data-label="Institution" style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={j.institute_name||""}>{j.institute_name}</td>
+                          <td data-label="Location" style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={j.location_city||j.location||""}>📍 {j.location_city||j.location||"—"}</td>
+                          <td data-label="Status" style={{ whiteSpace:"nowrap" }}><span className={"badge "+(j.status==="approved"?"bgreen":j.status==="pending"?"bamber":"bred")} style={{ whiteSpace:"nowrap" }}>
                             {j.status==="approved"?"● Live":j.status==="pending"?"⏳ Pending":"✕ Rejected"}
                           </span></td>
-                          <td>
+                          <td data-label="Action">
                             <div style={{ display:"flex", gap:8, flexWrap:"nowrap", alignItems:"center" }}>
                               <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedJob(j); }}>👁 View</button>
                               {j.subject && (
@@ -2316,12 +2325,12 @@ function AdminDashboard({ setPage }) {
                           <tr><td colSpan={6} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No institutions match filters</td></tr>
                         ) : filtered.map(s => (
                         <tr key={s.id} onClick={() => setSelectedSchool(s)} style={{ cursor:"pointer" }}>
-                          <td style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={s.name||""}><strong style={{ color:"#1A56DB", textDecoration:"underline" }}>{s.name}</strong></td>
-                          <td style={{ fontSize:12, color:"#6B7280", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={s.email||""}>{s.email}</td>
-                          <td style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={s.city||""}>📍 {s.city||"—"}</td>
-                          <td><span className="badge bgreen">{s.live_jobs||0}</span></td>
-                          <td><StatusBadge active={s.is_active} /></td>
-                          <td>
+                          <td data-label="Institution" style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={s.name||""}><strong style={{ color:"#1A56DB", textDecoration:"underline" }}>{s.name}</strong></td>
+                          <td data-label="Email" style={{ fontSize:12, color:"#6B7280", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={s.email||""}>{s.email}</td>
+                          <td data-label="City" style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={s.city||""}>📍 {s.city||"—"}</td>
+                          <td data-label="Live Jobs"><span className="badge bgreen">{s.live_jobs||0}</span></td>
+                          <td data-label="Status"><StatusBadge active={s.is_active} /></td>
+                          <td data-label="Action">
                             <div style={{ display:"flex", gap:8, flexWrap:"nowrap", alignItems:"center" }}>
                               <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedSchool(s); }}>👁 View</button>
                               <button className={"btn btn-sm "+(s.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(s.id); }}>{s.is_active?"Deactivate":"Activate"}</button>
@@ -2383,12 +2392,12 @@ function AdminDashboard({ setPage }) {
                           <tr><td colSpan={6} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No teachers match filters</td></tr>
                         ) : filtered.map(t => (
                         <tr key={t.id} onClick={() => setSelectedTeacher(t)} style={{ cursor:"pointer" }}>
-                          <td><strong style={{ color:"#1A56DB", textDecoration:"underline" }}>{t.name}</strong></td>
-                          <td style={{ fontSize:12, color:"#6B7280" }}>{t.email}</td>
-                          <td style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={t.specialization||""}>{t.specialization||"—"}</td>
-                          <td style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={t.city||""}>📍 {t.city||"—"}</td>
-                          <td><StatusBadge active={t.is_active} /></td>
-                          <td>
+                          <td data-label="Name"><strong style={{ color:"#1A56DB", textDecoration:"underline" }}>{t.name}</strong></td>
+                          <td data-label="Email" style={{ fontSize:12, color:"#6B7280" }}>{t.email}</td>
+                          <td data-label="Specialization" style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={t.specialization||""}>{t.specialization||"—"}</td>
+                          <td data-label="City" style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={t.city||""}>📍 {t.city||"—"}</td>
+                          <td data-label="Status"><StatusBadge active={t.is_active} /></td>
+                          <td data-label="Action">
                             <div style={{ display:"flex", gap:8, flexWrap:"nowrap", alignItems:"center" }}>
                               <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedTeacher(t); }}>👁 View</button>
                               <button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(t.id); }}>{t.is_active?"Deactivate":"Activate"}</button>
@@ -2462,12 +2471,12 @@ function AdminDashboard({ setPage }) {
                           <tr><td colSpan={6} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No tutors match filters</td></tr>
                         ) : filtered.map(t => (
                         <tr key={t.id} onClick={() => setSelectedTutor(t)} style={{ cursor:"pointer" }}>
-                          <td><strong style={{ color:"#6D28D9", textDecoration:"underline" }}>{t.name}</strong></td>
-                          <td style={{ fontSize:12, color:"#6B7280" }}>{t.email}</td>
-                          <td style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={t.subject||""}>{t.subject||"—"}</td>
-                          <td style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={t.city||""}>📍 {t.city||"—"}</td>
-                          <td><StatusBadge active={t.is_active} /></td>
-                          <td>
+                          <td data-label="Name"><strong style={{ color:"#6D28D9", textDecoration:"underline" }}>{t.name}</strong></td>
+                          <td data-label="Email" style={{ fontSize:12, color:"#6B7280" }}>{t.email}</td>
+                          <td data-label="Subject" style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={t.subject||""}>{t.subject||"—"}</td>
+                          <td data-label="City" style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={t.city||""}>📍 {t.city||"—"}</td>
+                          <td data-label="Status"><StatusBadge active={t.is_active} /></td>
+                          <td data-label="Action">
                             <div style={{ display:"flex", gap:8, flexWrap:"nowrap", alignItems:"center" }}>
                               <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedTutor(t); }}>👁 View</button>
                               {(t.subject || t.subjects) && (
@@ -2507,17 +2516,17 @@ function AdminDashboard({ setPage }) {
             ]} />
             {loading.parents
               ? <Loader />
-              : <div className="card" style={{ padding:0, overflow:"hidden" }}>
-                  <div className="tbl-wrap admin-tbl">
+              : <div className="card" style={{ padding:0, overflow:"visible" }}>
+                  <div className="tbl-wrap admin-tbl" style={{ overflow:"visible" }}>
                     <table style={{ tableLayout:"fixed" }}>
                       <colgroup>
+                        <col style={{ width:"13%" }} />
+                        <col style={{ width:"17%" }} />
                         <col style={{ width:"12%" }} />
-                        <col style={{ width:"15%" }} />
-                        <col style={{ width:"11%" }} />
+                        <col style={{ width:"9%" }} />
+                        <col style={{ width:"22%" }} />
                         <col style={{ width:"9%" }} />
                         <col style={{ width:"18%" }} />
-                        <col style={{ width:"9%" }} />
-                        <col style={{ width:"26%" }} />
                       </colgroup>
                       <thead><tr><th>Parent Name</th><th>Email</th><th>Student</th><th>Class / Grade</th><th>Subject</th><th>Status</th><th>Action</th></tr></thead>
                       <tbody>
@@ -2535,20 +2544,41 @@ function AdminDashboard({ setPage }) {
                             ? <tr><td colSpan={7} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No parents match filters</td></tr>
                             : filtered.map(p => (
                               <tr key={p.id} onClick={() => setSelectedParent(p)} style={{ cursor:"pointer" }}>
-                                <td><strong style={{ color:"#059669", textDecoration:"underline" }}>{p.name}</strong></td>
-                                <td style={{ fontSize:12, color:"#6B7280" }}>{p.email}</td>
-                                <td style={{ fontWeight:600, color:"#1A56DB" }}>{p.student_name||"—"}</td>
-                                <td>{p.student_class||"—"}</td>
-                                <td style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={p.subject||""}>{p.subject||"—"}</td>
-                                <td style={{ whiteSpace:"nowrap" }}><span className={"badge "+(p.status==="Assigned"?"bgreen":"bamber")} style={{ whiteSpace:"nowrap" }}>{p.status||"Open"}</span></td>
-                                <td>
-                                  <div style={{ display:"flex", gap:8, flexWrap:"nowrap", alignItems:"center" }}>
-                                    <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedParent(p); }}>👁 View</button>
-                                    {p.subject && (
-                                      <button className="btn btn-sm" style={{ color:"#0F6E56", borderColor:"#9FE1CB", background:"#E1F5EE" }} onClick={(e) => { e.stopPropagation(); openMatchTutorsForTuition(p); }} title={"Send this tuition to " + p.subject + " tutors on WhatsApp"}>📲 Send to tutors</button>
-                                    )}
-                                    <button className={"btn btn-sm "+(p.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(p.id); }}>{p.is_active?"Deactivate":"Activate"}</button>
-                                  </div>
+                                <td data-label="Parent Name"><strong style={{ color:"#059669", textDecoration:"underline" }}>{p.name}</strong></td>
+                                <td data-label="Email" style={{ fontSize:12, color:"#6B7280" }}>{p.email}</td>
+                                <td data-label="Student" style={{ fontWeight:600, color:"#1A56DB" }}>{p.student_name||"—"}</td>
+                                <td data-label="Class / Grade">{p.student_class||"—"}</td>
+                                <td data-label="Subject" style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={p.subject||""}>{p.subject||"—"}</td>
+                                <td data-label="Status" style={{ whiteSpace:"nowrap" }}><span className={"badge "+(p.status==="Assigned"?"bgreen":"bamber")} style={{ whiteSpace:"nowrap" }}>{p.status||"Open"}</span></td>
+                                <td data-label="Action" style={{ position:"relative", overflow:"visible" }}>
+                                  <button
+                                    className="btn btn-sm"
+                                    style={{ color:"#374151", borderColor:"#E5E7EB", background:"#F9FAFB", padding:"6px 12px", fontWeight:800 }}
+                                    onClick={(e) => { e.stopPropagation(); setOpenActionMenu(openActionMenu === "parent-"+p.id ? null : "parent-"+p.id); }}
+                                    aria-haspopup="true"
+                                    aria-expanded={openActionMenu === "parent-"+p.id}
+                                  >Actions ▾</button>
+                                  {openActionMenu === "parent-"+p.id && (
+                                    <div
+                                      onClick={(e) => e.stopPropagation()}
+                                      style={{ position:"absolute", right:0, top:"100%", marginTop:4, background:"#fff", border:"1px solid #E5E7EB", borderRadius:10, boxShadow:"0 10px 30px rgba(0,0,0,.15)", zIndex:200, minWidth:190, overflow:"hidden" }}
+                                    >
+                                      <button
+                                        style={{ display:"block", width:"100%", textAlign:"left", padding:"10px 14px", background:"none", border:"none", borderBottom:"1px solid #F3F4F6", cursor:"pointer", fontSize:13, fontWeight:600, color:"#1A56DB" }}
+                                        onClick={(e) => { e.stopPropagation(); setSelectedParent(p); setOpenActionMenu(null); }}
+                                      >👁 View</button>
+                                      {p.subject && (
+                                        <button
+                                          style={{ display:"block", width:"100%", textAlign:"left", padding:"10px 14px", background:"none", border:"none", borderBottom:"1px solid #F3F4F6", cursor:"pointer", fontSize:13, fontWeight:600, color:"#0F6E56" }}
+                                          onClick={(e) => { e.stopPropagation(); openMatchTutorsForTuition(p); setOpenActionMenu(null); }}
+                                        >📲 Send to tutors</button>
+                                      )}
+                                      <button
+                                        style={{ display:"block", width:"100%", textAlign:"left", padding:"10px 14px", background:"none", border:"none", cursor:"pointer", fontSize:13, fontWeight:600, color: p.is_active ? "#DC2626" : "#059669" }}
+                                        onClick={(e) => { e.stopPropagation(); toggleUser(p.id); setOpenActionMenu(null); }}
+                                      >{p.is_active ? "Deactivate" : "Activate"}</button>
+                                    </div>
+                                  )}
                                 </td>
                               </tr>
                             ));
@@ -2566,7 +2596,7 @@ function AdminDashboard({ setPage }) {
           <div className="fadeUp">
             <div className="page-title">Payments</div>
             <div className="page-sub">Revenue and transaction management</div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18, marginBottom:24 }}>
+            <div className="responsive-grid-3" style={{ marginBottom:24 }}>
               {[["Total Revenue","₹0","💰","#059669"],["This Month","₹0","📅","#1A56DB"],["Pending","₹0","⏳","#D97706"]].map(([l,v,i,c]) => (
                 <div key={l} className="card" style={{ padding:24, textAlign:"center" }}>
                   <div style={{ fontSize:28, marginBottom:8 }}>{i}</div>
@@ -2717,7 +2747,7 @@ function AdminDashboard({ setPage }) {
               <div className="card" style={{ padding:40, textAlign:"center", color:"#9CA3AF" }}>No analytics data yet</div>
             ) : (
               <>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:20 }}>
+                <div className="responsive-grid-2" style={{ marginBottom:20 }}>
                   {/* Top Subjects */}
                   <div className="card" style={{ padding:24 }}>
                     <h3 style={{ fontSize:16, fontWeight:800, marginBottom:18 }}>📚 Top Subjects in Demand</h3>

@@ -38,10 +38,16 @@ function TutorDashboard({ user, setPage }) {
     { month:"May",      amount:22400 },
   ];
 
+  const [navOpen, setNavOpen] = useState(false); // mobile sidebar drawer toggle
+
   return (
     <div style={{ display:"flex", width:"100vw", overflowX:"hidden", minHeight:"100vh" }}>
+      {/* Mobile nav toggle + backdrop */}
+      <button className="mobile-nav-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
+      <div className={"sidebar-backdrop" + (navOpen ? " show" : "")} onClick={() => setNavOpen(false)} />
+
       {/* Sidebar */}
-      <div className="sidebar">
+      <div className={"sidebar" + (navOpen ? " open" : "")} onClick={() => setNavOpen(false)}>
         <div className="sidebar-header">
           <div className="brand" style={{ cursor:"pointer" }} onClick={() => setPage("home")}>
             <img src="/acadhr-logo.png" alt="AcadHr" style={{ height:52, objectFit:"contain" }} />

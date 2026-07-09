@@ -115,7 +115,7 @@ export default function BrowseTeachersPage({ setPage }) {
               <select key={f.key}
                 style={{ border:"1px solid #E5E7EB", borderRadius:8, padding:"8px 14px", fontSize:13, fontWeight:600, color:"#374151", background:"#F9FAFB", cursor:"pointer" }}
                 value={filter[f.key]} onChange={e => setFilter(prev => ({...prev, [f.key]:e.target.value}))}>
-                {f.options.map(o => <option key={o}>{o}</option>)}
+                {f.options.map(o => <option key={o} value={o}>{o==="All" ? f.label : o}</option>)}
               </select>
             ))}
             {(filter.subject!=="All"||filter.city!=="All"||filter.experience!=="All"||filter.mode!=="All"||filter.search) && (

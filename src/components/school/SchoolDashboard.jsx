@@ -963,10 +963,10 @@ function SchoolDashboard({ user, setPage }) {
           );
 
           return (
-            <div style={{ display:"flex", height:"calc(100vh - 56px)", overflow:"hidden" }} className="fadeUp">
+            <div style={{ display:"flex", height:"calc(100vh - 56px)", overflow:"hidden" }} className="fadeUp school-db-layout">
 
               {/* ── Left filter panel ─────────────────────────────────────── */}
-              <div style={{ width:220, flexShrink:0, borderRight:"1px solid #E5E7EB", padding:"20px 16px", background:"#FAFBFC", height:"100%", overflowY:"auto" }}>
+              <div className="school-db-filters" style={{ width:220, flexShrink:0, borderRight:"1px solid #E5E7EB", padding:"20px 16px", background:"#FAFBFC", height:"100%", overflowY:"auto" }}>
 
                 <div style={{ fontWeight:800, fontSize:14, color:"#111827", marginBottom:16 }}>🔍 Filters</div>
 
@@ -1034,7 +1034,7 @@ function SchoolDashboard({ user, setPage }) {
               </div>
 
               {/* ── Right: cards grid ─────────────────────────────────────── */}
-              <div style={{ flex:1, padding:"24px 24px", height:"100%", overflowY:"auto" }}>
+              <div className="school-db-results" style={{ flex:1, padding:"24px 24px", height:"100%", overflowY:"auto" }}>
                 {/* Header */}
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
                   <div>

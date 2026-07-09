@@ -36,3 +36,89 @@
   word-break: break-word;
   vertical-align: middle;
 }
+
+/* ── Mobile: admin tables become stacked "cards" (like a spreadsheet's mobile
+   view) instead of a cramped table where headers wrap one-letter-per-line.
+   Each row becomes one card; each cell shows its column name via data-label.
+   The desktop table markup/columns above are completely untouched — this
+   only changes how it's *displayed* under 768px. ── */
+@media (max-width: 768px) {
+  .admin-tbl table,
+  .admin-tbl thead,
+  .admin-tbl tbody,
+  .admin-tbl th,
+  .admin-tbl td,
+  .admin-tbl tr {
+    display: block;
+    width: 100% !important;
+  }
+  .admin-tbl colgroup { display: none; }
+  .admin-tbl thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+  .admin-tbl tbody tr {
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    background: #fff;
+  }
+  .admin-tbl td {
+    border: none !important;
+    padding: 8px 0 8px 44% !important;
+    position: relative;
+    min-height: 22px;
+    text-align: left !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+  }
+  .admin-tbl td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 40%;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: #9CA3AF;
+  }
+  .admin-tbl td:first-child { padding-top: 0 !important; }
+  .admin-tbl td:last-child { padding-bottom: 0 !important; }
+  .admin-tbl tbody tr:hover { background: #fff; }
+
+  /* ── Opt-out: tables marked .admin-tbl-scroll skip the card view above and
+     stay a real table — just wide enough that columns stay readable, with
+     the page scrolling it sideways (classic spreadsheet mobile behaviour). ── */
+  .admin-tbl-scroll table {
+    display: table !important;
+    width: 720px !important;
+    min-width: 720px !important;
+  }
+  .admin-tbl-scroll thead { display: table-header-group !important; width: auto !important; }
+  .admin-tbl-scroll tbody { display: table-row-group !important; width: auto !important; }
+  .admin-tbl-scroll tr {
+    display: table-row !important;
+    width: auto !important;
+  }
+  .admin-tbl-scroll colgroup { display: table-column-group !important; }
+  .admin-tbl-scroll thead tr { position: static !important; top: auto !important; left: auto !important; }
+  .admin-tbl-scroll tbody tr { border: none !important; border-radius: 0 !important; margin-bottom: 0 !important; padding: 0 !important; background: transparent !important; }
+  .admin-tbl-scroll th,
+  .admin-tbl-scroll td {
+    display: table-cell !important;
+    width: auto !important;
+    border-bottom: 1px solid #F3F4F6 !important;
+    padding: 12px 14px !important;
+    position: static !important;
+    min-height: auto !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+  }
+  .admin-tbl-scroll td::before { content: none !important; }
+}

@@ -39,6 +39,11 @@
   .fw-page .container { padding-left: 16px; padding-right: 16px; }
 }
 
+/* ── Jobs page hero illustration: only shown when there's room beside the text ── */
+@media (max-width: 1024px) {
+  .jobs-hero-illustration { display: none; }
+}
+
 /* ── Auth split layout ── */
 .auth-layout { min-height: 100vh; display: flex; width: 100%; }
 .auth-panel-left {
@@ -272,6 +277,7 @@
     transform: translateX(0);
     box-shadow: 0 0 48px rgba(0, 0, 0, 0.28);
   }
+  .school-drawer-backdrop { display: block !important; }
   .school-main { margin-left: 0 !important; width: 100% !important; }
   .school-mobile-toggle {
     display: inline-flex !important;
@@ -285,6 +291,26 @@
 
   .responsive-grid-3,
   .responsive-grid-2 { grid-template-columns: 1fr; }
+
+  /* ── Teacher Database (School Dashboard): stack filters above results
+     instead of a fixed 220px sidebar squeezing the cards into a sliver ── */
+  .school-db-layout {
+    flex-direction: column !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .school-db-filters {
+    width: 100% !important;
+    flex-shrink: 1 !important;
+    height: auto !important;
+    max-height: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid #E5E7EB !important;
+  }
+  .school-db-results {
+    height: auto !important;
+    overflow: visible !important;
+  }
 }
 
 /* ── Phones (≤640px) ── */

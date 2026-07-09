@@ -818,6 +818,21 @@ function HomePage({ setPage }) {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // Hero poster carousel — cycles through your actual files in frontend/public:
+  // "teachers poster.png", "tutors poster.png", "parents poster.png"
+  const heroPosters = [
+    { src: "/teachers poster.png", alt: "AcadHr for Teachers" },
+    { src: "/tutors poster.png",   alt: "AcadHr for Tutors" },
+    { src: "/parents poster.png",  alt: "AcadHr for Parents" },
+  ];
+  const [heroSlide, setHeroSlide] = useState(0);
+  const [heroPosterMissing, setHeroPosterMissing] = useState({}); // { "/teachers poster.png": true } once an image fails to load
+  useEffect(() => {
+    const t = setInterval(() => setHeroSlide(i => (i + 1) % heroPosters.length), 5000);
+    return () => clearInterval(t);
+  }, []);
+  const goToHeroSlide = (i) => setHeroSlide(((i % heroPosters.length) + heroPosters.length) % heroPosters.length);
+
   // Tuition requirements posted by parents (public, fetched from DB)
   const [homeTuitions, setHomeTuitions] = useState([]);
   useEffect(() => {
@@ -1082,7 +1097,8 @@ function HomePage({ setPage }) {
   return (
     <div className="home-page">
       <Navbar setPage={setPage} page="home" />
-      {/* ── HERO ───────────────────────────────────────────────────────────── */}
+      {/* ── HERO (original — kept in code, not rendered; replaced below by the poster carousel) ── */}
+      {false && (
       <section className="hero-section" style={{ display:"flex", flexDirection:"column", background:"#fff", position:"relative", overflow:"hidden", minHeight:"auto" }}>
 
         {/* Background wash */}
@@ -1289,6 +1305,74 @@ function HomePage({ setPage }) {
           </div>
         </div>
       </section>
+      )}
+
+      {/* ── HERO: poster carousel (teacher / tuition / parent) ──────────────── */}
+      <section
+        className="hero-poster-carousel"
+        style={{ position:"relative", width:"100%", overflow:"hidden", background:"#F3F4F6", paddingTop: isMobile ? 72 : 90 }}
+      >
+        <div style={{ position:"relative", width:"100%", paddingTop: isMobile ? "62%" : "50%" }}>
+          {heroPosters.map((p, i) => (
+            heroPosterMissing[p.src] ? (
+              <div
+                key={p.src}
+                style={{
+                  position:"absolute", inset:0, display: i === heroSlide ? "flex" : "none",
+                  flexDirection:"column", alignItems:"center", justifyContent:"center",
+                  background:"linear-gradient(135deg,#EEF2FF,#F5F3FF)", color:"#6B7280", textAlign:"center", padding:20,
+                }}
+              >
+                <div style={{ fontSize:32, marginBottom:8 }}>🖼️</div>
+                <div style={{ fontWeight:700, fontSize:14, color:"#374151" }}>Image not found</div>
+                <div style={{ fontSize:13, marginTop:4 }}>
+                  Add <code style={{ background:"#fff", padding:"2px 6px", borderRadius:4, border:"1px solid #E5E7EB" }}>{p.src}</code> to your <code style={{ background:"#fff", padding:"2px 6px", borderRadius:4, border:"1px solid #E5E7EB" }}>frontend/public</code> folder
+                </div>
+              </div>
+            ) : (
+              <img
+                key={p.src}
+                src={p.src}
+                alt={p.alt}
+                onError={() => setHeroPosterMissing(m => ({ ...m, [p.src]: true }))}
+                style={{
+                  position:"absolute", inset:0, width:"100%", height:"100%", objectFit: isMobile ? "contain" : "cover",
+                  opacity: i === heroSlide ? 1 : 0,
+                  transition:"opacity .6s ease",
+                  pointerEvents: i === heroSlide ? "auto" : "none",
+                }}
+              />
+            )
+          ))}
+        </div>
+
+        {/* Prev / Next arrows */}
+        <button
+          type="button"
+          aria-label="Previous slide"
+          onClick={() => goToHeroSlide(heroSlide - 1)}
+          style={{ position:"absolute", top:"50%", left: isMobile ? 8 : 16, transform:"translateY(-50%)", width: isMobile ? 32 : 40, height: isMobile ? 32 : 40, borderRadius:"50%", border:"none", background:"rgba(17,24,39,.35)", color:"#fff", fontSize: isMobile ? 16 : 20, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:2 }}
+        >‹</button>
+        <button
+          type="button"
+          aria-label="Next slide"
+          onClick={() => goToHeroSlide(heroSlide + 1)}
+          style={{ position:"absolute", top:"50%", right: isMobile ? 8 : 16, transform:"translateY(-50%)", width: isMobile ? 32 : 40, height: isMobile ? 32 : 40, borderRadius:"50%", border:"none", background:"rgba(17,24,39,.35)", color:"#fff", fontSize: isMobile ? 16 : 20, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:2 }}
+        >›</button>
+
+        {/* Dots */}
+        <div style={{ position:"absolute", bottom: isMobile ? 8 : 16, left:"50%", transform:"translateX(-50%)", display:"flex", gap:8, zIndex:2 }}>
+          {heroPosters.map((p, i) => (
+            <button
+              key={p.src}
+              type="button"
+              aria-label={`Go to slide ${i + 1}`}
+              onClick={() => goToHeroSlide(i)}
+              style={{ width:9, height:9, borderRadius:"50%", border:"none", cursor:"pointer", background: i === heroSlide ? "#fff" : "rgba(255,255,255,.5)", boxShadow:"0 0 0 1px rgba(0,0,0,.15)" }}
+            />
+          ))}
+        </div>
+      </section>
 
       {/* ── COUNTRIES WE ARE PROVIDING TUITION (marquee) ──────────────────── */}
       <CountriesMarquee />
@@ -1483,6 +1567,7 @@ function HomePage({ setPage }) {
       </section>
 
       {/* LATEST JOBS */}
+      {false && (
       <section className="section" style={{ background:"#F9FAFB", borderTop:"1px solid #E5E7EB" }}>
         <div className="container">
           <div className="flexb" style={{ marginBottom:38 }}>
@@ -1497,6 +1582,7 @@ function HomePage({ setPage }) {
           </div>
         </div>
       </section>
+      )}
 
       {/* TESTIMONIALS */}
       <section className="section" style={{ background:"#fff" }}>
@@ -1525,6 +1611,7 @@ function HomePage({ setPage }) {
         </div>
       </section>
 
+    {false && (
     <section style={{ background:"#F9FAFB", borderTop:"1px solid #E5E7EB", padding:"72px 0" }}>
         <div className="container">
           {/* Section header */}
@@ -1568,6 +1655,7 @@ function HomePage({ setPage }) {
           </div>
         </div>
       </section>
+    )}
 
 
 
