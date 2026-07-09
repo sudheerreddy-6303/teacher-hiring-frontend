@@ -15,10 +15,12 @@ function Brand({ size, onClick }) {
   );
 }
 
-function Navbar({ setPage }) {
+function Navbar({ setPage, page }) {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const go = (p) => { setMenuOpen(false); setPage(p); };
+  const isActive = (id) => page === id;
+  const activeLinkStyle = { color: "#1A56DB", fontWeight: 800, borderBottom: "2px solid #1A56DB" };
   return (
     <nav className={"nav" + (menuOpen ? " nav-menu-open" : "")}>
       <div className="container nav-inner">
@@ -29,13 +31,13 @@ function Navbar({ setPage }) {
           </button>
         </div>
         <div className={"nav-actions" + (menuOpen ? " open" : "")}>
-          <span className="nav-link" onClick={() => go("jobs")}>Browse Jobs</span>
-          <span className="nav-link" onClick={() => go("teachers")}>Browse Teachers</span>
-          <span className="nav-link" onClick={() => go("tutors")}>Browse Tutors</span>
-          <span className="nav-link" onClick={() => go("tuitions")}>Browse Tuitions</span>
-          <span className="nav-link" onClick={() => go("howitworks")}>How It Works</span>
-          <span className="nav-link" onClick={() => go("faq")}>FAQ</span>
-          <span className="nav-link" onClick={() => go("pricing")} style={{ color:"#1A56DB", fontWeight:700 }}>Pricing</span>
+          <span className="nav-link" onClick={() => go("jobs")} style={isActive("jobs") ? activeLinkStyle : undefined}>Browse Jobs</span>
+          <span className="nav-link" onClick={() => go("teachers")} style={isActive("teachers") ? activeLinkStyle : undefined}>Browse Teachers</span>
+          <span className="nav-link" onClick={() => go("tutors")} style={isActive("tutors") ? activeLinkStyle : undefined}>Browse Tutors</span>
+          <span className="nav-link" onClick={() => go("tuitions")} style={isActive("tuitions") ? activeLinkStyle : undefined}>Browse Tuitions</span>
+          <span className="nav-link" onClick={() => go("howitworks")} style={isActive("howitworks") ? activeLinkStyle : undefined}>How It Works</span>
+          <span className="nav-link" onClick={() => go("faq")} style={isActive("faq") ? activeLinkStyle : undefined}>FAQ</span>
+          <span className="nav-link" onClick={() => go("pricing")} style={isActive("pricing") ? activeLinkStyle : undefined}>Pricing</span>
           {user ? (
             <>
               <button className="btn btn-ghost btn-sm" onClick={() => go("dashboard")}>Dashboard</button>

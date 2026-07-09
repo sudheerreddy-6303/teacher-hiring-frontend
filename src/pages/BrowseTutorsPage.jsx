@@ -3,7 +3,7 @@ import { Navbar } from "../components/common/Shared";
 import { useAuth } from "../context/AuthContext";
 import apiBase from "../config/apiBase";
 
-const SUBJECTS = ["All","Mathematics","Physics","Chemistry","Biology","English","Hindi","Computer Science","Economics","Accountancy","Social Science"];
+const SUBJECTS = ["All","Mathematics","Physics","Chemistry","Biology","English","Hindi","Computer Science","Economics","Accountancy","Social Science","Zoology"];
 const MODES    = ["All","Online","Offline","Both"];
 const CITIES   = ["All","Hyderabad","Delhi","Mumbai","Bangalore","Chennai","Pune","Kolkata","Visakhapatnam","Vijayawada"];
 const EXPS     = ["All","Fresher","1 Year","2 Years","3 Years","4 Years","5+ Years"];
@@ -99,7 +99,7 @@ export default function BrowseTutorsPage({ setPage }) {
 
   return (
     <div className="browse-page" style={{ minHeight:"100vh", background:"#F9FAFB" }}>
-      <Navbar setPage={setPage} />
+      <Navbar setPage={setPage} page="tutors" />
       <div style={{ paddingTop:90 }}>
 
         {/* Hero */}

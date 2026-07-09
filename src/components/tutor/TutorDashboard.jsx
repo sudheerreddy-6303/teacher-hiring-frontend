@@ -63,7 +63,7 @@ function TutorDashboard({ user, setPage }) {
     const arr = csvArr(key);
     setProfile(p => ({ ...p, [key]: (arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]).join(", ") }));
   }
-  const PROF_SUBS  = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit"];
+  const PROF_SUBS  = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Zoology"];
   const PROF_QUALS = ["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil"];
   const PROF_EXPS  = ["Fresher (0-1 year)","1-3 years","3-5 years","5-10 years","10+ years"];
   const PROF_TIMES = ["Morning","Afternoon","Evening","Any Time"];

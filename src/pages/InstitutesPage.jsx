@@ -17,7 +17,7 @@ const INSTITUTES = [
 export default function InstitutesPage({ setPage }) {
   return (
     <>
-      <Navbar setPage={setPage} />
+      <Navbar setPage={setPage} page="institutes" />
       <div className="institutes-page">
         <div className="container" style={{ paddingTop: 100, paddingBottom: 60 }}>
           <h1 className="page-title">Schools & Institutes</h1>

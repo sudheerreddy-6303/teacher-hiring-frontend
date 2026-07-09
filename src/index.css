@@ -313,3 +313,196 @@ img { content-visibility: auto; max-width: 100%; height: auto; }
 @media (min-width: 901px) {
   .nav-actions { display: flex !important; }
 }
+
+/* ── Countries marquee (Countries we are Providing tuition) ───────────── */
+@keyframes countriesMarqueeScroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-25%); }
+}
+.countries-marquee-viewport {
+  overflow: hidden;
+  width: 100%;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%);
+}
+.countries-marquee-track {
+  display: flex;
+  align-items: flex-start;
+  gap: 64px;
+  width: max-content;
+  animation: countriesMarqueeScroll 28s linear infinite;
+}
+.countries-marquee-viewport:hover .countries-marquee-track {
+  animation-play-state: paused;
+}
+.country-flag-badge {
+  width: 110px;
+  height: 80px;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px -8px rgba(15,23,42,.35);
+  background: #fff;
+}
+.country-flag-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  clip-path: polygon(0% 0%, 88% 0%, 100% 15%, 88% 30%, 100% 45%, 88% 60%, 100% 75%, 88% 90%, 100% 100%, 0% 100%);
+}
+.country-flag-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.country-flag-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1F2937;
+  white-space: nowrap;
+  font-family: 'Nunito', sans-serif;
+}
+@media (max-width: 640px) {
+  .countries-marquee-track { gap: 42px; }
+  .country-flag-badge { width: 80px; height: 58px; }
+  .country-flag-name { font-size: 14px; }
+}
+
+/* ── Subjects coverflow (All Subjects · All State Boards) ──────────────── */
+.subjects-coverflow-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+.subjects-coverflow-stage {
+  position: relative;
+  height: 210px;
+  flex: 1;
+  max-width: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.subject-coverflow-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 170px;
+  height: 170px;
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1E3A8A, #1A56DB);
+  box-shadow: 0 20px 38px -18px rgba(15,23,42,.35);
+  transition: transform .6s cubic-bezier(.22,.61,.36,1), opacity .6s ease, filter .6s ease;
+}
+.subject-coverflow-icon {
+  font-size: 68px;
+  line-height: 1;
+}
+.coverflow-arrow {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: #1A56DB;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 22px -8px rgba(26,86,219,.6);
+  transition: transform .15s ease, background .15s ease;
+}
+.coverflow-arrow:hover { background: #1E429F; transform: scale(1.08); }
+.subjects-coverflow-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+.coverflow-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 5px;
+  border: none;
+  background: rgba(15,23,42,.18);
+  cursor: pointer;
+  padding: 0;
+  transition: width .25s ease, background .25s ease;
+}
+.coverflow-dot-active {
+  width: 22px;
+  background: #1A56DB;
+}
+@media (max-width: 640px) {
+  .subjects-coverflow-stage { height: 150px; }
+  .subject-coverflow-card { width: 120px; height: 120px; border-radius: 16px; }
+  .subject-coverflow-icon { font-size: 46px; }
+  .coverflow-arrow { width: 34px; height: 34px; font-size: 18px; }
+}
+
+/* ── Jobs Hiring Now — slow left-to-right drifting motion ───────────────── */
+@keyframes jobsCardsSlide {
+  0%   { transform: translateX(0); }
+  50%  { transform: translateX(22px); }
+  100% { transform: translateX(0); }
+}
+.jobs-hiring-slide {
+  animation: jobsCardsSlide 6s ease-in-out infinite;
+}
+.jobs-hiring-slide:hover {
+  animation-play-state: paused;
+}
+
+/* ── Jobs Hiring Now — continuous scrolling marquee, shows every job ────── */
+@keyframes jobsMarqueeScroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.jobs-marquee-viewport {
+  overflow: hidden;
+  width: 100%;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
+}
+.jobs-marquee-track {
+  display: flex;
+  align-items: stretch;
+  gap: 22px;
+  width: max-content;
+  animation: jobsMarqueeScroll 18s linear infinite;
+}
+.jobs-marquee-viewport:hover .jobs-marquee-track {
+  animation-play-state: paused;
+}
+.jobs-marquee-track > * {
+  width: 340px;
+  flex-shrink: 0;
+}
+.jobs-marquee-track-reverse {
+  animation-direction: reverse;
+}
+@media (max-width: 640px) {
+  .jobs-marquee-track { gap: 14px; }
+  .jobs-marquee-track > * { width: 280px; }
+}
+
+/* ── Community rows — arrow-controlled horizontal scroll ─────────────────── */
+.community-scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
+

@@ -39,7 +39,7 @@ export default function FaqPage({ setPage }) {
 
   return (
     <div className="fw-page" style={{ minHeight:"100vh", background:"#F9FAFB" }}>
-      <Navbar setPage={setPage} />
+      <Navbar setPage={setPage} page="faq" />
       <div className="container" style={{ paddingTop:100, paddingBottom:60 }}>
 
         {/* Header */}

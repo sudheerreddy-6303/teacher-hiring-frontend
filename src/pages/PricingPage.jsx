@@ -250,6 +250,11 @@ const PLANS = {
       icon:     "🎖️",
       price:    "₹4,999",
       period:   "/month per school",
+      prices: {
+        "1m": { price: "₹4,999",  period: "/month per school" },
+        "3m": { price: "₹14,250", period: "/3 months per school", note: "≈ ₹4,750/mo · save 5%" },
+        "6m": { price: "₹26,995", period: "/6 months per school", note: "≈ ₹4,499/mo · save 10%" },
+      },
       color:    "#374151",
       bg:       "#F3F4F6",
       border:   "#E5E7EB",
@@ -271,6 +276,11 @@ const PLANS = {
       icon:      "🎖️",
       price:     "₹15,000",
       period:    "/month per school",
+      prices: {
+        "1m": { price: "₹15,000", period: "/month per school" },
+        "3m": { price: "₹42,750", period: "/3 months per school", note: "≈ ₹14,250/mo · save 5%" },
+        "6m": { price: "₹81,000", period: "/6 months per school", note: "≈ ₹13,500/mo · save 10%" },
+      },
       color:     "#1A56DB",
       bg:        "#EBF5FF",
       border:    "#93C5FD",
@@ -566,7 +576,7 @@ export default function PricingPage({ setPage }) {
 
   return (
     <div className="fw-page" style={{ minHeight:"100vh", background:"#F9FAFB" }}>
-      <Navbar setPage={setPage} />
+      <Navbar setPage={setPage} page="pricing" />
       {showContact && (
         <div onClick={() => setShowContact(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 }}>
           <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:18, padding:28, width:"100%", maxWidth:440, boxShadow:"0 20px 60px rgba(0,0,0,.3)", fontFamily:"Nunito,sans-serif", maxHeight:"90vh", overflowY:"auto" }}>
@@ -640,8 +650,8 @@ export default function PricingPage({ setPage }) {
           {/* Billing period toggle — shown for plans that offer monthly / 3-monthly */}
           {plans.some(p => p.prices) && (
             <div style={{ display:"flex", justifyContent:"center", marginBottom:30 }}>
-              <div style={{ display:"inline-flex", background:"#fff", borderRadius:12, padding:4, gap:4, border:"1px solid #E5E7EB", boxShadow:"0 2px 8px rgba(0,0,0,.05)" }}>
-                {[["1m","1 Month"],["3m","3 Months · save 10%"], ...(tab === "school" ? [["12m","Yearly · 2 months free"]] : [])].map(([id, label]) => (
+              <div style={{ display:"inline-flex", flexWrap:"wrap", background:"#fff", borderRadius:12, padding:4, gap:4, border:"1px solid #E5E7EB", boxShadow:"0 2px 8px rgba(0,0,0,.05)" }}>
+                {[["1m","1 Month"],["3m", tab === "school" ? "3 Months · save 5%" : "3 Months · save 10%"], ...(tab === "school" ? [["6m","6 Months · save 10%"],["12m","Yearly · 2 months free"]] : [])].map(([id, label]) => (
                   <button key={id} onClick={() => setBilling(id)}
                     style={{ padding:"9px 20px", borderRadius:9, border:"none", cursor:"pointer", fontWeight:700, fontSize:13.5, fontFamily:"Nunito,sans-serif", transition:"all .2s",
                       background: billing===id ? "#1A56DB" : "transparent",

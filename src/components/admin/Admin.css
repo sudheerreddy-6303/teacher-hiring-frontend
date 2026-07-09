@@ -17,18 +17,22 @@
   .admin-modal-header { padding: 18px 16px; }
 }
 
-/* ── Admin data tables: sit flush inside the card (no inner border / side gap)
-   and fit the available width so there is no horizontal scrollbar. ── */
+/* ── Admin data tables: sit flush inside the card (no inner border / side gap).
+   overflow-x:auto (not hidden) so that if any row's content is ever wider than
+   its column (e.g. extra action buttons), it becomes scrollable instead of
+   being silently clipped/hidden — this is what caused buttons to disappear. ── */
 .admin-tbl.tbl-wrap {
-  overflow-x: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: none;
   border-radius: 0;
   background: transparent;
 }
-.admin-tbl table { width: 100%; table-layout: auto; }
+.admin-tbl table { width: 100%; table-layout: auto; min-width: 100%; }
 .admin-tbl th,
 .admin-tbl td {
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
+  vertical-align: middle;
 }

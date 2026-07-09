@@ -87,7 +87,7 @@ function ParentDashboard({ user, setPage }) {
     const arr = csvArr(key);
     up(key, (arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]).join(", "));
   }
-  const REQ_SUBS  = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit"];
+  const REQ_SUBS  = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Zoology"];
   const REQ_TIMES = ["Morning","Afternoon","Evening","Any time"];
   const reqChip = (on, editable) => ({
     padding:"6px 12px", borderRadius:20, fontSize:12, fontWeight:600, userSelect:"none",

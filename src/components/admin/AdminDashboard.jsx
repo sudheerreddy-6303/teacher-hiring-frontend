@@ -503,7 +503,7 @@ function YesNoPills({ value, onChange, color="#1A56DB" }) {
 /* ── Teacher form — the SAME 5-section form a teacher fills under My Profile → Edit Profile.
    Email is editable and a password is added because the admin is creating the account.   ── */
 function AdminTeacherForm({ form, up }) {
-  const SUB_LIST = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Telugu","Kannada","Tamil","History","Geography","Civics","Accountancy","Business Studies"];
+  const SUB_LIST = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Telugu","Kannada","Tamil","History","Geography","Civics","Accountancy","Business Studies","Zoology"];
   const card = { padding:28, marginBottom:20 };
   const head = { fontWeight:800, fontSize:13, color:"#1A56DB", textTransform:"uppercase", letterSpacing:1, marginBottom:18, paddingBottom:8, borderBottom:"2px solid #EBF5FF" };
 
@@ -2227,7 +2227,14 @@ function AdminDashboard({ setPage }) {
             {loading.jobs ? <Loader /> : (
               <div className="card" style={{ padding:0, overflow:"hidden" }}>
                 <div className="tbl-wrap admin-tbl">
-                  <table>
+                  <table style={{ tableLayout:"fixed" }}>
+                    <colgroup>
+                      <col style={{ width:"24%" }} />
+                      <col style={{ width:"20%" }} />
+                      <col style={{ width:"16%" }} />
+                      <col style={{ width:"13%" }} />
+                      <col style={{ width:"27%" }} />
+                    </colgroup>
                     <thead><tr><th>Position</th><th>Institution</th><th>Location</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody>
                       {(() => {
@@ -2244,14 +2251,14 @@ function AdminDashboard({ setPage }) {
                           <tr><td colSpan={5} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No jobs match filters</td></tr>
                         ) : filtered.map(j => (
                         <tr key={j.id} onClick={() => setSelectedJob(j)} style={{ cursor:"pointer" }}>
-                          <td><strong style={{ color:"#111827" }}>{j.title}</strong></td>
-                          <td>{j.institute_name}</td>
-                          <td>📍 {j.location_city||j.location||"—"}</td>
-                          <td><span className={"badge "+(j.status==="approved"?"bgreen":j.status==="pending"?"bamber":"bred")}>
+                          <td style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={j.title||""}><strong style={{ color:"#111827" }}>{j.title}</strong></td>
+                          <td style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={j.institute_name||""}>{j.institute_name}</td>
+                          <td style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={j.location_city||j.location||""}>📍 {j.location_city||j.location||"—"}</td>
+                          <td style={{ whiteSpace:"nowrap" }}><span className={"badge "+(j.status==="approved"?"bgreen":j.status==="pending"?"bamber":"bred")} style={{ whiteSpace:"nowrap" }}>
                             {j.status==="approved"?"● Live":j.status==="pending"?"⏳ Pending":"✕ Rejected"}
                           </span></td>
                           <td>
-                            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                            <div style={{ display:"flex", gap:8, flexWrap:"nowrap", alignItems:"center" }}>
                               <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedJob(j); }}>👁 View</button>
                               {j.subject && (
                                 <button className="btn btn-sm" style={{ color:"#0F6E56", borderColor:"#9FE1CB", background:"#E1F5EE" }} onClick={(e) => { e.stopPropagation(); openMatchTeachersForJob(j); }} title={"Send this job to " + j.subject + " teachers on WhatsApp"}>📲 Send to teachers</button>
@@ -2285,7 +2292,15 @@ function AdminDashboard({ setPage }) {
             {loading.schools ? <Loader /> : (
               <div className="card" style={{ padding:0, overflow:"hidden" }}>
                 <div className="tbl-wrap admin-tbl">
-                  <table>
+                  <table style={{ tableLayout:"fixed" }}>
+                    <colgroup>
+                      <col style={{ width:"20%" }} />
+                      <col style={{ width:"20%" }} />
+                      <col style={{ width:"14%" }} />
+                      <col style={{ width:"12%" }} />
+                      <col style={{ width:"10%" }} />
+                      <col style={{ width:"24%" }} />
+                    </colgroup>
                     <thead><tr><th>Institution</th><th>Email</th><th>City</th><th>Live Jobs</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody>
                       {(() => {
@@ -2301,13 +2316,13 @@ function AdminDashboard({ setPage }) {
                           <tr><td colSpan={6} style={{ textAlign:"center", color:"#9CA3AF", padding:"40px 0" }}>No institutions match filters</td></tr>
                         ) : filtered.map(s => (
                         <tr key={s.id} onClick={() => setSelectedSchool(s)} style={{ cursor:"pointer" }}>
-                          <td><strong style={{ color:"#1A56DB", textDecoration:"underline" }}>{s.name}</strong></td>
-                          <td style={{ fontSize:12, color:"#6B7280" }}>{s.email}</td>
-                          <td>📍 {s.city||"—"}</td>
+                          <td style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={s.name||""}><strong style={{ color:"#1A56DB", textDecoration:"underline" }}>{s.name}</strong></td>
+                          <td style={{ fontSize:12, color:"#6B7280", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={s.email||""}>{s.email}</td>
+                          <td style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={s.city||""}>📍 {s.city||"—"}</td>
                           <td><span className="badge bgreen">{s.live_jobs||0}</span></td>
                           <td><StatusBadge active={s.is_active} /></td>
                           <td>
-                            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                            <div style={{ display:"flex", gap:8, flexWrap:"nowrap", alignItems:"center" }}>
                               <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedSchool(s); }}>👁 View</button>
                               <button className={"btn btn-sm "+(s.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(s.id); }}>{s.is_active?"Deactivate":"Activate"}</button>
                             </div>
@@ -2343,7 +2358,15 @@ function AdminDashboard({ setPage }) {
             {loading.teachers ? <Loader /> : (
               <div className="card" style={{ padding:0, overflow:"hidden" }}>
                 <div className="tbl-wrap admin-tbl">
-                  <table>
+                  <table style={{ tableLayout:"fixed" }}>
+                    <colgroup>
+                      <col style={{ width:"14%" }} />
+                      <col style={{ width:"20%" }} />
+                      <col style={{ width:"23%" }} />
+                      <col style={{ width:"13%" }} />
+                      <col style={{ width:"10%" }} />
+                      <col style={{ width:"20%" }} />
+                    </colgroup>
                     <thead><tr><th>Name</th><th>Email</th><th>Specialization</th><th>City</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody>
                       {(() => {
@@ -2362,11 +2385,11 @@ function AdminDashboard({ setPage }) {
                         <tr key={t.id} onClick={() => setSelectedTeacher(t)} style={{ cursor:"pointer" }}>
                           <td><strong style={{ color:"#1A56DB", textDecoration:"underline" }}>{t.name}</strong></td>
                           <td style={{ fontSize:12, color:"#6B7280" }}>{t.email}</td>
-                          <td>{t.specialization||"—"}</td>
-                          <td>📍 {t.city||"—"}</td>
+                          <td style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={t.specialization||""}>{t.specialization||"—"}</td>
+                          <td style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={t.city||""}>📍 {t.city||"—"}</td>
                           <td><StatusBadge active={t.is_active} /></td>
                           <td>
-                            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                            <div style={{ display:"flex", gap:8, flexWrap:"nowrap", alignItems:"center" }}>
                               <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedTeacher(t); }}>👁 View</button>
                               <button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(t.id); }}>{t.is_active?"Deactivate":"Activate"}</button>
                             </div>
@@ -2416,12 +2439,12 @@ function AdminDashboard({ setPage }) {
                 <div className="tbl-wrap admin-tbl">
                   <table style={{ tableLayout:"fixed" }}>
                     <colgroup>
-                      <col style={{ width:"15%" }} />
-                      <col style={{ width:"21%" }} />
-                      <col style={{ width:"25%" }} />
-                      <col style={{ width:"14%" }} />
-                      <col style={{ width:"10%" }} />
-                      <col style={{ width:"15%" }} />
+                      <col style={{ width:"13%" }} />
+                      <col style={{ width:"18%" }} />
+                      <col style={{ width:"20%" }} />
+                      <col style={{ width:"12%" }} />
+                      <col style={{ width:"9%" }} />
+                      <col style={{ width:"28%" }} />
                     </colgroup>
                     <thead><tr><th>Name</th><th>Email</th><th>Subject</th><th>City</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody>
@@ -2441,8 +2464,8 @@ function AdminDashboard({ setPage }) {
                         <tr key={t.id} onClick={() => setSelectedTutor(t)} style={{ cursor:"pointer" }}>
                           <td><strong style={{ color:"#6D28D9", textDecoration:"underline" }}>{t.name}</strong></td>
                           <td style={{ fontSize:12, color:"#6B7280" }}>{t.email}</td>
-                          <td>{t.subject||"—"}</td>
-                          <td>📍 {t.city||"—"}</td>
+                          <td style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={t.subject||""}>{t.subject||"—"}</td>
+                          <td style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={t.city||""}>📍 {t.city||"—"}</td>
                           <td><StatusBadge active={t.is_active} /></td>
                           <td>
                             <div style={{ display:"flex", gap:8, flexWrap:"nowrap", alignItems:"center" }}>
@@ -2486,7 +2509,16 @@ function AdminDashboard({ setPage }) {
               ? <Loader />
               : <div className="card" style={{ padding:0, overflow:"hidden" }}>
                   <div className="tbl-wrap admin-tbl">
-                    <table>
+                    <table style={{ tableLayout:"fixed" }}>
+                      <colgroup>
+                        <col style={{ width:"12%" }} />
+                        <col style={{ width:"15%" }} />
+                        <col style={{ width:"11%" }} />
+                        <col style={{ width:"9%" }} />
+                        <col style={{ width:"18%" }} />
+                        <col style={{ width:"9%" }} />
+                        <col style={{ width:"26%" }} />
+                      </colgroup>
                       <thead><tr><th>Parent Name</th><th>Email</th><th>Student</th><th>Class / Grade</th><th>Subject</th><th>Status</th><th>Action</th></tr></thead>
                       <tbody>
                         {(() => {
@@ -2507,10 +2539,10 @@ function AdminDashboard({ setPage }) {
                                 <td style={{ fontSize:12, color:"#6B7280" }}>{p.email}</td>
                                 <td style={{ fontWeight:600, color:"#1A56DB" }}>{p.student_name||"—"}</td>
                                 <td>{p.student_class||"—"}</td>
-                                <td>{p.subject||"—"}</td>
-                                <td><span className={"badge "+(p.status==="Assigned"?"bgreen":"bamber")}>{p.status||"Open"}</span></td>
+                                <td style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={p.subject||""}>{p.subject||"—"}</td>
+                                <td style={{ whiteSpace:"nowrap" }}><span className={"badge "+(p.status==="Assigned"?"bgreen":"bamber")} style={{ whiteSpace:"nowrap" }}>{p.status||"Open"}</span></td>
                                 <td>
-                                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                                  <div style={{ display:"flex", gap:8, flexWrap:"nowrap", alignItems:"center" }}>
                                     <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedParent(p); }}>👁 View</button>
                                     {p.subject && (
                                       <button className="btn btn-sm" style={{ color:"#0F6E56", borderColor:"#9FE1CB", background:"#E1F5EE" }} onClick={(e) => { e.stopPropagation(); openMatchTutorsForTuition(p); }} title={"Send this tuition to " + p.subject + " tutors on WhatsApp"}>📲 Send to tutors</button>

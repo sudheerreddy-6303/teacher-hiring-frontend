@@ -984,7 +984,7 @@ function SchoolDashboard({ user, setPage }) {
                     value={dbFilter.subject}
                     onChange={v => setDbFilter(f => ({...f, subject:v}))}
                     placeholder="All Subjects"
-                    options={["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit"]} />
+                    options={["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Zoology"]} />
                 </FilterSection>
 
                 {/* City */}

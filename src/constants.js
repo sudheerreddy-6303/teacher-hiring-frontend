@@ -21,7 +21,7 @@ export const MOCK_PENDING = [
 
 export const SUBS = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science",
   "Computer Science","Economics","Commerce","Physical Education","Sanskrit","Telugu",
-  "Kannada","Tamil","Accountancy","Business Studies","History","Geography"];
+  "Kannada","Tamil","Accountancy","Business Studies","History","Geography","Zoology"];
 
 export const INDIA_LOCATIONS = {
   "Andhra Pradesh":    ["Visakhapatnam","Vijayawada","Guntur","Tirupati","Kakinada","Nellore","Kurnool","Rajahmundry"],

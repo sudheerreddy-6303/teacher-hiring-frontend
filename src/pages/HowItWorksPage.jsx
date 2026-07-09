@@ -28,7 +28,7 @@ function HowItWorksPage({ setPage }) {
 
   return (
     <div className="fw-page" style={{ paddingTop:90 }}>
-      <Navbar setPage={setPage} />
+      <Navbar setPage={setPage} page="howitworks" />
 
       {/* ── Hero banner ── */}
       <section style={{ background:"linear-gradient(135deg,#1E429F 0%,#1A56DB 100%)", padding:"72px 0 80px", position:"relative", overflow:"hidden" }}>

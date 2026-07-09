@@ -115,7 +115,7 @@ function JobsPage({ setPage }) {
 
   return (
     <div className="browse-page" style={{ paddingTop:66, minHeight:"100vh", background:"#F9FAFB" }}>
-      <Navbar setPage={setPage} />
+      <Navbar setPage={setPage} page="jobs" />
 
       {/* Hero */}
       <div style={{ background:"linear-gradient(135deg,#B45309,#EA580C)", padding:"52px 0 40px" }}>

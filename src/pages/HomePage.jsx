@@ -468,7 +468,7 @@
 
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 
 import { Navbar, HeroSchoolsCarousel, JobCard, Toast, Brand, Divider } from "../components/common/Shared";
@@ -499,6 +499,69 @@ function Ic({ name, size = 20, stroke = 1.7, style }) {
       strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style} aria-hidden="true">
       {p}
     </svg>
+  );
+}
+
+/* Small rotating card widget for the hero sidebar — cycles through live
+   records for a category (Jobs / Teachers / Tuitions / Tutors) every few
+   seconds. Purely additive: doesn't touch the existing HeroSchoolsCarousel. */
+function MiniLiveCarousel({ emoji, title, items, viewAllLabel, onViewAll }) {
+  const [idx, setIdx]   = useState(0);
+  const [fade, setFade] = useState(false);
+  const total = items.length;
+
+  useEffect(() => {
+    if (total < 2) return;
+    const t = setInterval(() => {
+      setFade(true);
+      setTimeout(() => { setIdx(i => (i + 1) % total); setFade(false); }, 200);
+    }, 3500);
+    return () => clearInterval(t);
+  }, [total]);
+
+  if (!total) return null;
+  const c = items[idx % total];
+
+  return (
+    <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:18, overflow:"hidden", boxShadow:"0 24px 56px -22px rgba(15,23,42,.22)", marginTop:16 }}>
+      <div style={{ background:"linear-gradient(135deg,#1E3A8A,#1A56DB)", padding:"15px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span style={{ display:"inline-flex", alignItems:"center", gap:10, color:"#fff", fontWeight:800, fontSize:14.5 }}>
+          <span style={{ fontSize:17 }}>{emoji}</span> {title}
+        </span>
+        {onViewAll && (
+          <span onClick={onViewAll} style={{ display:"inline-flex", alignItems:"center", gap:5, color:"#DBEAFE", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+            {viewAllLabel} <Ic name="arrow" size={14} />
+          </span>
+        )}
+      </div>
+
+      <div style={{ padding:"20px 22px", opacity: fade ? 0 : 1, transition:"opacity .2s" }}>
+        <div style={{ fontSize:16.5, fontWeight:800, color:"#0F172A", marginBottom:4 }}>{c.name}</div>
+        <div style={{ fontSize:12.5, color:"#1A56DB", fontWeight:600, marginBottom:12 }}>{c.role}</div>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+          {c.city  && <span style={{ fontSize:11.5, color:"#64748B", background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:6, padding:"3px 9px" }}>📍 {c.city}</span>}
+          {c.exp   && <span style={{ fontSize:11.5, color:"#64748B", background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:6, padding:"3px 9px" }}>🎓 {c.exp}</span>}
+          {c.qual  && <span style={{ fontSize:11.5, color:"#64748B", background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:6, padding:"3px 9px" }}>📜 {c.qual}</span>}
+        </div>
+
+        {Array.isArray(c.details) && (
+          <div style={{ display:"flex", flexDirection:"column", gap:5, marginTop:14, paddingTop:14, borderTop:"1px solid #F1F5F9" }}>
+            {c.details.map(([label, value]) => value ? (
+              <div key={label} style={{ display:"flex", gap:8, fontSize:11.5, lineHeight:1.4 }}>
+                <span style={{ flexShrink:0, color:"#9CA3AF", fontWeight:700, minWidth:88 }}>{label}</span>
+                <span style={{ color:"#374151", fontWeight:600, wordBreak:"break-word" }}>{value}</span>
+              </div>
+            ) : null)}
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding:"0 22px 16px", display:"flex", gap:5 }}>
+        {items.map((_, i) => (
+          <span key={i} style={{ display:"inline-block", width:i===idx?18:6, height:6, borderRadius:3, background:i===idx?"#1A56DB":"#E2E8F0", transition:"all .3s" }} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -596,6 +659,156 @@ function HeroArt() {
   );
 }
 
+/* Countries marquee — "Countries we are Providing tuition" */
+const TUITION_COUNTRIES = [
+  { name: "India",         code: "in" },
+  { name: "Qatar",         code: "qa" },
+  { name: "Kuwait",        code: "kw" },
+  { name: "Bahrain",       code: "bh" },
+  { name: "UAE",           code: "ae" },
+  { name: "Saudi Arabia",  code: "sa" },
+  { name: "Oman",          code: "om" },
+  { name: "UK",            code: "gb" },
+  { name: "USA",           code: "us" },
+  { name: "Australia",     code: "au" },
+];
+
+function CountriesMarquee() {
+  // Duplicate the list 4x so the track stays wider than the viewport on large
+  // screens (avoids empty space on the right before the loop repeats).
+  const loopCountries = [...TUITION_COUNTRIES, ...TUITION_COUNTRIES, ...TUITION_COUNTRIES, ...TUITION_COUNTRIES];
+  return (
+    <section style={{ background: "#fff", padding: "56px 0" }}>
+      <div className="container" style={{ textAlign: "center", marginBottom: 34 }}>
+        <h2 className="sec-title" style={{ marginBottom: 10 }}>
+          Countries we are <em style={{ fontStyle: "italic", color: "#1A56DB" }}>Providing tuition</em>
+        </h2>
+        <p style={{ color: "#6B7280", fontSize: 15 }}>
+          Our programs support CBSE and State Syllabus students in India and the GCC.
+        </p>
+      </div>
+      <div className="countries-marquee-viewport">
+        <div className="countries-marquee-track">
+          {loopCountries.map((c, i) => (
+            <div className="country-flag-item" key={`${c.code}-${i}`}>
+              <span className="country-flag-badge">
+                <img src={`https://flagcdn.com/w160/${c.code}.png`} alt={`${c.name} flag`} loading="lazy" />
+              </span>
+              <span className="country-flag-name">{c.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* Subjects coverflow — "All Subjects · All State Boards" (autoplays every 5s) */
+const SUBJECTS_COVERED = [
+  { name: "Mathematics",               icon: "📐", tag: "CBSE · ICSE · All State Boards" },
+  { name: "Science",                   icon: "🔬", tag: "CBSE · ICSE · All State Boards" },
+  { name: "Physics",                   icon: "⚛️", tag: "CBSE · ICSE · All State Boards" },
+  { name: "Chemistry",                 icon: "🧪", tag: "CBSE · ICSE · All State Boards" },
+  { name: "Biology",                   icon: "🧬", tag: "CBSE · ICSE · All State Boards" },
+  { name: "English",                   icon: "📖", tag: "CBSE · ICSE · All State Boards" },
+  { name: "Social Studies",            icon: "🌍", tag: "CBSE · ICSE · All State Boards" },
+  { name: "Computer Science",          icon: "💻", tag: "CBSE · ICSE · All State Boards" },
+  { name: "Accountancy",               icon: "💰", tag: "CBSE · ICSE · All State Boards" },
+  { name: "Economics",                 icon: "📈", tag: "CBSE · ICSE · All State Boards" },
+  { name: "Hindi & Regional Languages",icon: "🗣️", tag: "CBSE · ICSE · All State Boards" },
+];
+
+function SubjectsCoverflow() {
+  const [active, setActive] = useState(0);
+  const n = SUBJECTS_COVERED.length;
+
+  // Auto-advance every 5 seconds; pauses while the user hovers the stage.
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    if (paused) return;
+    const t = setInterval(() => {
+      setActive(a => (a + 1) % n);
+    }, 5000);
+    return () => clearInterval(t);
+  }, [paused, n]);
+
+  const goto = (i) => setActive(((i % n) + n) % n);
+  const prev = () => goto(active - 1);
+  const next = () => goto(active + 1);
+
+  return (
+    <section style={{ background: "#F9FBFF", padding: "64px 0 56px", position: "relative", overflow: "hidden" }}>
+      <div className="container" style={{ textAlign: "center", marginBottom: 36 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: "#1A56DB", letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>
+          What We Teach
+        </div>
+        <h2 className="sec-title" style={{ color: "#0F172A", marginBottom: 10 }}>
+          All Subjects <em style={{ fontStyle: "italic", color: "#1A56DB" }}>All State Boards</em>
+        </h2>
+        <p style={{ color: "#6B7280", fontSize: 15 }}>
+          From core subjects to languages — covering CBSE, ICSE and every State Board curriculum.
+        </p>
+      </div>
+
+      <div className="subjects-coverflow-wrap" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+        <button type="button" className="coverflow-arrow coverflow-arrow-left" onClick={prev} aria-label="Previous subject">‹</button>
+
+        <div className="subjects-coverflow-stage">
+          {SUBJECTS_COVERED.map((s, i) => {
+            let offset = i - active;
+            if (offset > n / 2) offset -= n;
+            if (offset < -n / 2) offset += n;
+            if (Math.abs(offset) > 3) return null; // only render nearby cards for performance
+            const abs = Math.abs(offset);
+            const translate = offset * 150;
+            const scale = abs === 0 ? 1 : abs === 1 ? 0.82 : 0.66;
+            const opacity = abs === 0 ? 1 : abs === 1 ? 0.55 : 0.25;
+            return (
+              <div
+                key={s.name}
+                className="subject-coverflow-card"
+                style={{
+                  transform: `translate(-50%, -50%) translateX(${translate}px) scale(${scale})`,
+                  opacity,
+                  zIndex: 10 - abs,
+                  filter: abs === 0 ? "none" : "grayscale(55%)",
+                }}
+              >
+                <span className="subject-coverflow-icon">{s.icon}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <button type="button" className="coverflow-arrow coverflow-arrow-right" onClick={next} aria-label="Next subject">›</button>
+      </div>
+
+      <div style={{ textAlign: "center", marginTop: 22 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 14 }}>
+          <span style={{ display: "inline-block", width: 34, height: 1.5, background: "#1A56DB" }} />
+          <h3 style={{ color: "#0F172A", fontWeight: 800, fontSize: 20, margin: 0 }}>{SUBJECTS_COVERED[active].name}</h3>
+          <span style={{ display: "inline-block", width: 34, height: 1.5, background: "#1A56DB" }} />
+        </div>
+        <div style={{ color: "#6B7280", fontSize: 12.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginTop: 6 }}>
+          {SUBJECTS_COVERED[active].tag}
+        </div>
+      </div>
+
+      <div className="subjects-coverflow-dots">
+        {SUBJECTS_COVERED.map((s, i) => (
+          <button
+            key={s.name}
+            type="button"
+            className={`coverflow-dot${i === active ? " coverflow-dot-active" : ""}`}
+            onClick={() => goto(i)}
+            aria-label={`Go to ${s.name}`}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function HomePage({ setPage }) {
   const { user } = useAuth();
   const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
@@ -619,6 +832,7 @@ function HomePage({ setPage }) {
   const [liveTutors,   setLiveTutors]   = useState([]);
   const [liveSchools,  setLiveSchools]  = useState([]);
   const [liveParents,  setLiveParents]  = useState([]);
+  const [liveJobs,     setLiveJobs]     = useState([]);
   useEffect(() => {
     const j = (p) => fetch(`${apiBase()}${p}`)
       .then(r => (r.ok ? r.json() : []))
@@ -628,6 +842,7 @@ function HomePage({ setPage }) {
     j("/admin/public/tutors").then(setLiveTutors);
     j("/admin/public/schools").then(setLiveSchools);
     j("/admin/public/parents").then(setLiveParents);
+    j("/jobs").then(setLiveJobs);
   }, []);
   const isMobile = vw <= 640;
   const isTablet = vw <= 1024;
@@ -654,11 +869,11 @@ function HomePage({ setPage }) {
 
   const GROUPS = [
     {
-      key:"schools", label:"Schools Hiring Now", icon:"🏫",
+      key:"schools", label:"Jobs Hiring Now", icon:"💼",
       cards:[
-        { name:"Delhi Public School", role:"CBSE · K-12 School",   city:"Hyderabad", exp:"12 Openings", qual:"CBSE Board",  subjects:["Maths","Science","English"],   emoji:"🏫", rating:4.8, statusText:"Hiring Now",        statusDot:"#059669", color:"#EBF5FF", accent:"#1A56DB" },
-        { name:"St. Mary's School",   role:"ICSE · Primary",        city:"Chennai",   exp:"6 Openings",  qual:"ICSE Board",  subjects:["Hindi","EVS","Art"],           emoji:"🏫", rating:4.7, statusText:"Hiring in 2 Weeks", statusDot:"#D97706", color:"#ECFDF5", accent:"#059669" },
-        { name:"Sunrise Academy",     role:"State · High School",   city:"Pune",      exp:"9 Openings",  qual:"State Board", subjects:["Physics","Commerce","CS"],     emoji:"🏫", rating:4.9, statusText:"Hiring Now",        statusDot:"#059669", color:"#FFF7ED", accent:"#C2410C" },
+        { name:"Mathematics Teacher", role:"Delhi Public School · Hyderabad", city:"Hyderabad", exp:"Full-Time",    qual:"CBSE Board",  subjects:["Maths","Science","English"],   emoji:"💼", rating:null, statusText:"Hiring Now",        statusDot:"#059669", color:"#EBF5FF", accent:"#1A56DB" },
+        { name:"English Teacher",     role:"St. Mary's School · Chennai",   city:"Chennai",   exp:"Part-Time",  qual:"ICSE Board",  subjects:["Hindi","EVS","Art"],           emoji:"💼", rating:null, statusText:"Hiring in 2 Weeks", statusDot:"#D97706", color:"#ECFDF5", accent:"#059669" },
+        { name:"Physics Teacher",     role:"Sunrise Academy · Pune",        city:"Pune",      exp:"Full-Time",  qual:"State Board", subjects:["Physics","Commerce","CS"],     emoji:"💼", rating:null, statusText:"Hiring Now",        statusDot:"#059669", color:"#FFF7ED", accent:"#C2410C" },
       ],
     },
     {
@@ -699,26 +914,26 @@ function HomePage({ setPage }) {
   const _pick = (i) => _pal[i % _pal.length];
 
   const liveCardsFor = (key) => {
-    if (key === "schools") return liveSchools.slice(0, 3).map((r, i) => ({
-      name: r.institute_name || r.name || "School",
-      role: r.institute_type ? `${r.institute_type} · School` : "School",
-      city: r.city || "",
-      exp: `${r.live_jobs || 0} Openings`,
-      qual: r.est_year ? `Est. ${r.est_year}` : "Institute",
+    if (key === "schools") return liveJobs.map((r, i) => ({
+      name: r.title || "Teaching Job",
+      role: `${r.institution_name || "School"}${r.location_city ? ` · ${r.location_city}` : ""}`,
+      city: r.location_city || r.location_state || "",
+      exp: r.job_type || r.work_mode || "Full-Time",
+      qual: r.subject || "\u2014",
       details: [
-        ["Type", r.institute_type],
-        ["City", r.city],
-        ["Openings", `${r.live_jobs || 0}`],
-        ["Established", r.est_year],
-        ["Students", r.student_count],
-        ["Website", r.website],
+        ["Institution", r.institution_name],
+        ["Subject", r.subject],
+        ["Job Type", r.job_type],
+        ["Work Mode", r.work_mode],
+        ["Location", r.location_city || r.location_state],
+        ["Salary", r.salary_range || r.salary],
       ],
-      subjects: [], emoji:"🏫", rating:null,
-      statusText: (r.live_jobs > 0 ? "Hiring Now" : "Hiring Soon"),
-      statusDot: (r.live_jobs > 0 ? "#059669" : "#D97706"),
+      subjects: _subs(r.subject), emoji:"💼", rating:null,
+      statusText: "Hiring Now",
+      statusDot: "#059669",
       ..._pick(i),
     }));
-    if (key === "teachers") return liveTeachers.slice(0, 3).map((r, i) => ({
+    if (key === "teachers") return liveTeachers.map((r, i) => ({
       name: r.name || r.full_name || "Teacher",
       role: r.specialization || r.current_role || "Teacher",
       city: r.current_location || r.city || "",
@@ -738,7 +953,7 @@ function HomePage({ setPage }) {
       statusText:"Available Now", statusDot:"#059669",
       ..._pick(i),
     }));
-    if (key === "parents") return liveParents.slice(0, 3).map((r, i) => ({
+    if (key === "parents") return liveParents.map((r, i) => ({
       name: r.name || "Parent",
       role: "Parent · Seeking Tutor",
       city: r.location || r.city || "",
@@ -758,7 +973,7 @@ function HomePage({ setPage }) {
       statusText:"Looking Now", statusDot:"#059669",
       ..._pick(i),
     }));
-    if (key === "tutors") return liveTutors.slice(0, 3).map((r, i) => {
+    if (key === "tutors") return liveTutors.map((r, i) => {
       const subj = (r.subject || r.subjects || "").toString();
       const first = (subj.split(",")[0] || "").trim();
       return {
@@ -791,9 +1006,82 @@ function HomePage({ setPage }) {
     return live.length ? { ...g, cards: live } : g;
   });
 
+  // Refs + scroll handler for the arrow-controlled rows below.
+  const communityScrollRefs = useRef([]);
+  const scrollCommunityRow = (gi, dir) => {
+    const el = communityScrollRefs.current[gi];
+    if (el) el.scrollBy({ left: dir * 360, behavior: "smooth" });
+  };
+  // Only show the arrows when a row actually has enough cards to overflow —
+  // avoids a big empty gap before the arrow when there are just 2-3 cards.
+  const [rowOverflow, setRowOverflow] = useState([]);
+  useEffect(() => {
+    const check = () => {
+      setRowOverflow(communityScrollRefs.current.map(el => !!el && el.scrollWidth > el.clientWidth + 4));
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [liveTeachers, liveTutors, liveSchools, liveParents, liveJobs]);
+
+  // Renders a single community card — used by both the normal grid layout
+  // and the Jobs marquee below. Content/markup is unchanged from before.
+  const renderCommunityCard = (t, i, group) => (
+    <div key={i} style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:18, padding:"24px", boxShadow:"0 2px 10px rgba(0,0,0,.05)", transition:"all .22s", cursor:"pointer" }}
+      onMouseEnter={e => { e.currentTarget.style.transform="translateY(-4px)"; e.currentTarget.style.boxShadow="0 12px 32px rgba(26,86,219,.12)"; e.currentTarget.style.borderColor="#BFDBFE"; }}
+      onMouseLeave={e => { e.currentTarget.style.transform="none"; e.currentTarget.style.boxShadow="0 2px 10px rgba(0,0,0,.05)"; e.currentTarget.style.borderColor="#E5E7EB"; }}>
+
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:16 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ width:52, height:52, borderRadius:14, background:t.color, border:`1px solid ${t.accent}30`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:26 }}>{t.emoji}</div>
+          <div>
+            <div style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{t.name}</div>
+            <div style={{ fontSize:12, color:t.accent, fontWeight:600, marginTop:2 }}>{t.role}</div>
+          </div>
+        </div>
+        {t.rating != null && (
+          <div style={{ background:t.color, border:`1px solid ${t.accent}40`, borderRadius:8, padding:"4px 10px" }}>
+            <div style={{ fontSize:13, fontWeight:800, color:t.accent }}>★ {t.rating}</div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:14 }}>
+        <span style={{ fontSize:11, color:"#6B7280", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:6, padding:"3px 9px" }}>📍 {t.city}</span>
+        <span style={{ fontSize:11, color:"#6B7280", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:6, padding:"3px 9px" }}>🎓 {t.exp}</span>
+        <span style={{ fontSize:11, color:"#6B7280", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:6, padding:"3px 9px" }}>📜 {t.qual}</span>
+      </div>
+
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
+        {t.subjects.map(s => (
+          <span key={s} style={{ fontSize:11, fontWeight:600, color:t.accent, background:t.color, borderRadius:20, padding:"2px 10px", border:`1px solid ${t.accent}30` }}>{s}</span>
+        ))}
+      </div>
+
+      {Array.isArray(t.details) && (
+        <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
+          {t.details.map(([label, value]) => value ? (
+            <div key={label} style={{ display:"flex", gap:8, fontSize:12, lineHeight:1.4 }}>
+              <span style={{ flexShrink:0, color:"#9CA3AF", fontWeight:700, minWidth:96 }}>{label}</span>
+              <span style={{ color:"#374151", fontWeight:600, wordBreak:"break-word" }}>{value}</span>
+            </div>
+          ) : null)}
+        </div>
+      )}
+
+      <div style={{ borderTop:"1px solid #F3F4F6", paddingTop:14, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+          <span style={{ width:7, height:7, borderRadius:"50%", background: t.statusDot || (t.avail==="Immediate"?"#059669":"#D97706"), display:"inline-block" }} />
+          <span style={{ fontSize:11, color:"#6B7280", fontWeight:600 }}>{t.statusText || (t.avail==="Immediate"?"Available Now":`Avail. in ${t.avail}`)}</span>
+        </div>
+        <button className="btn btn-primary btn-sm" onClick={() => { if (!user) { setPage("login"); return; } setPage(group.key === "teachers" ? "teachers" : group.key === "tutors" ? "tutors" : group.key === "parents" ? "tuitions" : "jobs"); }}>View Profile</button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="home-page">
-      <Navbar setPage={setPage} />
+      <Navbar setPage={setPage} page="home" />
       {/* ── HERO ───────────────────────────────────────────────────────────── */}
       <section className="hero-section" style={{ display:"flex", flexDirection:"column", background:"#fff", position:"relative", overflow:"hidden", minHeight:"auto" }}>
 
@@ -802,6 +1090,7 @@ function HomePage({ setPage }) {
         <div style={{ position:"absolute", width:680, height:680, borderRadius:"50%", background:"radial-gradient(circle,rgba(26,86,219,.06),transparent 62%)", top:-260, left:"38%", pointerEvents:"none" }} />
 
         <div className="hero-inner" style={{ position:"relative", zIndex:1, flex:1, display:"flex", alignItems:"flex-start", paddingTop:12, paddingBottom:48, paddingLeft:isMobile?16:isTablet?24:60, paddingRight:isMobile?16:isTablet?24:60, width:"100%", boxSizing:"border-box" }}>
+          <div style={{ display:"flex", flexDirection:"column", width:"100%" }}>
           <div className="hero-grid hero-wide" style={{ alignItems:"start" }}>
 
             {/* ── LEFT: Copy + illustration ── */}
@@ -889,52 +1178,123 @@ function HomePage({ setPage }) {
                   ))}
                   <span style={{ width:34, height:34, borderRadius:"50%", background:"#F59E0B", color:"#fff", border:"2px solid #fff", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, marginLeft:-10, zIndex:5 }}>+2k</span>
                 </div>
-                <span style={{ fontSize:13, fontWeight:700, color:"#475569" }}>Join 25,000+ teachers already using AcadHr</span>
+                <span style={{ fontSize:13, fontWeight:700, color:"#475569" }}>Find your next teaching opportunity with AcadHR.</span>
               </div>
+
+              {/* Tutors — kept in code, not rendered here anymore (now shown in the
+                  right-side grid's second row instead, alongside Teachers/Tuitions) */}
+              {false && (
+                <div style={{ marginTop:24 }}>
+                  <MiniLiveCarousel
+                    emoji="📚" title="Tutors Ready to Teach"
+                    items={liveCardsFor("tutors")}
+                    viewAllLabel="View All Tutors" onViewAll={() => setPage("tutors")}
+                  />
+                </div>
+              )}
             </div>
 
             {/* ── RIGHT: Schools card + features ── */}
             <div className="fadeUp" style={{ animationDelay:".15s" }}>
-              {/* Schools card */}
-              <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:18, overflow:"hidden", boxShadow:"0 24px 56px -22px rgba(15,23,42,.22)" }}>
-                {/* Topbar */}
-                <div style={{ background:"linear-gradient(135deg,#1E3A8A,#1A56DB)", padding:"15px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                  <span style={{ display:"inline-flex", alignItems:"center", gap:10, color:"#fff", fontWeight:800, fontSize:14.5 }}>
-                    <Ic name="crown" size={18} style={{ color:"#FBBF24" }} /> Top Hiring Schools
-                  </span>
-                  <span onClick={() => setPage("institutes")} style={{ display:"inline-flex", alignItems:"center", gap:5, color:"#DBEAFE", fontSize:12, fontWeight:700, cursor:"pointer" }}>
-                    View All Schools <Ic name="arrow" size={14} />
-                  </span>
-                </div>
-
-                {/* Carousel */}
-                <HeroSchoolsCarousel setPage={setPage} />
-              </div>
-
-              {/* Feature cards 2x2 */}
-              <div className="home-pills-grid" style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:14, marginTop:16 }}>
-                {[
-                  { icon:"target",   t:"Smart Matching",    d:"AI matches you with the best teaching jobs.",                bg:"#EFF5FF", bd:"#DBEAFE", c:"#1E429F" },
-                  { icon:"shield",   t:"Verified Profiles", d:"100% verified schools and institutions.",                   bg:"#ECFDF5", bd:"#A7F3D0", c:"#065F46" },
-                  { icon:"bell",     t:"Instant Alerts",    d:"Get notified instantly about new job openings.",            bg:"#FFFBEB", bd:"#FDE68A", c:"#92400E" },
-                  { icon:"activity", t:"Live Dashboard",    d:"Track applications, responses and job updates in real-time.", bg:"#F5F3FF", bd:"#DDD6FE", c:"#5B21B6" },
-                ].map(f => (
-                  <div key={f.t} style={{ background:f.bg, border:`1px solid ${f.bd}`, borderRadius:14, padding:"16px 16px", transition:"transform .18s, box-shadow .18s" }}
-                    onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 12px 24px -14px rgba(15,23,42,.25)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform="none"; e.currentTarget.style.boxShadow="none"; }}>
-                    <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:34, height:34, borderRadius:9, background:"#fff", border:`1px solid ${f.bd}`, color:f.c, marginBottom:10 }}>
-                      <Ic name={f.icon} size={18} />
+              {/* Schools card — kept in code, not rendered (replaced below with the
+                  same rotating-widget style used for Jobs/Teachers/Tuitions/Tutors) */}
+              {false && (
+                <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:18, overflow:"hidden", boxShadow:"0 24px 56px -22px rgba(15,23,42,.22)" }}>
+                  {/* Topbar */}
+                  <div style={{ background:"linear-gradient(135deg,#1E3A8A,#1A56DB)", padding:"15px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <span style={{ display:"inline-flex", alignItems:"center", gap:10, color:"#fff", fontWeight:800, fontSize:14.5 }}>
+                      <Ic name="crown" size={18} style={{ color:"#FBBF24" }} /> Top Hiring Schools
                     </span>
-                    <div style={{ fontSize:13.5, fontWeight:800, color:f.c, marginBottom:4 }}>{f.t}</div>
-                    <div style={{ fontSize:12, color:"#64748B", lineHeight:1.5 }}>{f.d}</div>
+                    <span onClick={() => setPage("institutes")} style={{ display:"inline-flex", alignItems:"center", gap:5, color:"#DBEAFE", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                      View All Schools <Ic name="arrow" size={14} />
+                    </span>
                   </div>
-                ))}
+
+                  {/* Carousel */}
+                  <HeroSchoolsCarousel setPage={setPage} />
+                </div>
+              )}
+
+              {/* Row 1 — 2 cards */}
+              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:16 }}>
+                <MiniLiveCarousel
+                  emoji="🏫" title="Top Hiring Schools"
+                  items={liveSchools.map(r => ({
+                    name: r.institute_name || r.name || "School",
+                    role: r.institute_type ? `${r.institute_type} · School` : "School",
+                    city: r.city || "",
+                    exp: `${r.live_jobs || 0} Openings`,
+                    qual: r.est_year ? `Est. ${r.est_year}` : "Institute",
+                    details: [
+                      ["Type", r.institute_type],
+                      ["City", r.city],
+                      ["Openings", `${r.live_jobs || 0}`],
+                      ["Established", r.est_year],
+                      ["Students", r.student_count],
+                      ["Website", r.website],
+                    ],
+                  }))}
+                  viewAllLabel="View All Schools" onViewAll={() => setPage("institutes")}
+                />
+
+                <MiniLiveCarousel
+                  emoji="💼" title="Jobs Hiring Now"
+                  items={liveCardsFor("schools")}
+                  viewAllLabel="View All Jobs" onViewAll={() => setPage("jobs")}
+                />
               </div>
+
+              {/* Row 2 — 3 cards */}
+              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap:16, marginTop:16 }}>
+                <MiniLiveCarousel
+                  emoji="👩‍🏫" title="Teachers Available"
+                  items={liveCardsFor("teachers")}
+                  viewAllLabel="View All Teachers" onViewAll={() => setPage("teachers")}
+                />
+                <MiniLiveCarousel
+                  emoji="👪" title="Tuitions Requested"
+                  items={liveCardsFor("parents")}
+                  viewAllLabel="View All Tuitions" onViewAll={() => setPage("tuitions")}
+                />
+                <MiniLiveCarousel
+                  emoji="📚" title="Tutors Ready to Teach"
+                  items={liveCardsFor("tutors")}
+                  viewAllLabel="View All Tutors" onViewAll={() => setPage("tutors")}
+                />
+              </div>
+
             </div>
 
           </div>
+
+          {/* Feature cards — single row, full page width */}
+          <div className="home-pills-grid" style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 1fr", gap:14, marginTop:24, width:"100%" }}>
+            {[
+              { icon:"target",   t:"Smart Matching",    d:"AI matches you with the best teaching jobs.",                bg:"#EFF5FF", bd:"#DBEAFE", c:"#1E429F" },
+              { icon:"shield",   t:"Verified Profiles", d:"100% verified schools and institutions.",                   bg:"#ECFDF5", bd:"#A7F3D0", c:"#065F46" },
+              { icon:"bell",     t:"Instant Alerts",    d:"Get notified instantly about new job openings.",            bg:"#FFFBEB", bd:"#FDE68A", c:"#92400E" },
+              { icon:"activity", t:"Live Dashboard",    d:"Track applications, responses and job updates in real-time.", bg:"#F5F3FF", bd:"#DDD6FE", c:"#5B21B6" },
+            ].map(f => (
+              <div key={f.t} style={{ background:f.bg, border:`1px solid ${f.bd}`, borderRadius:14, padding:"16px 16px", transition:"transform .18s, box-shadow .18s" }}
+                onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 12px 24px -14px rgba(15,23,42,.25)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform="none"; e.currentTarget.style.boxShadow="none"; }}>
+                <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:34, height:34, borderRadius:9, background:"#fff", border:`1px solid ${f.bd}`, color:f.c, marginBottom:10 }}>
+                  <Ic name={f.icon} size={18} />
+                </span>
+                <div style={{ fontSize:13.5, fontWeight:800, color:f.c, marginBottom:4 }}>{f.t}</div>
+                <div style={{ fontSize:12, color:"#64748B", lineHeight:1.5 }}>{f.d}</div>
+              </div>
+            ))}
+          </div>
+          </div>
         </div>
       </section>
+
+      {/* ── COUNTRIES WE ARE PROVIDING TUITION (marquee) ──────────────────── */}
+      <CountriesMarquee />
+
+      {/* ── SUBJECTS WE COVER (coverflow, autoplays every 5s) ─────────────── */}
+      <SubjectsCoverflow />
 
       {/* ── VALUE BAND ─────────────────────────────────────────────────────── */}
       <section style={{ background:"#F9FBFF", padding: isMobile?"0 0 40px":"0 0 56px" }}>
@@ -972,7 +1332,7 @@ function HomePage({ setPage }) {
             <p style={{ color:"#6B7280", fontSize:15, marginTop:10 }}>Schools hiring, teachers and tutors available, and parents finding the right match</p>
           </div>
 
-          {GROUPS_LIVE.map(group => (
+          {GROUPS_LIVE.map((group, gi) => (
             <div key={group.key} style={{ marginBottom:40 }}>
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:18 }}>
                 <span style={{ fontSize:20 }}>{group.icon}</span>
@@ -980,68 +1340,47 @@ function HomePage({ setPage }) {
                 <span style={{ flex:1, height:1, background:"#E5E7EB" }} />
               </div>
 
-              <div className="home-features-grid responsive-grid-3" style={{ gap:22 }}>
-                {group.cards.map((t,i) => (
-                  <div key={i} style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:18, padding:"24px", boxShadow:"0 2px 10px rgba(0,0,0,.05)", transition:"all .22s", cursor:"pointer" }}
-                    onMouseEnter={e => { e.currentTarget.style.transform="translateY(-4px)"; e.currentTarget.style.boxShadow="0 12px 32px rgba(26,86,219,.12)"; e.currentTarget.style.borderColor="#BFDBFE"; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform="none"; e.currentTarget.style.boxShadow="0 2px 10px rgba(0,0,0,.05)"; e.currentTarget.style.borderColor="#E5E7EB"; }}>
-
-                    <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:16 }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                        <div style={{ width:52, height:52, borderRadius:14, background:t.color, border:`1px solid ${t.accent}30`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:26 }}>{t.emoji}</div>
-                        <div>
-                          <div style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{t.name}</div>
-                          <div style={{ fontSize:12, color:t.accent, fontWeight:600, marginTop:2 }}>{t.role}</div>
-                        </div>
-                      </div>
-                      {t.rating != null && (
-                        <div style={{ background:t.color, border:`1px solid ${t.accent}40`, borderRadius:8, padding:"4px 10px" }}>
-                          <div style={{ fontSize:13, fontWeight:800, color:t.accent }}>★ {t.rating}</div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:14 }}>
-                      <span style={{ fontSize:11, color:"#6B7280", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:6, padding:"3px 9px" }}>📍 {t.city}</span>
-                      <span style={{ fontSize:11, color:"#6B7280", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:6, padding:"3px 9px" }}>🎓 {t.exp}</span>
-                      <span style={{ fontSize:11, color:"#6B7280", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:6, padding:"3px 9px" }}>📜 {t.qual}</span>
-                    </div>
-
-                    <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
-                      {t.subjects.map(s => (
-                        <span key={s} style={{ fontSize:11, fontWeight:600, color:t.accent, background:t.color, borderRadius:20, padding:"2px 10px", border:`1px solid ${t.accent}30` }}>{s}</span>
-                      ))}
-                    </div>
-
-                    {Array.isArray(t.details) && (
-                      <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
-                        {t.details.map(([label, value]) => value ? (
-                          <div key={label} style={{ display:"flex", gap:8, fontSize:12, lineHeight:1.4 }}>
-                            <span style={{ flexShrink:0, color:"#9CA3AF", fontWeight:700, minWidth:96 }}>{label}</span>
-                            <span style={{ color:"#374151", fontWeight:600, wordBreak:"break-word" }}>{value}</span>
-                          </div>
-                        ) : null)}
-                      </div>
-                    )}
-
-                    <div style={{ borderTop:"1px solid #F3F4F6", paddingTop:14, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                        <span style={{ width:7, height:7, borderRadius:"50%", background: t.statusDot || (t.avail==="Immediate"?"#059669":"#D97706"), display:"inline-block" }} />
-                        <span style={{ fontSize:11, color:"#6B7280", fontWeight:600 }}>{t.statusText || (t.avail==="Immediate"?"Available Now":`Avail. in ${t.avail}`)}</span>
-                      </div>
-                      <button className="btn btn-primary btn-sm" onClick={() => { if (!user) { setPage("login"); return; } setPage(group.key === "teachers" ? "teachers" : group.key === "tutors" ? "tutors" : group.key === "parents" ? "tuitions" : "jobs"); }}>View Profile</button>
-                    </div>
+              {false ? (
+                <div className="jobs-marquee-viewport">
+                  <div className={`jobs-marquee-track${gi % 2 === 0 ? " jobs-marquee-track-reverse" : ""}`}>
+                    {[...group.cards, ...group.cards].map((t,i) => renderCommunityCard(t, i, group))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : false ? (
+                <div className="home-features-grid responsive-grid-3" style={{ gap:22 }}>
+                  {group.cards.map((t,i) => renderCommunityCard(t, i, group))}
+                </div>
+              ) : (
+                <div style={{ position:"relative" }}>
+                  {rowOverflow[gi] && (
+                    <button
+                      aria-label="Scroll left"
+                      onClick={() => scrollCommunityRow(gi, -1)}
+                      style={{ position:"absolute", left:-18, top:"50%", transform:"translateY(-50%)", zIndex:2, width:36, height:36, borderRadius:"50%", border:"1px solid #E5E7EB", background:"#fff", boxShadow:"0 2px 8px rgba(0,0,0,.12)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, color:"#374151" }}
+                    >←</button>
+                  )}
+
+                  <div
+                    ref={el => (communityScrollRefs.current[gi] = el)}
+                    className="community-scroll-row"
+                    style={{ display:"flex", gap:22, overflowX:"auto", scrollBehavior:"smooth", scrollbarWidth:"none", paddingBottom:4 }}
+                  >
+                    {group.cards.map((t,i) => (
+                      <div key={i} style={{ flexShrink:0, width:340 }}>{renderCommunityCard(t, i, group)}</div>
+                    ))}
+                  </div>
+
+                  {rowOverflow[gi] && (
+                    <button
+                      aria-label="Scroll right"
+                      onClick={() => scrollCommunityRow(gi, 1)}
+                      style={{ position:"absolute", right:-18, top:"50%", transform:"translateY(-50%)", zIndex:2, width:36, height:36, borderRadius:"50%", border:"1px solid #E5E7EB", background:"#fff", boxShadow:"0 2px 8px rgba(0,0,0,.12)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, color:"#374151" }}
+                    >→</button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
-
-          <div style={{ textAlign:"center", marginTop:40 }}>
-            <button className="btn btn-outline btn-lg" onClick={() => setPage("signup")} style={{ fontSize:14 }}>
-              Browse All Teachers →
-            </button>
-          </div>
         </div>
       </section>
 

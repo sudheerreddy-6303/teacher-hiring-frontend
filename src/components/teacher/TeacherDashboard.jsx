@@ -283,7 +283,7 @@ function TeacherDashboard({ user, setPage }) {
     { id:"settings",     icon:"⚙️",  label:"Settings" },
   ];
 
-  const SUBS  = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit"];
+  const SUBS  = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Zoology"];
   const QUALS = ["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil"];
   const GRADES= ["Pre-Primary","1–5","6–8","9–10","11–12","All Grades","Degree"];
   const BOARDS= ["CBSE","ICSE","State Board","IB","IGCSE","All Boards"];
@@ -848,7 +848,7 @@ function TeacherDashboard({ user, setPage }) {
                       if (!cur.includes(sub)) up("specialization", [...cur, sub].join(", "));
                     }} style={{ background:"#fff" }}>
                       <option value="">+ Add subject (you can select multiple)</option>
-                      {["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Telugu","Kannada","Tamil","History","Geography","Civics","Accountancy","Business Studies"].map(s => <option key={s} value={s}>{s}</option>)}
+                      {["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Telugu","Kannada","Tamil","History","Geography","Civics","Accountancy","Business Studies","Zoology"].map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   )}
                   <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop: editMode?8:0 }}>
@@ -1007,7 +1007,7 @@ function TeacherDashboard({ user, setPage }) {
               <div className="fg">
                 <label className="flabel">Subjects * (select all you teach)</label>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
-                  {["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Telugu","Kannada","Tamil","Accountancy","Business Studies","History","Geography"].map(s => {
+                  {["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Telugu","Kannada","Tamil","Accountancy","Business Studies","History","Geography","Zoology"].map(s => {
                     const sel = profile.subjects.includes(s);
                     return (
                       <label key={s} onClick={() => {
