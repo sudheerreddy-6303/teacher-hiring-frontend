@@ -3,6 +3,10 @@ import { useAuth } from "../context/AuthContext";
 import { Navbar } from "../components/common/Shared";
 import apiBase from "../config/apiBase";
 
+const SUBJECTS = ["All","Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Zoology"];
+const CITIES   = ["All","Hyderabad","Delhi","Mumbai","Bangalore","Chennai","Pune","Kolkata","Ahmedabad","Visakhapatnam","Vijayawada"];
+const JOB_TYPES = ["All","Full-time","Part-time","Home Tuition"];
+
 function JobsPage({ setPage }) {
   const { user } = useAuth();
   const [jobs,       setJobs]       = useState([]);
@@ -13,6 +17,7 @@ function JobsPage({ setPage }) {
   const [applied,    setApplied]    = useState([]);
   const [loginAlert, setLoginAlert] = useState(false);
   const [shareToast, setShareToast] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const API = apiBase();
 
@@ -37,6 +42,9 @@ function JobsPage({ setPage }) {
     (!filter.location || (j.location_city||"").toLowerCase().includes(filter.location.toLowerCase()) ||
                          (j.location_state||"").toLowerCase().includes(filter.location.toLowerCase()))
   );
+
+  const activeFilterCount = ["subject","type","location"].filter(k => filter[k]).length
+    + (filter.search ? 1 : 0);
 
   // ── Apply ──────────────────────────────────────────────────────────────────
   function handleApply(job) {
@@ -167,33 +175,68 @@ function JobsPage({ setPage }) {
               <button className="btn btn-primary" onClick={() => setPage("dashboard")}>+ Post a Job</button>
             )}
           </div>
-
-          {/* Filters */}
-          <div className="filter-bar" style={{ paddingBottom:24 }}>
-            <div style={{ position:"relative", flex:1, minWidth:220 }}>
-              <span style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", color:"#9CA3AF", pointerEvents:"none" }}>🔍</span>
-              <input className="input" style={{ paddingLeft:38 }} placeholder="Title, school or keyword..."
-                value={filter.search} onChange={e => setFilter(f => ({...f, search:e.target.value}))} />
-            </div>
-            <input className="input" style={{ maxWidth:160 }} placeholder="📚 Subject..."
-              value={filter.subject} onChange={e => setFilter(f => ({...f, subject:e.target.value}))} />
-            <select className="input" style={{ maxWidth:160 }} value={filter.type} onChange={e => setFilter(f => ({...f, type:e.target.value}))}>
-              <option value="">All Types</option>
-              <option value="Full-time">Full-Time</option>
-              <option value="Part-time">Part-Time</option>
-              <option value="Home Tuition">Home Tuition</option>
-            </select>
-            <input className="input" style={{ maxWidth:180 }} placeholder="📍 City..."
-              value={filter.location} onChange={e => setFilter(f => ({...f, location:e.target.value}))} />
-            {Object.values(filter).some(v=>v) && (
-              <button className="btn btn-ghost btn-sm" onClick={() => setFilter({ subject:"", type:"", location:"", search:"" })}>Clear ✕</button>
-            )}
-          </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="container" style={{ paddingTop:32, paddingBottom:72 }}>
+      <div className="container browse-layout" style={{ paddingTop:32, paddingBottom:72 }}>
+
+        {/* Mobile filter toggle */}
+        <button className="browse-filter-toggle" onClick={() => setShowFilters(s => !s)}
+          style={{ display:"none", alignItems:"center", justifyContent:"center", gap:8, width:"100%", marginBottom:16, background:"#fff", border:"1px solid #E5E7EB", borderRadius:10, padding:"11px 16px", fontSize:14, fontWeight:700, color:"#374151", cursor:"pointer" }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+          Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+        </button>
+
+        {/* Left side filters */}
+        <aside className={`browse-sidebar${showFilters ? " open" : ""}`}>
+          <div style={{ background:"#fff", borderRadius:12, border:"1px solid #E5E7EB", padding:"18px 18px 6px", position:"sticky", top:100 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <span style={{ fontWeight:800, fontSize:15, color:"#111827" }}>Filters</span>
+              {activeFilterCount > 0 && (
+                <button onClick={() => setFilter({ subject:"", type:"", location:"", search:"" })}
+                  style={{ border:"none", background:"none", color:"#DC2626", fontSize:12.5, fontWeight:700, cursor:"pointer" }}>
+                  Clear ✕
+                </button>
+              )}
+            </div>
+
+            <div style={{ marginBottom:18 }}>
+              <div style={{ fontSize:11.5, fontWeight:800, color:"#6B7280", textTransform:"uppercase", letterSpacing:.6, marginBottom:8 }}>Search</div>
+              <input className="input" placeholder="Title, school or keyword..."
+                value={filter.search} onChange={e => setFilter(f => ({...f, search:e.target.value}))} />
+            </div>
+
+            {[
+              { key:"subject",  label:"Subject",   options:SUBJECTS  },
+              { key:"location", label:"City",      options:CITIES    },
+              { key:"type",     label:"Job Type",  options:JOB_TYPES },
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom:18 }}>
+                <div style={{ fontSize:11.5, fontWeight:800, color:"#6B7280", textTransform:"uppercase", letterSpacing:.6, marginBottom:8 }}>{f.label}</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:2, maxHeight:190, overflowY:"auto", paddingRight:4 }}>
+                  {f.options.map(o => {
+                    const val = o === "All" ? "" : o;
+                    return (
+                      <label key={o}
+                        style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 8px", borderRadius:7, cursor:"pointer", fontSize:13.5,
+                          color: filter[f.key]===val ? "#EA580C" : "#374151", fontWeight: filter[f.key]===val ? 700 : 500,
+                          background: filter[f.key]===val ? "#FFF7ED" : "transparent" }}>
+                        <input type="radio" name={`job-${f.key}`} checked={filter[f.key]===val}
+                          onChange={() => setFilter(prev => ({...prev, [f.key]:val}))}
+                          style={{ accentColor:"#EA580C", width:14, height:14, flexShrink:0 }} />
+                        {o}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <div className="browse-main">
 
         {loginAlert && (
           <div className="alert a-warn flexb" style={{ marginBottom:20 }}>
@@ -309,6 +352,7 @@ function JobsPage({ setPage }) {
             </div>
           </>
         )}
+        </div>
       </div>
 
       {/* Apply success modal */}

@@ -25,6 +25,7 @@ export default function BrowseTuitionsPage({ setPage }) {
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
   const [filter,   setFilter]   = useState({ subject:"All", mode:"All", city:"All", search:"" });
+  const [showFilters, setShowFilters] = useState(false);
 
   const API = apiBase();
 
@@ -65,6 +66,9 @@ export default function BrowseTuitionsPage({ setPage }) {
       (t.student_class||"").toLowerCase().includes(filter.search.toLowerCase()) ||
       (t.notes||"").toLowerCase().includes(filter.search.toLowerCase()))
   );
+
+  const activeFilterCount = ["subject","mode","city"].filter(k => filter[k] !== "All").length
+    + (filter.search ? 1 : 0);
 
   // Share a tuition requirement — everything EXCEPT phone, email & student name
   async function shareTuition(t, e) {
@@ -122,27 +126,57 @@ export default function BrowseTuitionsPage({ setPage }) {
           </div>
         </div>
 
-        <div className="container" style={{ padding:"32px 0 60px" }}>
-          {/* Filters */}
-          <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:24, background:"#fff", padding:"16px 20px", borderRadius:12, border:"1px solid #E5E7EB" }}>
-            {[
-              { key:"subject", label:"Subject", options:SUBJECTS },
-              { key:"mode",    label:"Mode",    options:MODES    },
-              { key:"city",    label:"City",    options:CITIES   },
-            ].map(f => (
-              <select key={f.key}
-                style={{ border:"1px solid #E5E7EB", borderRadius:8, padding:"8px 14px", fontSize:13, fontWeight:600, color:"#374151", background:"#F9FAFB", cursor:"pointer" }}
-                value={filter[f.key]} onChange={e => setFilter(prev => ({...prev, [f.key]:e.target.value}))}>
-                {f.options.map(o => <option key={o} value={o}>{o==="All" ? f.label : o}</option>)}
-              </select>
-            ))}
-            {(filter.subject!=="All"||filter.mode!=="All"||filter.city!=="All"||filter.search) && (
-              <button onClick={() => setFilter({ subject:"All", mode:"All", city:"All", search:"" })}
-                style={{ border:"1px solid #FECACA", borderRadius:8, padding:"8px 14px", fontSize:13, fontWeight:600, color:"#DC2626", background:"#FEF2F2", cursor:"pointer" }}>
-                Clear ✕
-              </button>
-            )}
-            <span style={{ marginLeft:"auto", fontSize:13, color:"#6B7280", alignSelf:"center", fontWeight:600 }}>
+        <div className="container browse-layout" style={{ padding:"32px 0 60px" }}>
+
+          {/* Mobile filter toggle */}
+          <button className="browse-filter-toggle" onClick={() => setShowFilters(s => !s)}
+            style={{ display:"none", alignItems:"center", justifyContent:"center", gap:8, width:"100%", marginBottom:16, background:"#fff", border:"1px solid #E5E7EB", borderRadius:10, padding:"11px 16px", fontSize:14, fontWeight:700, color:"#374151", cursor:"pointer" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+            Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+          </button>
+
+          {/* Left side filters */}
+          <aside className={`browse-sidebar${showFilters ? " open" : ""}`}>
+            <div style={{ background:"#fff", borderRadius:12, border:"1px solid #E5E7EB", padding:"18px 18px 6px", position:"sticky", top:100 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                <span style={{ fontWeight:800, fontSize:15, color:"#111827" }}>Filters</span>
+                {activeFilterCount > 0 && (
+                  <button onClick={() => setFilter({ subject:"All", mode:"All", city:"All", search:"" })}
+                    style={{ border:"none", background:"none", color:"#DC2626", fontSize:12.5, fontWeight:700, cursor:"pointer" }}>
+                    Clear ✕
+                  </button>
+                )}
+              </div>
+              {[
+                { key:"subject", label:"Subject", options:SUBJECTS },
+                { key:"mode",    label:"Mode",    options:MODES    },
+                { key:"city",    label:"City",    options:CITIES   },
+              ].map(f => (
+                <div key={f.key} style={{ marginBottom:18 }}>
+                  <div style={{ fontSize:11.5, fontWeight:800, color:"#6B7280", textTransform:"uppercase", letterSpacing:.6, marginBottom:8 }}>{f.label}</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:2, maxHeight:190, overflowY:"auto", paddingRight:4 }}>
+                    {f.options.map(o => (
+                      <label key={o}
+                        style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 8px", borderRadius:7, cursor:"pointer", fontSize:13.5,
+                          color: filter[f.key]===o ? "#0E7490" : "#374151", fontWeight: filter[f.key]===o ? 700 : 500,
+                          background: filter[f.key]===o ? "#ECFEFF" : "transparent" }}>
+                        <input type="radio" name={`tuition-${f.key}`} checked={filter[f.key]===o}
+                          onChange={() => setFilter(prev => ({...prev, [f.key]:o}))}
+                          style={{ accentColor:"#0E7490", width:14, height:14, flexShrink:0 }} />
+                        {o}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+
+          {/* Main content */}
+          <div className="browse-main">
+
+          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:16 }}>
+            <span style={{ fontSize:13, color:"#6B7280", fontWeight:600 }}>
               {filtered.length} tuition{filtered.length!==1?"s":""} found
             </span>
           </div>
@@ -239,6 +273,7 @@ export default function BrowseTuitionsPage({ setPage }) {
               );})}
             </div>
           )}
+          </div>
         </div>
       </div>
 

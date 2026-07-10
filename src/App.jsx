@@ -11,6 +11,8 @@ import BrowseTutorsPage   from "./pages/BrowseTutorsPage";
 import BrowseTuitionsPage from "./pages/BrowseTuitionsPage";
 import PricingPage        from "./pages/PricingPage";
 import FaqPage            from "./pages/FaqPage";
+import PrivacyPolicyPage  from "./pages/PrivacyPolicyPage";
+import TermsAndConditionsPage from "./pages/TermsAndConditionsPage";
 import AuthPage           from "./components/auth/AuthPage";
 import AdminDashboard     from "./components/admin/AdminDashboard";
 import TeacherDashboard   from "./components/teacher/TeacherDashboard";
@@ -93,6 +95,8 @@ export default function App() {
       {page === "tuitions"   && <BrowseTuitionsPage setPage={setPage} />}
       {page === "pricing"    && <PricingPage        setPage={setPage} />}
       {page === "faq"        && <FaqPage            setPage={setPage} />}
+      {page === "privacy"    && <PrivacyPolicyPage  setPage={setPage} />}
+      {page === "terms"      && <TermsAndConditionsPage setPage={setPage} />}
       {page === "login"      && <AuthPage           mode="login"  setPage={setPage} />}
       {page === "signup"     && <AuthPage           mode="signup" setPage={setPage} />}
       {page === "dashboard"  && <DashboardRouter />}

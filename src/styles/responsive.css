@@ -214,6 +214,35 @@
   flex-wrap: wrap;
 }
 
+/* ── Browse pages: left-side filters layout ── */
+.browse-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  align-items: start;
+  gap: 24px;
+}
+.browse-sidebar {
+  width: auto;
+}
+.browse-main {
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .browse-layout { display: block; }
+  .browse-filter-toggle { display: flex !important; }
+  .browse-sidebar {
+    width: 100%;
+    display: none;
+  }
+  .browse-sidebar.open {
+    display: block;
+    margin-bottom: 16px;
+  }
+  .browse-sidebar > div {
+    position: static !important;
+  }
+}
+
 /* ── Cards / grids used in pages ── */
 .responsive-grid-3 {
   display: grid;

@@ -169,7 +169,10 @@ function HowItWorksPage({ setPage }) {
             </div>
             <div style={{ display:"flex", gap:24, flexWrap:"wrap" }}>
               {["Privacy Policy","Terms of Service","Contact Us","About"].map(l => (
-                <span key={l} style={{ fontSize:13, color:"#6B7280", cursor:"pointer" }}>{l}</span>
+                <span key={l} style={{ fontSize:13, color:"#6B7280", cursor:"pointer" }}
+                  onClick={() => { if (l === "Privacy Policy") setPage("privacy"); if (l === "Terms of Service") setPage("terms"); }}>
+                  {l}
+                </span>
               ))}
             </div>
           </div>

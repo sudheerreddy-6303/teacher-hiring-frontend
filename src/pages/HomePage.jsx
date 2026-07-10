@@ -1726,11 +1726,22 @@ function HomePage({ setPage }) {
             </div>
             <div style={{ display:"flex", gap:24, flexWrap:"wrap" }}>
               {["Privacy Policy","Terms of Service","Contact Us","About"].map(l => (
-                <span key={l} style={{ fontSize:13, color:"#6B7280", cursor:"pointer" }}>{l}</span>
+                <span key={l} style={{ fontSize:13, color:"#6B7280", cursor:"pointer" }}
+                  onClick={() => { if (l === "Privacy Policy") setPage("privacy"); if (l === "Terms of Service") setPage("terms"); }}>
+                  {l}
+                </span>
               ))}
             </div>
           </div>
           <Divider />
+          <div style={{ textAlign:"center", marginBottom:14 }}>
+            <p style={{ color:"#6B7280", fontSize:12.5, marginBottom:6, lineHeight:1.6 }}>
+              📍 Fn. 709, 7th Floor, D Block, Petbasheerabad Village, Kutbullapur, Hyderabad, Telangana – 500055
+            </p>
+            <p style={{ color:"#6B7280", fontSize:12.5 }}>
+              📞 <a href="tel:+919849876783" style={{ color:"#6B7280", textDecoration:"none" }}>+91 98498 76783</a>
+            </p>
+          </div>
           <p style={{ color:"#9CA3AF", fontSize:12, textAlign:"center" }}>© 2025 AcadHr. All rights reserved by DEERAJ TECHNOLOGY PRIVATE LIMITED. Made with ❤️ in Hyderabad, India.</p>
         </div>
       </footer>
