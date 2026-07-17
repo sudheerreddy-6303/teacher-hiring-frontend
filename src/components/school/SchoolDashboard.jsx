@@ -94,10 +94,18 @@ function SchoolDashboard({ user, setPage }) {
   function loadTeacherDB() {
     if (dbTeachers.length) return;   // already loaded
     setDbLoading(true);
+    // ADDED: logged-in schools get contact info via the authenticated endpoint;
+    // the public endpoint (below) stays as a fallback so the list never breaks.
+    const _token = localStorage.getItem("acadhr_token");
+    fetch(`${API_BASE}/admin/school/teachers`, { headers: _token ? { Authorization: "Bearer " + _token } : {} })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => { setDbTeachers(Array.isArray(data) ? data : []); setDbLoading(false); })
+      .catch(() =>
     fetch(`${API_BASE}/admin/public/teachers`)
       .then(r => r.ok ? r.json() : [])
       .then(data => { setDbTeachers(Array.isArray(data) ? data : []); setDbLoading(false); })
-      .catch(() => setDbLoading(false));
+      .catch(() => setDbLoading(false))
+      );
   }
 
   const [appStatus, setAppStatus] = useState([]);
@@ -106,6 +114,22 @@ function SchoolDashboard({ user, setPage }) {
 
   async function postJob(e) {
     e.preventDefault();
+    // ADDED (mandatory fields): all job post fields are required
+    {
+      const missing = [];
+      const need = (v, label) => { if (v === "" || v === null || v === undefined || (Array.isArray(v) && v.length === 0)) missing.push(label); };
+      need(form.institution_name, "Institution Name"); need(form.institution_type, "Institution Type");
+      need(form.location_state, "State"); need(form.location_city, "City");
+      need(form.contact_person, "Contact Person"); need(form.contact_number, "Contact Number");
+      need(form.email, "Email"); need(form.requirement_type, "Requirement Type");
+      need(form.subject, "Subject"); need(form.grades, "Grades"); need(form.board, "Board");
+      need(form.experience, "Experience"); need(form.salary_min, "Salary Min"); need(form.salary_max, "Salary Max");
+      need(form.joining_timeline, "Joining Timeline"); need(form.work_mode, "Work Mode");
+      need(form.residential, "Residential"); need(form.accommodation, "Accommodation");
+      need(form.gender_preference, "Gender Preference"); need(form.interview_mode, "Interview Mode");
+      need(form.demo_required, "Demo Required"); need(form.positions, "Positions");
+      if (missing.length) { alert("Please fill all mandatory fields: " + missing.join(", ")); return; }
+    }
     try {
       const token = localStorage.getItem("acadhr_token");
       const payload = {
@@ -197,6 +221,16 @@ function SchoolDashboard({ user, setPage }) {
   const [profileSaved, setProfileSaved] = useState(false);
   const [showSavePopup, setShowSavePopup] = useState(false);
   const upProfile = (k, v) => setSchoolProfile(p => ({...p, [k]:v}));
+  // ADDED (mandatory fields): all school profile fields are required before saving
+  function validateSchoolProfile() {
+    const missing = [];
+    const need = (v, label) => { if (v === "" || v === null || v === undefined) missing.push(label); };
+    need(schoolProfile.institute_name, "Institute Name"); need(schoolProfile.email, "Email");
+    need(schoolProfile.phone, "Phone"); need(schoolProfile.city, "City");
+    need(schoolProfile.institute_type, "Institute Type"); need(schoolProfile.affiliation_board, "Affiliation Board");
+    if (missing.length) { alert("Please fill all mandatory fields: " + missing.join(", ")); return false; }
+    return true;
+  }
 
   const liveJobs  = myJobs.filter(j => j.status === "approved");
   const pendJobs  = myJobs.filter(j => j.status === "pending");
@@ -224,14 +258,16 @@ function SchoolDashboard({ user, setPage }) {
       <div className={"sidebar-backdrop" + (navOpen ? " show" : "")} onClick={() => setNavOpen(false)} />
 
       {/* Sidebar */}
+      {/* ADDED (mobile responsiveness): dim backdrop behind the drawer; tap closes it */}
+      {navOpen && <div className="school-drawer-backdrop" onClick={() => setNavOpen(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:1400 }} />}
       <div className={"school-sidebar" + (navOpen ? " drawer-open" : "")} style={{ width:sidebarOpen?210:64 }} onClick={() => setNavOpen(false)}>
         <div style={{ padding:"14px 16px", borderBottom:"1px solid #E5E7EB", display:"flex", alignItems:"center", justifyContent:"space-between", minHeight:56 }}>
-          {sidebarOpen && <div style={{ cursor:"pointer" }} onClick={() => setPage("home")}><img src="/acadhr-logo.png" alt="AcadHr" style={{ height:32, objectFit:"contain" }} /></div>}
+          {(sidebarOpen || navOpen) && <div style={{ cursor:"pointer" }} onClick={() => setPage("home")}><img src="/acadhr-logo.png" alt="AcadHr" style={{ height:32, objectFit:"contain" }} /></div>}
           <button onClick={() => setSidebarOpen(o => !o)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, color:"#6B7280", padding:4 }}>{sidebarOpen ? "◀" : "▶"}</button>
         </div>
         <div style={{ padding:"12px 16px", borderBottom:"1px solid #F3F4F6", display:"flex", alignItems:"center", gap:10 }}>
           <div style={{ width:34, height:34, borderRadius:"50%", background:"#1A56DB", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, flexShrink:0 }}>{user.name.charAt(0)}</div>
-          {sidebarOpen && <div style={{ overflow:"hidden" }}><div style={{ fontWeight:700, fontSize:13, color:"#111827", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{user.name}</div><div style={{ fontSize:11, color:"#9CA3AF" }}>{user.email || "institute@edu.in"}</div></div>}
+          {(sidebarOpen || navOpen) && <div style={{ overflow:"hidden" }}><div style={{ fontWeight:700, fontSize:13, color:"#111827", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{user.name}</div><div style={{ fontSize:11, color:"#9CA3AF" }}>{user.email || "institute@edu.in"}</div></div>}
         </div>
         <div style={{ flex:1, paddingTop:8 }}>
           {MENU.map(m => (
@@ -243,24 +279,24 @@ function SchoolDashboard({ user, setPage }) {
               else if (!sidebarOpen) setSidebarOpen(true);
             }} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 16px", cursor:"pointer", borderLeft:`3px solid ${tab===m.id?"#1A56DB":"transparent"}`, background:tab===m.id?"#EBF5FF":"transparent", color:tab===m.id?"#1A56DB":"#374151", fontWeight:tab===m.id?700:600, fontSize:14, transition:"all .15s" }}>
               <span style={{ fontSize:17, flexShrink:0 }}>{m.icon}</span>
-              {sidebarOpen && <span style={{ whiteSpace:"nowrap" }}>{m.label}</span>}
-              {sidebarOpen && m.id==="jobs" && <span style={{ marginLeft:"auto", background:"#1A56DB", color:"#fff", borderRadius:20, padding:"1px 7px", fontSize:10, fontWeight:800 }}>{myJobs.length}</span>}
+              {(sidebarOpen || navOpen) && <span style={{ whiteSpace:"nowrap" }}>{m.label}</span>}
+              {(sidebarOpen || navOpen) && m.id==="jobs" && <span style={{ marginLeft:"auto", background:"#1A56DB", color:"#fff", borderRadius:20, padding:"1px 7px", fontSize:10, fontWeight:800 }}>{myJobs.length}</span>}
             </div>
           ))}
-          {sidebarOpen && (
+          {(sidebarOpen || navOpen) && (
             <div style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 16px", cursor:"pointer", color:"#374151", fontWeight:600, fontSize:14 }}>
               <span style={{ fontSize:17 }}>💬</span><span>WA Quick Recruit</span>
             </div>
           )}
         </div>
-        {sidebarOpen && (
+        {(sidebarOpen || navOpen) && (
           <div style={{ margin:"12px", background:"#EBF5FF", border:"1px solid #BFDBFE", borderRadius:12, padding:14 }}>
             <div style={{ fontSize:13, fontWeight:700, color:"#1E429F", marginBottom:4 }}>Hire faster with Premium Jobs</div>
             <div style={{ fontSize:11, color:"#6B7280", marginBottom:10 }}>Contact us to get a better pricing just for you</div>
             <button className="btn btn-primary btn-sm" style={{ width:"100%", justifyContent:"center", fontSize:11 }}>Contact Us</button>
           </div>
         )}
-        {sidebarOpen && (
+        {(sidebarOpen || navOpen) && (
           <div style={{ borderTop:"1px solid #E5E7EB", padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
             <div style={{ width:30, height:30, borderRadius:6, background:"#F3F4F6", border:"1px solid #D1D5DB", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, color:"#374151" }}>{user.name.substring(0,2).toUpperCase()}</div>
             <div style={{ flex:1, overflow:"hidden" }}><div style={{ fontWeight:700, fontSize:12, color:"#111827", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{user.name}</div><div style={{ fontSize:10, color:"#9CA3AF" }}>{liveJobs.length} Job{liveJobs.length!==1?"s":""}</div></div>
@@ -268,7 +304,7 @@ function SchoolDashboard({ user, setPage }) {
           </div>
         )}
         <div onClick={logout} style={{ padding:"10px 16px", cursor:"pointer", color:"#DC2626", fontWeight:600, fontSize:13, display:"flex", alignItems:"center", gap:10, borderTop:"1px solid #F3F4F6" }}>
-          <span>🚪</span>{sidebarOpen && "Sign Out"}
+          <span>🚪</span>{(sidebarOpen || navOpen) && "Sign Out"}
         </div>
       </div>
 
@@ -322,7 +358,7 @@ function SchoolDashboard({ user, setPage }) {
             </div>
 
             {/* Stats cards */}
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:22 }}>
+            <div className="dash-grid-4" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:22 }}>
               {[
                 { icon:"✅", label:"Live Jobs",          value:liveJobs.length,    color:"#059669", bg:"#ECFDF5", onClick:()=>setTab("jobs") },
                 { icon:"⏳", label:"Pending Review",     value:pendJobs.length,    color:"#D97706", bg:"#FFFBEB", onClick:()=>setTab("jobs") },
@@ -444,10 +480,10 @@ function SchoolDashboard({ user, setPage }) {
             {!profileEditMode ? (
               <>
                 {/* Hero */}
-                <div style={{ background:"linear-gradient(135deg,#0EA5E9,#1A56DB)", borderRadius:20, padding:"32px 36px", marginBottom:20, position:"relative", overflow:"hidden" }}>
+                <div className="school-hero" style={{ background:"linear-gradient(135deg,#0EA5E9,#1A56DB)", borderRadius:20, padding:"32px 36px", marginBottom:20, position:"relative", overflow:"hidden" }}>
                   <div style={{ position:"absolute", top:-50, right:-50, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,.05)" }} />
                   <div style={{ position:"absolute", bottom:-60, right:80, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,.04)" }} />
-                  <div style={{ display:"flex", alignItems:"center", gap:24, position:"relative", zIndex:1 }}>
+                  <div className="school-hero-row" style={{ display:"flex", alignItems:"center", gap:24, position:"relative", zIndex:1 }}>
                     <div style={{ width:88, height:88, borderRadius:18, background:"rgba(255,255,255,.2)", border:"3px solid rgba(255,255,255,.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:40, flexShrink:0 }}>🏫</div>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:24, fontWeight:800, color:"#fff", marginBottom:4 }}>{schoolProfile.institute_name || user.name}</div>
@@ -461,7 +497,7 @@ function SchoolDashboard({ user, setPage }) {
                         {schoolProfile.medium_of_instruction && <span style={{ color:"#E0F2FE", fontSize:13 }}>🗣 {schoolProfile.medium_of_instruction}</span>}
                       </div>
                     </div>
-                    <button onClick={() => setProfileEditMode(true)}
+                    <button onClick={() => setProfileEditMode(true)} className="school-hero-edit"
                       style={{ background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"#fff", padding:"10px 20px", borderRadius:12, cursor:"pointer", fontWeight:700, fontSize:14, backdropFilter:"blur(4px)", flexShrink:0 }}>
                       ✏️ Edit Profile
                     </button>
@@ -588,7 +624,7 @@ function SchoolDashboard({ user, setPage }) {
                   </div>
                   <div style={{ display:"flex", gap:10 }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => { setProfileEditMode(false); setProfileSaved(false); }}>✕ Cancel</button>
-                    <button className="btn btn-primary btn-sm" onClick={() => { setProfileEditMode(false); setProfileSaved(true); setShowSavePopup(true); }}>Save ✓</button>
+                    <button className="btn btn-primary btn-sm" onClick={() => { if (!validateSchoolProfile()) return; setProfileEditMode(false); setProfileSaved(true); setShowSavePopup(true); }}>Save ✓</button>
                   </div>
                 </div>
 
@@ -685,7 +721,7 @@ function SchoolDashboard({ user, setPage }) {
 
                 <div style={{ display:"flex", gap:10, marginBottom:20 }}>
                   <button className="btn btn-ghost" style={{ flex:1, justifyContent:"center" }} onClick={() => { setProfileEditMode(false); setProfileSaved(false); }}>Cancel</button>
-                  <button className="btn btn-primary" style={{ flex:2, justifyContent:"center" }} onClick={() => { setProfileEditMode(false); setProfileSaved(true); setShowSavePopup(true); }}>Save All Changes ✓</button>
+                  <button className="btn btn-primary" style={{ flex:2, justifyContent:"center" }} onClick={() => { if (!validateSchoolProfile()) return; setProfileEditMode(false); setProfileSaved(true); setShowSavePopup(true); }}>Save All Changes ✓</button>
                 </div>
               </>
             )}
@@ -842,7 +878,7 @@ function SchoolDashboard({ user, setPage }) {
                       onMouseLeave={e => { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.borderColor="#E5E7EB"; }}>
 
                       {/* Row 1 — Avatar + Name + Status */}
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                      <div className="school-app-cardhead" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
                         <div style={{ display:"flex", gap:12, alignItems:"center" }}>
                           <div style={{ width:48, height:48, borderRadius:12, background:"#EBF5FF", border:"2px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, fontWeight:800, color:"#1A56DB", flexShrink:0, overflow:"hidden" }}>
                             {a.profile_photo
@@ -1063,14 +1099,14 @@ function SchoolDashboard({ user, setPage }) {
                     </p>
                   </div>
                 ) : (
-                  <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                  <div className="school-db-grid" style={{ display:"flex", flexDirection:"column", gap:12 }}>
                     {filtered.map(t => (
                       <div key={t.id} style={{ background:"#fff", borderRadius:14, border:"1px solid #E5E7EB", padding:"18px 22px", transition:"all .2s" }}
                         onMouseEnter={e => { e.currentTarget.style.boxShadow="0 4px 20px rgba(26,86,219,.09)"; e.currentTarget.style.borderColor="#BFDBFE"; }}
                         onMouseLeave={e => { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.borderColor="#E5E7EB"; }}>
 
                         {/* Row 1 — Avatar + Name + Badge + Feedback */}
-                        <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:10 }}>
+                        <div className="school-db-cardhead" style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:10 }}>
                           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                             {/* Avatar */}
                             <div style={{ width:44, height:44, borderRadius:10, overflow:"hidden", background:"#E0E7FF", border:"1px solid #C7D2FE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:800, color:"#4338CA", flexShrink:0 }}>
@@ -1155,7 +1191,9 @@ function SchoolDashboard({ user, setPage }) {
 
                         {/* Row 4 — Action buttons */}
                         <div style={{ display:"flex", justifyContent:"flex-end", gap:10 }}>
-                          <button
+                          {/* CHANGED (per request): resume now shows inside View Contact only.
+                              Button kept (not deleted) — hidden via the school-db-resume-btn class. */}
+                          <button className="school-db-resume-btn"
                             style={{ display:"flex", alignItems:"center", gap:7, padding:"8px 18px", borderRadius:9, border:"1.5px solid #D1D5DB", background:"#fff", color:"#374151", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s" }}
                             onClick={() => setResumeTeacher(t)}
                             onMouseEnter={e => { e.currentTarget.style.background="#F9FAFB"; e.currentTarget.style.borderColor="#9CA3AF"; }}
@@ -1398,6 +1436,31 @@ function SchoolDashboard({ user, setPage }) {
                   </div>
                 )}
 
+                {/* ADDED: Resume preview inside contact details */}
+                {contactTeacher.resume_link && (() => {
+                  const BASE = (process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","");
+                  const isDrive = contactTeacher.resume_link.includes("drive.google.com") || contactTeacher.resume_link.includes("docs.google.com");
+                  const fileUrl = contactTeacher.resume_link.startsWith("http") ? contactTeacher.resume_link : BASE + contactTeacher.resume_link;
+                  const src = isDrive ? contactTeacher.resume_link.replace("/view", "/preview") : fileUrl;
+                  return (
+                    <div style={{ border:"1px solid #E5E7EB", borderRadius:12, overflow:"hidden" }}>
+                      <div style={{ padding:"10px 14px", background:"#F9FAFB", borderBottom:"1px solid #E5E7EB", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                        <span style={{ fontSize:12, fontWeight:700, color:"#374151" }}>📄 Resume{contactTeacher.resume_file_name ? " — " + contactTeacher.resume_file_name : ""}</span>
+                        <a href={fileUrl} target="_blank" rel="noreferrer" style={{ fontSize:12, fontWeight:700, color:"#1A56DB", textDecoration:"none" }}>Open ↗</a>
+                      </div>
+                      <iframe src={src} style={{ width:"100%", height:320, border:"none", display:"block" }} title="Resume" />
+                    </div>
+                  );
+                })()}
+
+                {/* ADDED: placeholder when the teacher has not uploaded a resume */}
+                {!contactTeacher.resume_link && (
+                  <div style={{ border:"1px dashed #D1D5DB", borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", gap:10, color:"#9CA3AF", background:"#FAFAFA" }}>
+                    <span style={{ fontSize:20 }}>📄</span>
+                    <span style={{ fontSize:13, fontWeight:600 }}>No resume uploaded by this teacher</span>
+                  </div>
+                )}
+
                 {!contactTeacher.mobile && !contactTeacher.phone && !contactTeacher.email && (
                   <div style={{ textAlign:"center", padding:"24px 0", color:"#9CA3AF" }}>
                     <div style={{ fontSize:40, marginBottom:10 }}>📭</div>
@@ -1418,7 +1481,7 @@ function SchoolDashboard({ user, setPage }) {
           <div style={{ padding:"28px 28px" }} className="fadeUp">
             <h2 style={{ fontSize:20, fontWeight:800, color:"#111827", marginBottom:6 }}>Analytics</h2>
             <p style={{ color:"#6B7280", fontSize:14, marginBottom:24 }}>Your hiring performance at a glance</p>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:24 }}>
+            <div className="dash-grid-4" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:24 }}>
               {[
                 ["Live Jobs",      liveJobs.length,      "✅","#059669","#ECFDF5"],
                 ["Pending Jobs",   pendJobs.length,      "⏳","#D97706","#FFFBEB"],
@@ -1467,7 +1530,7 @@ function SchoolDashboard({ user, setPage }) {
         {tab==="credits" && (
           <div style={{ padding:"28px 28px" }} className="fadeUp">
             <h2 style={{ fontSize:20, fontWeight:800, color:"#111827", marginBottom:22 }}>Credits</h2>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, marginBottom:28 }}>
+            <div className="dash-grid-3" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, marginBottom:28 }}>
               {[["Available Credits","0","🪙","#D97706"],["Credits Used","0","📊","#1A56DB"],["Jobs Boosted","0","🚀","#059669"]].map(([l,v,i,c]) => (
                 <div key={l} style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:14, padding:"24px 20px", textAlign:"center" }}>
                   <div style={{ fontSize:28, marginBottom:10 }}>{i}</div>

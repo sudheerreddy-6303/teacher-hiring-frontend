@@ -203,7 +203,7 @@ export default function BrowseTuitionsPage({ setPage }) {
               </p>
             </div>
           ) : (
-            <div className="responsive-grid-4" style={{ display:"grid", gap:20 }}>
+            <div className="responsive-grid-3" style={{ display:"grid", gap:20 }}>
               {filtered.map(t => {
                 const sub  = [t.student_class, t.board].filter(Boolean).join(" · ");
                 return (

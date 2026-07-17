@@ -53,7 +53,24 @@ export default function BrowseTutorsPage({ setPage }) {
         return r.json();
       })
       .then(data => {
-        setTutors(Array.isArray(data) ? data : []);
+        // ADDED (profile completeness sorting): tutors who filled more fields show first
+        // (100% → 70% → 50% → …). Ties keep the original newest-first order.
+        const TUTOR_COMPLETENESS_FIELDS = [
+          "name","city","subject","subjects","experience","qualification","qualifications",
+          "teaching_mode","hourly_rate","bio","location","availability","gender"
+        ];
+        const tutorCompleteness = (t) => {
+          const filled = TUTOR_COMPLETENESS_FIELDS.filter(k => {
+            const v = t && t[k];
+            return v !== "" && v !== null && v !== undefined;
+          }).length;
+          return Math.round((filled / TUTOR_COMPLETENESS_FIELDS.length) * 100);
+        };
+        const sorted = (Array.isArray(data) ? [...data] : []).sort((a, b) =>
+          tutorCompleteness(b) - tutorCompleteness(a) ||
+          (new Date(b.created_at || 0) - new Date(a.created_at || 0))
+        );
+        setTutors(sorted);
         setLoading(false);
       })
       .catch(() => {
@@ -206,7 +223,7 @@ export default function BrowseTutorsPage({ setPage }) {
               </p>
             </div>
           ) : (
-            <div className="responsive-grid-4" style={{ display:"grid", gap:20 }}>
+            <div className="responsive-grid-3" style={{ display:"grid", gap:20 }}>
               {filtered.map(t => (
                 <div key={t.id}
                   style={{ background:"#fff", borderRadius:16, border:"1px solid #E5E7EB", padding:24, transition:"all .2s" }}
@@ -219,8 +236,8 @@ export default function BrowseTutorsPage({ setPage }) {
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{t.name}</div>
-                      <div style={{ fontSize:12, color:"#6D28D9", fontWeight:600, marginTop:2 }}>{t.subject || "Tutor"}</div>
-                      {t.qualification && <div style={{ fontSize:11, color:"#6B7280", marginTop:1 }}>{t.qualification}</div>}
+                      <div style={{ fontSize:12, color:"#6D28D9", fontWeight:600, marginTop:2 }}>{t.subjects || t.subject || "Tutor"}</div>
+                      {(t.qualifications || t.qualification) && <div style={{ fontSize:11, color:"#6B7280", marginTop:1 }}>{t.qualifications || t.qualification}</div>}
                     </div>
                     {user && (
                       <button onClick={(e) => shareTutor(t, e)} title="Share this tutor"
@@ -233,7 +250,7 @@ export default function BrowseTutorsPage({ setPage }) {
 
                   {/* Tags */}
                   <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
-                    {t.city          && <span style={{ background:"#F3F4F6", color:"#374151", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>📍 {t.city}</span>}
+                    {(t.city || t.location) && <span style={{ background:"#F3F4F6", color:"#374151", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>📍 {t.city || t.location}</span>}
                     {t.experience    && <span style={{ background:"#F5F3FF", color:"#6D28D9", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>⏳ {t.experience}</span>}
                     {t.teaching_mode && <span style={{ background:"#E0F2FE", color:"#0369A1", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>
                       {t.teaching_mode === "Online" ? "💻" : t.teaching_mode === "Offline" ? "🏠" : "🔄"} {t.teaching_mode}
@@ -244,13 +261,7 @@ export default function BrowseTutorsPage({ setPage }) {
                   {/* Details */}
                   <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:14 }}>
                     {[
-                      ["Subjects",       t.subjects || t.subject],
-                      ["Qualifications", t.qualifications || t.qualification],
-                      ["Experience",     t.experience],
-                      ["Teaching Mode",  t.teaching_mode],
                       ["Availability",   t.availability],
-                      ["Gender",         t.gender],
-                      ["Location",       t.location || t.city],
                       ["Pincode",        t.pincode],
                       ["Address",        t.address],
                       ["Class Link",     t.class_link],

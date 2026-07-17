@@ -108,7 +108,7 @@ export default function PublicProfile({ role, id }) {
   const accent = cfg ? cfg.color : "#1A56DB";
 
   return (
-    <div style={{ minHeight:"100vh", background:"#F8FAFC", fontFamily:"Nunito,sans-serif" }}>
+    <div className="public-profile-page" style={{ minHeight:"100vh", background:"#F8FAFC", fontFamily:"Nunito,sans-serif" }}>
       {/* Top bar */}
       <div style={{ background:"#fff", borderBottom:"1px solid #E5E7EB", padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div onClick={goHome} style={{ fontWeight:900, fontSize:20, color:"#1A56DB", cursor:"pointer", letterSpacing:.3 }}>

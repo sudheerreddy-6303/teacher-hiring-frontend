@@ -8,6 +8,17 @@ const CITIES    = ["All","Hyderabad","Delhi","Mumbai","Bangalore","Chennai","Pun
 const EXPS      = ["All","Fresher","Less than 1 Year","1–2 Years","2–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years"];
 const MODES     = ["All","Full-time","Part-time","Online","Home Tuition"];
 
+// ADDED (duplicate subjects fix): specialization and subjects often contain the
+// same list in a different order (or one inside the other). Compare them
+// ignoring order, case, and spacing so near-duplicates are detected too.
+const _subjList = (s) => String(s || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+function isSameSubjects(a, b) {
+  const A = _subjList(a), B = _subjList(b);
+  if (!A.length || !B.length) return false;
+  const [small, large] = A.length <= B.length ? [A, B] : [B, A];
+  return small.every(x => large.includes(x));
+}
+
 export default function BrowseTeachersPage({ setPage }) {
   const { user } = useAuth();
   const [selected, setSelected] = useState(null);
@@ -29,7 +40,26 @@ export default function BrowseTeachersPage({ setPage }) {
         return r.json();
       })
       .then(data => {
-        setTeachers(Array.isArray(data) ? data : []);
+        // ADDED (profile completeness sorting): teachers who filled more fields show first
+        // (100% → 70% → 50% → …). Ties keep the original newest-first order.
+        const TEACHER_COMPLETENESS_FIELDS = [
+          "name","city","specialization","subjects","total_experience","experience","qualification",
+          "work_mode","teaching_mode","languages","grades_handling","boards_handled","current_location",
+          "current_role","current_org","profile_photo","gender","preferred_locations","relevant_experience",
+          "certifications","tutor_type","competitive_exams","demo_available","demo_link"
+        ];
+        const teacherCompleteness = (t) => {
+          const filled = TEACHER_COMPLETENESS_FIELDS.filter(k => {
+            const v = t && t[k];
+            return v !== "" && v !== null && v !== undefined;
+          }).length;
+          return Math.round((filled / TEACHER_COMPLETENESS_FIELDS.length) * 100);
+        };
+        const sorted = (Array.isArray(data) ? [...data] : []).sort((a, b) =>
+          teacherCompleteness(b) - teacherCompleteness(a) ||
+          (new Date(b.created_at || 0) - new Date(a.created_at || 0))
+        );
+        setTeachers(sorted);
         setLoading(false);
       })
       .catch(err => {
@@ -186,7 +216,7 @@ export default function BrowseTeachersPage({ setPage }) {
               </p>
             </div>
           ) : (
-            <div className="responsive-grid-4" style={{ display:"grid", gap:20 }}>
+            <div className="responsive-grid-3" style={{ display:"grid", gap:20 }}>
               {filtered.map(t => (
                 <div key={t.id}
                   style={{ background:"#fff", borderRadius:16, border:"1px solid #E5E7EB", padding:24, transition:"all .2s", cursor:"default" }}
@@ -202,7 +232,7 @@ export default function BrowseTeachersPage({ setPage }) {
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{t.name}</div>
-                      <div style={{ fontSize:12, color:"#1A56DB", fontWeight:600, marginTop:2 }}>{t.specialization || t.current_role || "Educator"}</div>
+                      <div style={{ fontSize:12, color:"#1A56DB", fontWeight:600, marginTop:2 }}>{isSameSubjects(t.specialization, t.subjects) ? (t.current_role || "Educator") : (t.specialization || t.current_role || "Educator")}</div>
                       {t.current_org && <div style={{ fontSize:11, color:"#6B7280", marginTop:1 }}>{t.current_org}</div>}
                     </div>
                     {user && (
@@ -216,23 +246,19 @@ export default function BrowseTeachersPage({ setPage }) {
 
                   {/* Tags */}
                   <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 }}>
-                    {t.city             && <span style={{ background:"#F3F4F6", color:"#374151", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>📍 {t.city}</span>}
-                    {t.total_experience && <span style={{ background:"#EBF5FF", color:"#1A56DB", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>⏳ {t.total_experience}</span>}
+                    {(t.city || t.current_location) && <span style={{ background:"#F3F4F6", color:"#374151", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>📍 {t.city || t.current_location}</span>}
+                    {(t.total_experience || t.experience) && <span style={{ background:"#EBF5FF", color:"#1A56DB", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>⏳ {t.total_experience || t.experience}</span>}
                     {t.qualification    && <span style={{ background:"#F5F3FF", color:"#6D28D9", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>🎓 {t.qualification}</span>}
-                    {t.work_mode        && <span style={{ background:"#ECFDF5", color:"#059669", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>{t.work_mode}</span>}
+                    {(t.work_mode || t.teaching_mode) && <span style={{ background:"#ECFDF5", color:"#059669", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>{t.work_mode || t.teaching_mode}</span>}
                   </div>
 
                   {/* Details */}
                   <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
                     {[
-                      ["Specialization", t.specialization],
-                      ["Subjects",       t.subjects],
-                      ["Experience",     t.total_experience || t.experience],
-                      ["Teaching Mode",  t.teaching_mode],
+                      ["Subjects",       t.subjects || t.specialization],
                       ["Languages",      t.languages],
                       ["Grades",         t.grades_handling],
                       ["Boards",         t.boards_handled],
-                      ["Location",       t.current_location || t.city],
                     ].map(([label, value]) => value ? (
                       <div key={label} style={{ display:"flex", gap:8, fontSize:12, lineHeight:1.4 }}>
                         <span style={{ flexShrink:0, color:"#9CA3AF", fontWeight:700, minWidth:96 }}>{label}</span>

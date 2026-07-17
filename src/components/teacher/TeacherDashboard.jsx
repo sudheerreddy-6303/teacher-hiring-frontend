@@ -206,6 +206,28 @@ function TeacherDashboard({ user, setPage }) {
 
   // Save profile to backend
   async function saveProfile() {
+    // ADDED (mandatory fields): all profile fields are required before saving
+    {
+      const REQUIRED = [
+        ["full_name","Full Name"],["mobile","Mobile"],["email","Email"],["gender","Gender"],["dob","Date of Birth"],
+        ["current_location","Current Location"],["preferred_locations","Preferred Locations"],
+        ["qualification","Qualification"],["specialization","Specialization"],
+        ["total_experience","Total Experience"],["relevant_experience","Relevant Experience"],
+        ["current_role","Current Role"],["current_org","Current Organization"],
+        ["current_salary","Current Salary"],["expected_salary","Expected Salary"],
+        ["notice_period","Notice Period"],["available_from","Available From"],
+        ["work_mode","Work Mode"],["tutor_type","Tutor Type"],["subjects","Subjects"],
+        ["grades_handling","Grades"],["boards_handled","Boards"],["competitive_exams","Competitive Exams"],
+        ["teaching_mode","Teaching Mode"],["demo_available","Demo Available"],["certifications","Certifications"],
+        ["residential_pref","Residential Preference"],["relocation_ready","Relocation Ready"],["accommodation_req","Accommodation Required"],
+      ];
+      const missing = REQUIRED.filter(([k]) => {
+        const v = profile[k];
+        return v === "" || v === null || v === undefined || (Array.isArray(v) && v.length === 0);
+      }).map(([,label]) => label);
+      if (profile.demo_available === "Yes" && !String(profile.demo_link || "").trim()) missing.push("Demo Link");
+      if (missing.length) { setSaveError("Please fill all mandatory fields: " + missing.join(", ")); return; }
+    }
     setSaving(true); setSaveError("");
     try {
       const token = localStorage.getItem("acadhr_token");
@@ -453,10 +475,10 @@ function TeacherDashboard({ user, setPage }) {
               /* ── VIEW MODE: Beautiful profile card ── */
               <>
                 {/* Profile Hero Card */}
-                <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", borderRadius:20, padding:"32px 36px", marginBottom:20, position:"relative", overflow:"hidden" }}>
+                <div className="teacher-hero" style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", borderRadius:20, padding:"32px 36px", marginBottom:20, position:"relative", overflow:"hidden" }}>
                   <div style={{ position:"absolute", top:-40, right:-40, width:200, height:200, borderRadius:"50%", background:"rgba(255,255,255,.05)" }} />
                   <div style={{ position:"absolute", bottom:-60, right:60, width:150, height:150, borderRadius:"50%", background:"rgba(255,255,255,.04)" }} />
-                  <div style={{ display:"flex", alignItems:"center", gap:24, position:"relative", zIndex:1 }}>
+                  <div className="teacher-hero-row" style={{ display:"flex", alignItems:"center", gap:24, position:"relative", zIndex:1 }}>
                     {/* Photo */}
                     <div style={{ width:90, height:90, borderRadius:"50%", overflow:"hidden", border:"4px solid rgba(255,255,255,.3)", background:"#1A56DB", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                       {profile.profile_photo
@@ -474,7 +496,7 @@ function TeacherDashboard({ user, setPage }) {
                         {profile.teaching_mode     && <span style={{ color:"#BFDBFE", fontSize:13 }}>🖥 {profile.teaching_mode}</span>}
                       </div>
                     </div>
-                    <div style={{ display:"flex", flexDirection:"column", gap:8, alignItems:"flex-end" }}>
+                    <div className="teacher-hero-side" style={{ display:"flex", flexDirection:"column", gap:8, alignItems:"flex-end" }}>
                       <button className="btn btn-sm" onClick={() => setEditMode(true)}
                         style={{ background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"#fff", backdropFilter:"blur(4px)" }}>
                         ✏️ Edit Profile
@@ -1372,7 +1394,7 @@ function TeacherDashboard({ user, setPage }) {
           <div className="fadeUp">
             <div className="page-title">Analytics</div>
             <div className="page-sub">Your performance insights</div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18, marginBottom:24 }}>
+            <div className="dash-grid-3" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18, marginBottom:24 }}>
               {[
                 ["Profile Views","0","👁","#1A56DB"],
                 ["Applications Sent",applications.length,"📋","#059669"],

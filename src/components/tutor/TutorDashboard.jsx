@@ -26,6 +26,21 @@ function TutorDashboard({ user, setPage }) {
 
   // Persist profile edits to the database
   async function handleSave() {
+    // ADDED (mandatory fields): all profile fields are required before saving
+    {
+      const missing = [];
+      const need = (v, label) => { if (v === "" || v === null || v === undefined || (Array.isArray(v) && v.length === 0)) missing.push(label); };
+      need(profile.name, "Name"); need(profile.phone, "Phone"); need(profile.city, "City");
+      need(profile.subject || profile.subjects, "Subjects");
+      need(profile.qualification || profile.qualifications, "Qualifications");
+      need(profile.experience, "Experience");
+      need(profile.mode || profile.teaching_mode, "Teaching Mode");
+      need(profile.rate || profile.hourly_rate, "Hourly Rate");
+      need(profile.bio, "Bio"); need(profile.availability, "Availability"); need(profile.gender, "Gender");
+      need(profile.address, "Address"); need(profile.location, "Location"); need(profile.pincode, "Pincode");
+      need(profile.class_link, "Class Link");
+      if (missing.length) { alert("Please fill all mandatory fields: " + missing.join(", ")); return; }
+    }
     setSaving(true); setSaved(false);
     try {
       await profileAPI.update({
@@ -170,7 +185,7 @@ function TutorDashboard({ user, setPage }) {
             <div className="page-title">Welcome back, {user.name.split(" ")[0]} 👋</div>
             <div className="page-sub">Your tutoring activity at a glance</div>
 
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:18, marginBottom:26 }}>
+            <div className="dash-grid-4" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:18, marginBottom:26 }}>
               {[
                 ["Active Students", String(requests.filter(r => r.status === "Active").length), "🧑‍🎓", "#1A56DB"],
                 ["Hours This Month", "—", "⏱️", "#059669"],
@@ -270,7 +285,7 @@ function TutorDashboard({ user, setPage }) {
           <div className="fadeUp">
             <div className="page-title">Earnings</div>
             <div className="page-sub">Your tutoring income summary</div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18, marginBottom:26 }}>
+            <div className="dash-grid-3" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18, marginBottom:26 }}>
               {[["This Month","—","#059669"],["Last Month","—","#1A56DB"],["Total","—","#D97706"]].map(([l,v,c]) => (
                 <div key={l} className="card" style={{ padding:22, textAlign:"center" }}>
                   <div style={{ fontSize:26, fontWeight:800, color:c, fontFamily:"Playfair Display,serif", marginBottom:6 }}>{v}</div>

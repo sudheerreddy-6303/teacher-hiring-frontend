@@ -103,7 +103,7 @@ function HowItWorksPage({ setPage }) {
             <h2 className="sec-title">Hire the <em style={{ color:"#1A56DB" }}>Right Teacher</em> Fast</h2>
             <p style={{ color:"#6B7280", fontSize:15, marginTop:10, maxWidth:520, margin:"10px auto 0" }}>Post, review, and hire quality educators in 5 easy steps</p>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:16 }}>
+          <div className="dash-grid-5" style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:16 }}>
             {SCHOOL_STEPS.map((s,i) => (
               <div key={i} style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:16, padding:"24px 18px", boxShadow:"0 2px 10px rgba(0,0,0,.05)", textAlign:"center", position:"relative" }}>
                 {i < SCHOOL_STEPS.length-1 && (

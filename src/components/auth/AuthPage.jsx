@@ -222,6 +222,10 @@ function AuthPage({ mode, setPage }) {
       // Validate mandatory phone
       if (!form.phone.trim()) { setErr("Phone number is required."); return; }
       if (!form.email.trim()) { setErr("Email address is required."); return; }
+      // ADDED (mandatory fields): all step-1 fields are required
+      if (!form.name.trim())     { setErr("Full name is required."); return; }
+      if (!form.city.trim())     { setErr("City is required."); return; }
+      if (!form.password.trim()) { setErr("Password is required."); return; }
       setStep(2); return;
     }
     if (step === 2) {
@@ -230,10 +234,36 @@ function AuthPage({ mode, setPage }) {
         if (!form.student_name.trim()) { setErr("Please enter your child's name."); return; }
         if (!form.student_class)       { setErr("Please select your child's class."); return; }
         if (!(form.parent_subjects && form.parent_subjects.length)) { setErr("Please select at least one subject."); return; }
+        // ADDED (mandatory fields): remaining parent fields are required too
+        if (form.parent_courses !== undefined && !(form.parent_courses && form.parent_courses.length)) { setErr("Please select at least one course."); return; }
+        if (form.board_pref !== undefined && !String(form.board_pref || "").trim())     { setErr("Please select a board preference."); return; }
+        if (form.location_pref !== undefined && !String(form.location_pref || "").trim()) { setErr("Please enter your location preference."); return; }
       }
       // Validate tutor-specific required fields
       if (form.role === "tutor") {
         if (!(form.subjects && form.subjects.length)) { setErr("Please select at least one subject."); return; }
+        // ADDED (mandatory fields): all tutor fields are required
+        if (!String(form.qualification || "").trim() && !(form.qualifications && form.qualifications.length)) { setErr("Please select your qualification."); return; }
+        if (!(form.availability && form.availability.length)) { setErr("Please select your availability."); return; }
+        if (!String(form.hourly_rate || "").trim())    { setErr("Hourly rate is required."); return; }
+        if (!String(form.address || "").trim())        { setErr("Address is required."); return; }
+        if (!String(form.tutor_location || "").trim()) { setErr("Location/area is required."); return; }
+        if (!String(form.pincode || "").trim())        { setErr("Pincode is required."); return; }
+        if (!String(form.class_link || "").trim())     { setErr("Online class link is required."); return; }
+        if (!String(form.gender || "").trim())         { setErr("Please select your gender."); return; }
+      }
+      // ADDED (mandatory fields): teacher fields are required
+      if (form.role === "teacher") {
+        if (!String(form.subject || "").trim())       { setErr("Please select at least one subject."); return; }
+        if (!String(form.experience || "").trim())    { setErr("Experience is required."); return; }
+        if (!String(form.qualification || "").trim()) { setErr("Qualification is required."); return; }
+        if (!String(form.bio || "").trim())           { setErr("Please write a short bio."); return; }
+      }
+      // ADDED (mandatory fields): school fields are required
+      if (form.role === "school") {
+        if (!String(form.institute_type || "").trim()) { setErr("Institute type is required."); return; }
+        if (!String(form.est_year || "").trim())       { setErr("Establishment year is required."); return; }
+        if (!String(form.student_count || "").trim())  { setErr("Student count is required."); return; }
       }
       // Send OTP to email
       setOtpLoading(true);

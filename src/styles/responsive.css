@@ -408,3 +408,167 @@
 @media (max-width: 768px) {
   .pricing-grid { grid-template-columns: 1fr !important; max-width: 460px !important; }
 }
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADDED (mobile responsiveness fix): tablet-range grid adjustments (641–1024px)
+   Purely additive — phones (≤640px) and laptops (>1024px) keep existing behavior.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Tablets: 3/4-column dashboard KPI grids → 2 across; 5-column strips → 3 across */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .dash-grid-3,
+  .dash-grid-4,
+  .kpi-row { grid-template-columns: repeat(2, 1fr) !important; }
+  .dash-grid-5 { grid-template-columns: repeat(3, 1fr) !important; }
+}
+
+/* Phones: 5-column strips → 2 across (cards too small at 1-per-row here looks fine,
+   but 2-across matches the stats-strip pattern already used elsewhere) */
+@media (max-width: 640px) {
+  .dash-grid-5 { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* Public profile page: comfortable edge padding on phones */
+@media (max-width: 640px) {
+  .public-profile-page { padding-left: 4px; padding-right: 4px; }
+  .public-profile-page > div { padding-left: 12px !important; padding-right: 12px !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADDED (School dashboard mobile fixes) — purely additive
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  /* ☰ button is fixed at top-left; give the topbar title room so it isn't hidden */
+  .school-topbar { padding-left: 68px !important; }
+
+  /* Drawer: comfortable width on small phones, never wider than the screen */
+  .school-sidebar { max-width: 82vw; }
+
+  /* Backdrop is rendered by JS only while the drawer is open */
+  .school-drawer-backdrop { display: block !important; }
+}
+
+@media (max-width: 640px) {
+  /* Content breathing room + topbar actions fit on one screen */
+  .school-content { padding: 16px 12px !important; }
+  .school-topbar-actions { gap: 6px; }
+  .school-topbar-actions .btn { font-size: 12px !important; padding: 7px 12px !important; }
+
+  /* Teacher-detail rows: labels shrink instead of forcing overflow */
+  .school-db-results [style*="min-width"] { min-width: 0 !important; }
+
+  /* Modals inside school dashboard: use full width comfortably */
+  .school-layout .modal,
+  .school-layout [style*="max-width: 780"] { width: 96% !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADDED (School dashboard phone card fixes — from user screenshots)
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  /* Profile hero: stack logo / name / Edit button vertically, keep inside the card */
+  .school-hero { padding: 22px 18px !important; }
+  .school-hero-row { flex-wrap: wrap !important; gap: 14px !important; }
+  .school-hero-row > div:first-child { width: 64px !important; height: 64px !important; font-size: 30px !important; }
+  .school-hero-row > div:nth-child(2) { flex: 1 1 100% !important; order: 3; }
+  .school-hero-row > div:nth-child(2) > div:first-child { font-size: 19px !important; word-break: break-word; }
+  .school-hero-edit { order: 2; margin-left: auto; padding: 8px 14px !important; font-size: 13px !important; }
+
+  /* Teacher Database card header: relevance widget wraps below the name
+     instead of pushing the thumbs off-screen */
+  .school-db-cardhead { flex-wrap: wrap !important; gap: 8px !important; }
+  .school-db-cardhead > div:last-child { width: 100%; justify-content: flex-end; }
+
+  /* Applicant card header: status badge wraps under the name when tight */
+  .school-app-cardhead { flex-wrap: wrap !important; gap: 8px !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADDED (Teacher Database: 2 cards per row on desktop, 1 per row on mobile)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.school-db-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px !important;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .school-db-grid { grid-template-columns: 1fr; }
+}
+
+/* Contact modal: a bit wider so the resume preview reads well */
+@media (min-width: 641px) {
+  .school-layout [style*="max-width: 420"] { max-width: 560px !important; }
+}
+
+/* ADDED: resume is shown inside the View Contact popup only —
+   the card's View Resume button is hidden (code kept, not deleted) */
+.school-db-resume-btn { display: none !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADDED (Teacher dashboard profile hero — phone layout, from user screenshot)
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .teacher-hero { padding: 22px 18px !important; }
+  .teacher-hero-row { flex-wrap: wrap !important; gap: 14px !important; }
+  .teacher-hero-row > div:first-child { width: 68px !important; height: 68px !important; }
+  .teacher-hero-row > div:first-child span { font-size: 30px !important; }
+  .teacher-hero-row > div:nth-child(2) { flex: 1 1 100% !important; order: 3; }
+  .teacher-hero-row > div:nth-child(2) > div:first-child { font-size: 19px !important; word-break: break-word; }
+  .teacher-hero-side {
+    order: 2; margin-left: auto;
+    flex-direction: row !important; align-items: center !important; gap: 8px !important;
+  }
+  .teacher-hero-side .btn { font-size: 12px !important; padding: 7px 12px !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADDED (Parent dashboard — Find Tutors filter bar, all screen sizes)
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .parent-filter-bar { gap: 14px !important; }
+  .parent-city-filter { flex: 1 1 100% !important; }
+  .parent-city-filter select { width: 100%; }
+  .parent-filter-bar span { font-size: 11px !important; padding: 5px 10px !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ADDED (browse pages responsiveness): mobile + all laptop sizes.
+   Scoped to .browse-page ONLY — dashboards, home page and admin pages
+   keep their existing rules untouched.
+   Breakpoints:
+     ≥1281px  desktops / big laptops  → 3 cards per row (comfortable)
+     1025–1280px small laptops       → 3 cards per row, tighter gaps
+     641–1024px  tablets             → 2 cards per row
+     ≤640px      phones              → 1 card per row
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Small laptops (1025–1280px): keep 3 per row but tighten spacing so the
+   cards fit neatly beside the 260px filter sidebar.
+   (!important needed because the grid divs carry an inline gap:20 style) */
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .browse-page .responsive-grid-3 { grid-template-columns: repeat(3, 1fr); gap: 14px !important; }
+  .browse-page .browse-layout     { grid-template-columns: 230px 1fr; gap: 16px; }
+}
+
+/* Tablets landscape (901–1024px): 2 per row */
+@media (min-width: 901px) and (max-width: 1024px) {
+  .browse-page .responsive-grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Tablets portrait (641–900px): 2 per row — previously collapsed to a
+   single column this early, wasting half the screen */
+@media (min-width: 641px) and (max-width: 900px) {
+  .browse-page .responsive-grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Phones (≤640px): 1 per row, comfortable side padding, smaller hero */
+@media (max-width: 640px) {
+  .browse-page .responsive-grid-3 { grid-template-columns: 1fr; gap: 14px !important; }
+  .browse-page .container { padding-left: 14px !important; padding-right: 14px !important; }
+}
+
+/* Very small phones (≤380px): keep chips and long subject lists from
+   overflowing the card */
+@media (max-width: 380px) {
+  .browse-page .responsive-grid-3 { gap: 12px !important; }
+}

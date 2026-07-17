@@ -7,6 +7,16 @@ import './Parent.css';
 function ParentDashboard({ user, setPage }) {
   const { logout } = useAuth();
   const [tab, setTab] = useState("overview");
+  // ADDED (credit system): show remaining contact credits on the Overview page too
+  const [overviewCredits, setOverviewCredits] = useState(null);
+  useEffect(() => {
+    const _t = localStorage.getItem("acadhr_token");
+    if (!_t) return;
+    fetch((process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/admin/parent/credits", { headers: { Authorization: "Bearer " + _t } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && typeof d.credits === "number") setOverviewCredits(d.credits); })
+      .catch(() => {});
+  }, [tab]);
   const [profile, setProfile] = useState({
     student_name:"", student_class:"", board:"", subject:"",
     location:"", mode:"", preferred_time:"", budget:"",
@@ -56,6 +66,21 @@ function ParentDashboard({ user, setPage }) {
   }, []);
 
   async function saveProfile() {
+    // ADDED (mandatory fields): all profile fields are required before saving
+    {
+      const missing = [];
+      const need = (v, label) => { if (v === "" || v === null || v === undefined) missing.push(label); };
+      need(profile.student_name, "Student Name"); need(profile.student_class, "Class");
+      need(profile.board, "Board"); need(profile.subject, "Subjects");
+      need(profile.location, "Location"); need(profile.mode, "Mode");
+      need(profile.preferred_time, "Preferred Time");
+      need(profile.budget || profile.hourly_budget, "Budget");
+      need(profile.tutor_gender_pref, "Tutor Gender Preference");
+      need(profile.experience_req, "Experience Required");
+      need(profile.state, "State"); need(profile.pincode, "Pincode");
+      need(profile.landmark, "Landmark"); need(profile.institute_name, "School/Institute Name");
+      if (missing.length) { setSaveError("Please fill all mandatory fields: " + missing.join(", ")); return; }
+    }
     setSaving(true); setSaveError("");
     try {
       const token = localStorage.getItem("acadhr_token");
@@ -183,11 +208,13 @@ function ParentDashboard({ user, setPage }) {
           <div className="fadeUp">
             <div className="page-title">Welcome, {user.name.split(" ")[0]} 👋</div>
             <div className="page-sub">Your tutor search at a glance</div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18, marginBottom:24 }}>
+            <div className="dash-grid-3" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18, marginBottom:24 }}>
               {[
                 ["Student",   profile.student_name||"Not set", "🧒", "#1A56DB"],
                 ["Class",     profile.student_class||"Not set", "📚", "#059669"],
                 ["Status",    profile.status||"Open",           "📋", "#D97706"],
+                /* ADDED (credit system): credits card on Overview */
+                ...(overviewCredits !== null ? [["Contact Credits", `${overviewCredits} left`, "🪙", overviewCredits > 0 ? "#D97706" : "#DC2626"]] : []),
               ].map(([l,v,i,c]) => (
                 <div key={l} className="card kpi" style={{ padding:22, textAlign:"center" }}>
                   <div style={{ fontSize:28, marginBottom:8 }}>{i}</div>
@@ -345,7 +372,7 @@ function ParentDashboard({ user, setPage }) {
         )}
 
         {tab==="tutors" && (
-          <TutorFinder user={user} profile={profile} />
+          <TutorFinder user={user} profile={profile} setPage={setPage} />
         )}
       </div>
     </div>
@@ -353,18 +380,36 @@ function ParentDashboard({ user, setPage }) {
 }
 
 // ── TutorFinder — only shown to approved parents ─────────────────────────────
-function TutorFinder({ user, profile }) {
+function TutorFinder({ user, profile, setPage }) {
   const [tutors,   setTutors]   = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [approved, setApproved] = useState(true); // is_active from backend
   const [filter,   setFilter]   = useState({ subjects:[], city:"" });
   const [contacted, setContacted] = useState([]);
+  // ADDED (mobile fix): searchable city box state — native <select> popup
+  // could overflow the phone screen, this stays fully inside it.
+  const [cityQuery, setCityQuery] = useState("");
+  const [citySug,   setCitySug]   = useState(false);
+  // ADDED (credit system): parents get 5 free tutor contacts; balance lives on the server
+  const [credits,     setCredits]     = useState(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  // ADDED: freeze background scrolling while the upgrade popup is open,
+  // so the popup always sits centered over a still page
+  useEffect(() => {
+    document.body.style.overflow = showUpgrade ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [showUpgrade]);
 
   const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
   useEffect(() => {
     const token = localStorage.getItem("acadhr_token");
     if (!token) { setLoading(false); return; }
+    // ADDED (credit system): load the parent's remaining credits
+    fetch(`${API}/admin/parent/credits`, { headers: { Authorization: "Bearer " + token } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && typeof d.credits === "number") setCredits(d.credits); })
+      .catch(() => {});
     // Fetch ALL tutors for the parent — backend returns 403 if not approved
     fetch(API + "/admin/tutors-list", {
       headers: { Authorization: "Bearer " + token }
@@ -379,7 +424,14 @@ function TutorFinder({ user, profile }) {
   }, []);
 
   // Unique dropdown / chip options derived from the fetched tutors
-  const subjectOptions = Array.from(new Set(tutors.map(t => t.subject).filter(Boolean))).sort();
+  // CHANGED (chip cleanup): split combined "Math, Physics, ..." strings into individual
+  // subjects so the filter shows one clean chip per subject. Original line kept below.
+  // const subjectOptions = Array.from(new Set(tutors.map(t => t.subject).filter(Boolean))).sort();
+  const subjectOptions = Array.from(new Set(
+    tutors.flatMap(t => String(t.subjects || t.subject || "").split(","))
+          .map(s => s.trim())
+          .filter(Boolean)
+  )).sort();
   const cityOptions    = Array.from(new Set(tutors.map(t => t.city).filter(Boolean))).sort();
 
   // Build a WhatsApp link (strip non-digits; assume +91 for 10-digit Indian numbers)
@@ -425,11 +477,22 @@ function TutorFinder({ user, profile }) {
   return (
     <div className="fadeUp">
       <div className="page-title">Find Tutors</div>
-      <div className="page-sub">Browse all tutors — {filtered.length} available</div>
+      <div className="page-sub" style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+        <span>Browse all tutors — {filtered.length} available</span>
+        {credits !== null && (
+          <span style={{
+            background: credits > 0 ? "linear-gradient(135deg,#F59E0B,#D97706)" : "linear-gradient(135deg,#EF4444,#DC2626)",
+            color:"#fff", borderRadius:24, padding:"7px 18px", fontSize:14, fontWeight:800,
+            boxShadow: credits > 0 ? "0 4px 14px rgba(217,119,6,.35)" : "0 4px 14px rgba(220,38,38,.35)",
+            display:"inline-flex", alignItems:"center", gap:6, letterSpacing:.3 }}>
+            🪙 {credits} credit{credits === 1 ? "" : "s"} left
+          </span>
+        )}
+      </div>
 
       {/* Filters */}
       <div style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:12, padding:"16px 20px", marginBottom:20 }}>
-        <div style={{ display:"flex", gap:20, flexWrap:"wrap", alignItems:"flex-start" }}>
+        <div className="parent-filter-bar" style={{ display:"flex", gap:20, flexWrap:"wrap", alignItems:"flex-start" }}>
           <div style={{ flex:"1 1 320px" }}>
             <div style={{ fontSize:12, fontWeight:700, color:"#6B7280", marginBottom:8 }}>📚 Filter by subject (select any)</div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
@@ -448,12 +511,40 @@ function TutorFinder({ user, profile }) {
                   })}
             </div>
           </div>
-          <div style={{ flex:"0 0 200px" }}>
+          <div className="parent-city-filter" style={{ flex:"0 0 200px" }}>
             <div style={{ fontSize:12, fontWeight:700, color:"#6B7280", marginBottom:8 }}>📍 Filter by city</div>
-            <select className="input" value={filter.city} onChange={e => setFilter(f => ({ ...f, city:e.target.value }))}>
-              <option value="">All cities</option>
+            {/* Original dropdown kept (not deleted) — hidden; native popup overflowed phone screens */}
+            <select className="input parent-city-select-old" style={{ display:"none" }} value={filter.city} onChange={e => setFilter(f => ({ ...f, city:e.target.value }))}>
+              <option value="">Select City</option>
               {cityOptions.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
+            {/* ADDED: searchable city box — suggestion list stays inside the screen */}
+            <div style={{ position:"relative" }}>
+              <input className="input" placeholder="Type a city..." value={filter.city || cityQuery}
+                onChange={e => { setCityQuery(e.target.value); setCitySug(true); if (filter.city) setFilter(f => ({ ...f, city:"" })); }}
+                onFocus={() => setCitySug(true)}
+                onBlur={() => setTimeout(() => setCitySug(false), 150)} />
+              {filter.city && (
+                <span onClick={() => { setFilter(f => ({ ...f, city:"" })); setCityQuery(""); }}
+                  style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:"#9CA3AF", fontWeight:700 }}>✕</span>
+              )}
+              {citySug && !filter.city && (
+                <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:50, background:"#fff", border:"1px solid #E5E7EB", borderRadius:10, marginTop:4, maxHeight:220, overflowY:"auto", boxShadow:"0 10px 30px rgba(0,0,0,.12)" }}>
+                  {cityOptions.filter(c => c.toLowerCase().includes(cityQuery.toLowerCase())).slice(0, 30).map(c => (
+                    <div key={c}
+                      onMouseDown={() => { setFilter(f => ({ ...f, city:c })); setCityQuery(""); setCitySug(false); }}
+                      style={{ padding:"9px 12px", fontSize:13, cursor:"pointer", borderBottom:"1px solid #F3F4F6" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "#F0F4FF"}
+                      onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+                      {c}
+                    </div>
+                  ))}
+                  {cityOptions.filter(c => c.toLowerCase().includes(cityQuery.toLowerCase())).length === 0 && (
+                    <div style={{ padding:"10px 12px", fontSize:13, color:"#9CA3AF" }}>No matching city</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         {(filter.subjects.length || filter.city) ? (
@@ -521,13 +612,54 @@ function TutorFinder({ user, profile }) {
                   </div>
                 ) : (
                   <button className="btn btn-primary btn-sm" style={{ width:"100%", justifyContent:"center" }}
-                    onClick={() => setContacted(c => [...c, t.id])}>
+                    onClick={async () => {
+                      // ADDED (credit system): 1 credit per new tutor contact, checked on the server.
+                      // Already-contacted tutors stay open free (button hidden for them).
+                      try {
+                        const token = localStorage.getItem("acadhr_token");
+                        const r = await fetch(`${API}/admin/parent/use-credit`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                          body: JSON.stringify({ tutor_id: t.id }),
+                        });
+                        if (r.status === 402) { setShowUpgrade(true); return; }
+                        if (r.ok) {
+                          const d = await r.json();
+                          if (typeof d.credits === "number") setCredits(d.credits);
+                          setContacted(c => [...c, t.id]);
+                          return;
+                        }
+                      } catch (e) { /* network issue — fall through to original behavior */ }
+                      // Original behavior kept as fallback (e.g. backend not yet redeployed)
+                      setContacted(c => [...c, t.id]);
+                    }}>
                     📞 Contact Tutor
                   </button>
                 )}
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ADDED (credit system): upgrade popup when credits reach 0 */}
+      {showUpgrade && (
+        <div onClick={() => setShowUpgrade(false)}
+          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:3000, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:16, paddingTop:70, overflowY:"auto" }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background:"#fff", borderRadius:18, maxWidth:400, width:"100%", padding:"30px 26px", textAlign:"center", boxShadow:"0 24px 80px rgba(0,0,0,.25)" }}>
+            <div style={{ fontSize:44, marginBottom:12 }}>🪙</div>
+            <h3 style={{ fontWeight:800, fontSize:19, color:"#111827", marginBottom:8 }}>You're out of credits</h3>
+            <p style={{ fontSize:14, color:"#6B7280", lineHeight:1.6, marginBottom:22 }}>
+              You've used your 5 free tutor contacts. Upgrade your plan to keep connecting with tutors.
+            </p>
+            <button className="btn btn-primary" style={{ width:"100%", justifyContent:"center", marginBottom:10 }}
+              onClick={() => { setShowUpgrade(false); if (typeof setPage === "function") setPage("pricing"); }}>
+              🚀 Upgrade Now
+            </button>
+            <button className="btn btn-ghost" style={{ width:"100%", justifyContent:"center" }}
+              onClick={() => setShowUpgrade(false)}>Maybe later</button>
+          </div>
         </div>
       )}
     </div>
