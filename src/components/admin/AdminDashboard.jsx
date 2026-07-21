@@ -1313,7 +1313,7 @@ function TutorEditModal({ tutor, api, hdr, onClose, onToggle, onSaved }) {
     resume_link:   tutor.resume_link || "",
     resume_file_name: tutor.resume_file_name || "",
     bio:           tutor.bio || "",
-    profile_status: tutor.profile_status || "Pending",
+    profile_status: tutor.profile_status || "Active",
   }));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg]       = useState("");
@@ -2523,7 +2523,10 @@ function AdminDashboard({ setPage }) {
                           <td data-label="Email" style={{ fontSize:12, color:"#6B7280" }}>{t.email}</td>
                           <td data-label="Subject" style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={t.subject||""}>{t.subject||"—"}</td>
                           <td data-label="City" style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={t.city||""}>📍 {t.city||"—"}</td>
-                          <td data-label="Status"><StatusBadge active={t.is_active} /></td>
+                          <td data-label="Status">
+                            <StatusBadge active={t.is_active} />
+                            {t.profile_status === "Pending" && <span style={{ marginLeft:6, background:"#FEF3C7", color:"#92400E", borderRadius:20, padding:"2px 8px", fontSize:10.5, fontWeight:800, whiteSpace:"nowrap" }}>⏳ Pending</span>}
+                          </td>
                           <td data-label="Action">
                             <div style={{ display:"flex", gap:8, flexWrap:"nowrap", alignItems:"center" }}>
                               <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedTutor(t); }}>👁 View</button>
@@ -2531,6 +2534,16 @@ function AdminDashboard({ setPage }) {
                                 <button className="btn btn-sm" style={{ color:"#0F6E56", borderColor:"#9FE1CB", background:"#E1F5EE", display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"6px 10px" }} onClick={(e) => { e.stopPropagation(); openMatchTuitionsForTutor(t); }} title="Send this tutor's profile to matching tuitions on WhatsApp" aria-label="Send to tuitions on WhatsApp"><svg width="17" height="17" viewBox="0 0 24 24" fill="#25D366"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-5.9c-.2-.1-1.4-.7-1.7-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8.9-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7.3 7.3 0 0 1-1.4-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4c.1-.1 0-.3 0-.4l-.8-1.9c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 4 3.4.6.3 1 .4 1.4.5.6.2 1.1.2 1.5.1.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1 0-.1-.2-.2-.4-.3z"/></svg></button>
                               )}
                               <button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(t.id); }}>{t.is_active?"Deactivate":"Activate"}</button>
+                              {t.profile_status === "Pending" && (
+                                <button className="btn btn-sm btn-success" title="Approve — publish on Browse Tutors & Home"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                      const r = await fetch(API + `/admin/tutors/${t.id}`, { method:"PATCH", headers:{ ...hdr, "Content-Type":"application/json" }, body: JSON.stringify({ profile_status:"Active" }) });
+                                      if (r.ok) fetchData("tutors", "/admin/tutors", setTutors);
+                                    } catch (_) { /* ignore */ }
+                                  }}>✓ Approve</button>
+                              )}
                             </div>
                           </td>
                         </tr>
