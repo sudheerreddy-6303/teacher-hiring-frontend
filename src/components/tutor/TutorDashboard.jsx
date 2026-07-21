@@ -1,10 +1,22 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { profileAPI } from "../../api";
+import { tutorAPI } from "../../api"; // ADDED: tuitions database + apply
 
 import { Toast, Divider, InlineBrowseJobs } from "../../components/common/Shared";
 import SuccessPopup from "../../components/common/SuccessPopup";
 import './Tutor.css';
+
+// ADDED: subject icon helper — same look as the public Browse Tuitions page
+const TUITION_SUBJECT_ICON = {
+  mathematics:"➗", maths:"➗", math:"➗", physics:"🔬", chemistry:"⚗️", biology:"🧬",
+  english:"📖", hindi:"🔤", "computer science":"💻", economics:"📈", accountancy:"📊",
+  "social science":"🌍", science:"🔭",
+};
+function tuitionIconFor(subject) {
+  const key = (subject || "").trim().toLowerCase().split(/[,/]/)[0].trim();
+  return TUITION_SUBJECT_ICON[key] || "📚";
+}
 
 function TutorDashboard({ user, setPage }) {
   const { logout } = useAuth();
@@ -123,6 +135,7 @@ function TutorDashboard({ user, setPage }) {
         hourly_rate:    rawRate || prev.hourly_rate,
         resume_name:    p.resume_file_name || prev.resume_name,
         resume_link:    p.resume_link || prev.resume_link,
+        profile_status: p.profile_status || prev.profile_status || "",
       }));
     } catch (e) { /* keep current values if the fetch fails */ }
   }
@@ -135,10 +148,55 @@ function TutorDashboard({ user, setPage }) {
   const MENU = [
     { id:"overview",  icon:"🏠", label:"Overview" },
     { id:"students",  icon:"🧑‍🎓", label:"My Students" },
+    { id:"tuitions",  icon:"📚", label:"Tuitions Database" },
     { id:"schedule",  icon:"📅", label:"Schedule" },
     { id:"earnings",  icon:"💰", label:"Earnings" },
     { id:"profile",   icon:"👤", label:"My Profile" },
   ];
+
+  // ADDED: Tuitions Database — all open tuition requirements + this tutor's applications
+  const [tuitions, setTuitions]             = useState([]);
+  const [tuitionsLoading, setTuitionsLoading] = useState(false);
+  const [tuitionsError, setTuitionsError]   = useState("");
+  const [appliedIds, setAppliedIds]         = useState([]);   // parent_user_ids already applied to
+  const [applyBusy, setApplyBusy]           = useState(null); // id currently being applied to
+  const [applyMsg, setApplyMsg]             = useState("");
+  // ADDED: load this tutor's application count once on mount, so the overview KPI shows it
+  useEffect(() => {
+    tutorAPI.myTuitionApplications()
+      .then(apps => setAppliedIds(Array.isArray(apps) ? apps.map(a => a.parent_user_id) : []))
+      .catch(() => {});
+  }, []);
+  // ADDED: filter for the Tuitions Database tab — "all" or "applied" (set when the KPI is clicked)
+  const [tuitionsFilter, setTuitionsFilter] = useState("all");
+  const shownTuitions = tuitionsFilter === "applied"
+    ? tuitions.filter(t => appliedIds.includes(t.id))
+    : tuitions;
+  // ADDED: a newly registered tutor must be approved by an admin before using the dashboard
+  const pendingApproval = String(profile.profile_status || "") === "Pending";
+  useEffect(() => {
+    if (tab !== "tuitions" || pendingApproval) return;
+    setTuitionsLoading(true); setTuitionsError("");
+    Promise.all([
+      tutorAPI.tuitions().catch(e => { throw e; }),
+      tutorAPI.myTuitionApplications().catch(() => []),
+    ])
+      .then(([list, apps]) => {
+        setTuitions(Array.isArray(list) ? list : []);
+        setAppliedIds(Array.isArray(apps) ? apps.map(a => a.parent_user_id) : []);
+      })
+      .catch(e => setTuitionsError(e.message || "Could not load tuitions."))
+      .finally(() => setTuitionsLoading(false));
+  }, [tab, pendingApproval]);
+  async function handleApplyTuition(id) {
+    setApplyBusy(id); setApplyMsg("");
+    try {
+      const r = await tutorAPI.applyTuition(id);
+      setAppliedIds(ids => ids.includes(id) ? ids : [...ids, id]);
+      setApplyMsg(r.message || "Applied successfully!");
+    } catch (e) { setApplyMsg("Error: " + e.message); }
+    finally { setApplyBusy(null); }
+  }
 
   // Earnings — no backend source yet, so start empty (no fake data)
   const earnings = [];
@@ -185,19 +243,36 @@ function TutorDashboard({ user, setPage }) {
             <div className="page-title">Welcome back, {user.name.split(" ")[0]} 👋</div>
             <div className="page-sub">Your tutoring activity at a glance</div>
 
-            <div className="dash-grid-4" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:18, marginBottom:26 }}>
+            {pendingApproval && (
+              <div style={{ background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:12, padding:"14px 18px", margin:"14px 0 20px", display:"flex", gap:12, alignItems:"flex-start" }}>
+                <span style={{ fontSize:22 }}>⏳</span>
+                <div>
+                  <div style={{ fontWeight:800, color:"#92400E", fontSize:14.5 }}>Your profile is pending admin approval</div>
+                  <div style={{ color:"#B45309", fontSize:13, marginTop:2 }}>Browsing and applying to tuitions unlocks once an admin approves your profile. You can finish your details under My Profile in the meantime.</div>
+                </div>
+              </div>
+            )}
+
+            <div className="dash-grid-4" style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:18, marginBottom:26 }}>
               {[
                 ["Active Students", String(requests.filter(r => r.status === "Active").length), "🧑‍🎓", "#1A56DB"],
+                ["Tuitions Applied", String(appliedIds.length), "📚", "#0E7490"],
                 ["Hours This Month", "—", "⏱️", "#059669"],
                 ["Earnings (This Month)", "—", "💰", "#D97706"],
                 ["Avg. Rating", "—", "⭐", "#6D28D9"],
-              ].map(([l,v,i,c]) => (
-                <div key={l} className="card kpi" style={{ padding:20, textAlign:"center" }}>
+              ].map(([l,v,i,c]) => {
+                const clickable = l === "Tuitions Applied";
+                return (
+                <div key={l} className="card kpi"
+                  onClick={clickable ? () => { setTuitionsFilter("applied"); setTab("tuitions"); } : undefined}
+                  title={clickable ? "View the tuitions you've applied to" : undefined}
+                  style={{ padding:20, textAlign:"center", cursor: clickable ? "pointer" : "default" }}>
                   <div style={{ fontSize:26, marginBottom:8 }}>{i}</div>
                   <div style={{ fontSize:22, fontWeight:800, color:c, fontFamily:"Playfair Display,serif" }}>{v}</div>
                   <div style={{ fontSize:12, color:"#6B7280", fontWeight:600, marginTop:4 }}>{l}</div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
@@ -243,7 +318,120 @@ function TutorDashboard({ user, setPage }) {
         )}
 
         {/* ── Students ── */}
-        {tab === "students" && (
+        {/* ADDED: lock screen — gated tabs are blocked until an admin approves the tutor ── */}
+        {pendingApproval && (tab === "tuitions" || tab === "students" || tab === "schedule" || tab === "earnings") && (
+          <div className="fadeUp">
+            <div className="page-title">Pending Admin Approval</div>
+            <div className="card" style={{ textAlign:"center", padding:"48px 24px", maxWidth:640 }}>
+              <div style={{ fontSize:52, marginBottom:14 }}>⏳</div>
+              <h3 style={{ fontSize:20, fontWeight:800, color:"#111827", marginBottom:10 }}>Your profile is awaiting approval</h3>
+              <p style={{ color:"#6B7280", fontSize:14.5, lineHeight:1.7, maxWidth:460, margin:"0 auto 6px" }}>
+                An AcadHr admin needs to review and approve your tutor profile before you can browse the Tuitions Database, apply to tuitions, and use the other tools. You'll get full access as soon as you're approved.
+              </p>
+              <p style={{ color:"#9CA3AF", fontSize:13, marginTop:10 }}>Meanwhile, you can complete your details under <b>My Profile</b>.</p>
+              <button className="btn btn-primary btn-sm" style={{ marginTop:18 }} onClick={() => setTab("profile")}>Go to My Profile →</button>
+            </div>
+          </div>
+        )}
+        {/* ── ADDED: Tuitions Database — all open tuitions with Apply buttons ── */}
+        {tab === "tuitions" && !pendingApproval && (
+          <div className="fadeUp">
+            <div className="page-title">Tuitions Database</div>
+            <div className="page-sub">All tuition requirements posted by parents — apply to the ones that match you</div>
+            {/* ADDED: filter — All vs Applied only (KPI click lands here on "Applied") */}
+            <div style={{ display:"flex", gap:8, margin:"14px 0 4px", flexWrap:"wrap" }}>
+              {[["all","All Tuitions"],["applied",`Applied (${appliedIds.length})`]].map(([key,label]) => (
+                <span key={key} onClick={() => setTuitionsFilter(key)}
+                  style={{ padding:"7px 14px", borderRadius:999, fontSize:13, fontWeight:700, cursor:"pointer", userSelect:"none",
+                    border:`1.5px solid ${tuitionsFilter===key ? "#0E7490" : "#E5E7EB"}`,
+                    background: tuitionsFilter===key ? "#ECFEFF" : "#fff",
+                    color: tuitionsFilter===key ? "#0E7490" : "#6B7280" }}>{label}</span>
+              ))}
+            </div>
+            {applyMsg && (
+              <div className={"alert " + (applyMsg.startsWith("Error") ? "a-warn" : "a-ok")} style={{ marginBottom:16 }}>{applyMsg}</div>
+            )}
+            {tuitionsLoading && (
+              <div className="card" style={{ textAlign:"center", color:"#9CA3AF", padding:"36px 0" }}>Loading tuitions…</div>
+            )}
+            {!tuitionsLoading && tuitionsError && (
+              <div className="card" style={{ textAlign:"center", color:"#B91C1C", padding:"28px 16px" }}>{tuitionsError}</div>
+            )}
+            {!tuitionsLoading && !tuitionsError && shownTuitions.length === 0 && (
+              <div className="card" style={{ textAlign:"center", color:"#9CA3AF", padding:"36px 0" }}>
+                {tuitionsFilter === "applied" ? "You haven't applied to any tuitions yet." : "No open tuitions right now — check back soon!"}
+              </div>
+            )}
+            {!tuitionsLoading && !tuitionsError && shownTuitions.length > 0 && (
+              <div className="responsive-grid-3" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:20 }}>
+                {shownTuitions.map(t => {
+                  const applied = appliedIds.includes(t.id);
+                  const sub = [t.student_class, t.board].filter(Boolean).join(" · ");
+                  const cityOf = t.location || t.user_city || "";
+                  return (
+                    <div key={t.id}
+                      style={{ background:"#fff", borderRadius:16, border:"1px solid #E5E7EB", padding:24, transition:"all .2s" }}
+                      onMouseEnter={e => { e.currentTarget.style.boxShadow="0 8px 28px rgba(14,116,144,.12)"; e.currentTarget.style.borderColor="#67E8F9"; e.currentTarget.style.transform="translateY(-2px)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.borderColor="#E5E7EB"; e.currentTarget.style.transform="none"; }}>
+
+                      <div style={{ display:"flex", alignItems:"flex-start", gap:14, marginBottom:14 }}>
+                        <div style={{ width:54, height:54, borderRadius:14, background:"#ECFEFF", border:"2px solid #A5F3FC", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>
+                          {tuitionIconFor(t.subject)}
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontWeight:800, fontSize:16, color:"#111827" }}>{t.subject || "Tuition Required"}</div>
+                          {sub && <div style={{ fontSize:12, color:"#0E7490", fontWeight:600, marginTop:2 }}>{sub}</div>}
+                          <div style={{ fontSize:11, color:"#6B7280", marginTop:1 }}>Posted by {t.name || "a parent"}</div>
+                        </div>
+                        <span style={{ background:"#ECFDF5", color:"#059669", border:"1px solid #A7F3D0", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:700, flexShrink:0 }}>
+                          {t.status || "Open"}
+                        </span>
+                      </div>
+
+                      {/* Tags */}
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
+                        {cityOf            && <span style={{ background:"#F3F4F6", color:"#374151", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>📍 {cityOf}</span>}
+                        {t.mode            && <span style={{ background:"#E0F2FE", color:"#0369A1", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>
+                          {t.mode === "Online" ? "💻" : t.mode === "Offline" ? "🏠" : "🔄"} {t.mode}
+                        </span>}
+                        {t.preferred_time  && <span style={{ background:"#F0FDFA", color:"#0E7490", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>🕐 {t.preferred_time}</span>}
+                        {t.experience_req  && <span style={{ background:"#FFF7ED", color:"#C2410C", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>⏳ {t.experience_req}</span>}
+                        {t.tutor_gender_pref && <span style={{ background:"#FDF2F8", color:"#DB2777", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>👤 {t.tutor_gender_pref}</span>}
+                      </div>
+
+                      {t.budget && (
+                        <div style={{ fontWeight:800, fontSize:16, color:"#059669", marginBottom:t.notes?10:14 }}>
+                          💰 {t.budget}
+                        </div>
+                      )}
+
+                      {t.notes && (
+                        <p style={{ fontSize:12, color:"#6B7280", marginBottom:14, lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
+                          “{t.notes}”
+                        </p>
+                      )}
+
+                      <button
+                        disabled={applied || applyBusy === t.id}
+                        onClick={() => handleApplyTuition(t.id)}
+                        style={{ width:"100%", padding:"9px 0", borderRadius:10, fontWeight:700, fontSize:13, fontFamily:"Nunito,sans-serif", transition:"all .15s",
+                          border: applied ? "1.5px solid #A7F3D0" : "1.5px solid #A5F3FC",
+                          background: applied ? "#ECFDF5" : "#ECFEFF",
+                          color: applied ? "#059669" : "#0E7490",
+                          cursor: applied ? "default" : "pointer" }}
+                        onMouseEnter={e => { if (!applied && applyBusy !== t.id) { e.currentTarget.style.background="#0E7490"; e.currentTarget.style.color="#fff"; } }}
+                        onMouseLeave={e => { if (!applied && applyBusy !== t.id) { e.currentTarget.style.background="#ECFEFF"; e.currentTarget.style.color="#0E7490"; } }}>
+                        {applied ? "✓ Applied" : (applyBusy === t.id ? "Applying…" : "Apply Now →")}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === "students" && !pendingApproval && (
           <div className="fadeUp">
             <div className="page-title">My Students</div>
             <div className="page-sub">Manage all your tutoring relationships</div>
@@ -270,7 +458,7 @@ function TutorDashboard({ user, setPage }) {
         )}
 
         {/* ── Schedule ── */}
-        {tab === "schedule" && (
+        {tab === "schedule" && !pendingApproval && (
           <div className="fadeUp">
             <div className="page-title">My Schedule</div>
             <div className="page-sub">Weekly tutoring sessions</div>
@@ -281,7 +469,7 @@ function TutorDashboard({ user, setPage }) {
         )}
 
         {/* ── Earnings ── */}
-        {tab === "earnings" && (
+        {tab === "earnings" && !pendingApproval && (
           <div className="fadeUp">
             <div className="page-title">Earnings</div>
             <div className="page-sub">Your tutoring income summary</div>

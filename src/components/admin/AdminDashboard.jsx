@@ -798,6 +798,22 @@ function AdminTutorForm({ form, up }) {
         </div>
       </div>
       <div className="fg"><label className="flabel">Bio</label><textarea className="input" rows={3} value={form.bio} onChange={e=>up("bio",e.target.value)} placeholder="A short bio..." /></div>
+
+      {/* ADDED: admin approval — only Active (Approved) tutors appear on Browse Tutors & Home */}
+      <div className="fg"><label className="flabel">Profile Status (Approval)</label>
+        <div style={{ display:"flex", gap:10, marginTop:6, flexWrap:"wrap" }}>
+          {[["Active","#059669"],["Pending","#D97706"],["Inactive","#DC2626"]].map(([v,color]) => {
+            const on = (form.profile_status || "Active") === v;
+            return (
+              <label key={v} onClick={()=>up("profile_status",v)}
+                style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 18px", borderRadius:22, border:`2px solid ${on?color:"#D1D5DB"}`, background:on?color+"18":"#fff", cursor:"pointer", fontSize:13, fontWeight:700, color:on?color:"#374151", userSelect:"none" }}>
+                <div style={{ width:8, height:8, borderRadius:"50%", background:on?color:"#D1D5DB" }} />{v==="Active"?"Active (Approved)":v}
+              </label>
+            );
+          })}
+        </div>
+        <div style={{ fontSize:12, color:"#6B7280", marginTop:6 }}>Only <b style={{color:"#059669"}}>Active (Approved)</b> tutors appear on Browse Tutors and the home page.</div>
+      </div>
     </>
   );
 }
@@ -1149,7 +1165,7 @@ const ADD_REQUIRED = {
 
 const ADD_INIT = {
   teacher: { full_name:"", email:"", mobile:"", password:"Welcome@123", gender:"", dob:"", current_location:"", preferred_locations:"", qualification:"", specialization:"", total_experience:"", relevant_experience:"", current_role:"", current_org:"", current_salary:"", expected_salary:"", notice_period:"", available_from:"", certifications:"", work_mode:"", tutor_type:"", subjects:"", grades_handling:"", boards_handled:"", competitive_exams:"", teaching_mode:"", languages:"", demo_available:"", demo_link:"", residential_pref:"", relocation_ready:"", accommodation_req:"", aadhaar_verified:"", resume_link:"", resume_file_name:"", profile_status:"Active", remarks:"", terms_accepted:"" },
-  tutor:   { name:"", email:"", phone:"", password:"Welcome@123", subject:"", city:"", experience:"", qualification:"", hourly_rate:"", teaching_mode:"Both", bio:"" },
+  tutor:   { name:"", email:"", phone:"", password:"Welcome@123", subject:"", city:"", experience:"", qualification:"", hourly_rate:"", teaching_mode:"Both", bio:"", profile_status:"Active" },
   tuition: { name:"", email:"", phone:"", city:"", password:"Welcome@123", student_name:"", student_class:"", board:"", subject:"", courses:"", preferred_days:"", location:"", state:"", pincode:"", landmark:"", institute_name:"", mode:"Home", preferred_time:"", budget:"", hourly_budget:"", tutor_gender_pref:"", experience_req:"", notes:"" },
   job:     { institution_name:"", institution_type:"", location_state:"", location_city:"", contact_person:"", contact_number:"", contact_email:"", requirement_type:"Teacher", subject:"", grades:[], board:"CBSE", experience:"", salary_min:"", salary_max:"", joining_timeline:"Immediate", work_mode:"Full-time", residential:"No", accommodation:"Not Provided", gender_preference:"No Preference", interview_mode:"Online", demo_required:"No", positions:1, status:"Open", assigned_recruiter:"", notes:"" },
 };
@@ -1218,13 +1234,16 @@ function TeacherEditModal({ teacher, api, hdr, onClose, onToggle, onSaved }) {
     finally { setSaving(false); }
   }
 
+  /* Full-page mode (additive): overrides spread AFTER existing styles — nothing removed */
+  const FULLPAGE_MODAL  = { width:"100vw", maxWidth:"100vw", height:"100vh", maxHeight:"100vh", borderRadius:0, margin:0 };
+  const FULLPAGE_HEADER = { borderRadius:0 };
   return (
-    <div className="overlay" onClick={onClose}>
+    <div className="overlay" onClick={onClose} style={{ padding:0 }}>
       <SuccessPopup show={msg.startsWith("✓")} onClose={onClose} />
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)", ...FULLPAGE_MODAL }}>
         {/* Header */}
-        <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+        <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10, ...FULLPAGE_HEADER }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16, maxWidth:1000, margin:"0 auto", width:"100%" }}>
             <div style={{ minWidth:0 }}>
               <div style={{ color:"#93C5FD", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>👩‍🏫 Teacher Profile</div>
               <div style={{ color:"#fff", fontSize:20, fontWeight:800 }}>{form.full_name || teacher.name}</div>
@@ -1234,7 +1253,7 @@ function TeacherEditModal({ teacher, api, hdr, onClose, onToggle, onSaved }) {
           </div>
         </div>
         {/* Body — the full form, pre-filled */}
-        <div style={{ padding:"24px 28px" }}>
+        <div style={{ padding:"24px 28px", maxWidth:1000, margin:"0 auto", width:"100%" }}>
           {msg && <div className={"alert " + (msg.startsWith("✓") ? "a-ok" : "a-warn")} style={{ marginBottom:16 }}>{msg}</div>}
           <AdminTeacherForm form={form} up={up} />
           <div style={{ display:"flex", gap:10, alignItems:"center", marginTop:8, paddingTop:18, borderTop:"1px solid #E5E7EB" }}>
@@ -1267,6 +1286,11 @@ function TeacherEditModal({ teacher, api, hdr, onClose, onToggle, onSaved }) {
 /* ── Tutor View/Edit modal — shows the SAME tutor registration form, pre-filled
    with the selected tutor's data, and lets the admin update & save it.        ── */
 function TutorEditModal({ tutor, api, hdr, onClose, onToggle, onSaved }) {
+  /* Full-page mode: these style overrides are spread AFTER the existing modal styles,
+     so the tutor profile opens as a full page instead of a small popup.
+     Nothing from the original modal is removed — only overridden. */
+  const FULLPAGE_MODAL  = { width:"100vw", maxWidth:"100vw", height:"100vh", maxHeight:"100vh", borderRadius:0, margin:0 };
+  const FULLPAGE_HEADER = { borderRadius:0 };
   const EXPS  = ["Fresher (0-1 year)","1-3 years","3-5 years","5-10 years","10+ years"];
   const QUALS = ["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil"];
   const TIMES = ["Morning","Afternoon","Evening","Any Time"];
@@ -1289,6 +1313,7 @@ function TutorEditModal({ tutor, api, hdr, onClose, onToggle, onSaved }) {
     resume_link:   tutor.resume_link || "",
     resume_file_name: tutor.resume_file_name || "",
     bio:           tutor.bio || "",
+    profile_status: tutor.profile_status || "Pending",
   }));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg]       = useState("");
@@ -1313,11 +1338,11 @@ function TutorEditModal({ tutor, api, hdr, onClose, onToggle, onSaved }) {
   const sec = { fontWeight:800, fontSize:13, color:"#6D28D9", textTransform:"uppercase", letterSpacing:1, marginTop:22, marginBottom:14, paddingBottom:6, borderBottom:"2px solid #F5F3FF" };
 
   return (
-    <div className="overlay" onClick={onClose}>
+    <div className="overlay" onClick={onClose} style={{ padding:0 }}>
       <SuccessPopup show={msg.startsWith("✓")} onClose={onClose} />
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
-        <div style={{ background:"linear-gradient(135deg,#5B21B6,#7C3AED)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:780, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)", ...FULLPAGE_MODAL }}>
+        <div style={{ background:"linear-gradient(135deg,#5B21B6,#7C3AED)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10, ...FULLPAGE_HEADER }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16, maxWidth:1000, margin:"0 auto", width:"100%" }}>
             <div style={{ minWidth:0 }}>
               <div style={{ color:"#DDD6FE", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>🧑‍🎓 Tutor Profile</div>
               <div style={{ color:"#fff", fontSize:20, fontWeight:800 }}>{form.name}</div>
@@ -1326,7 +1351,7 @@ function TutorEditModal({ tutor, api, hdr, onClose, onToggle, onSaved }) {
             <button onClick={onClose} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, flexShrink:0 }}>✕</button>
           </div>
         </div>
-        <div style={{ padding:"24px 28px" }}>
+        <div style={{ padding:"24px 28px", maxWidth:1000, margin:"0 auto", width:"100%" }}>
           {msg && <div className={"alert " + (msg.startsWith("✓") ? "a-ok" : "a-warn")} style={{ marginBottom:16 }}>{msg}</div>}
 
           <div style={{ ...sec, marginTop:0 }}>👤 Account & Contact</div>
@@ -1378,6 +1403,23 @@ function TutorEditModal({ tutor, api, hdr, onClose, onToggle, onSaved }) {
             {form.resume_file_name && <div style={{ fontSize:12, color:"#059669", marginTop:6, fontWeight:700 }}>📄 {form.resume_file_name}</div>}
           </div>
           <div className="fg"><label className="flabel">Short Bio</label><textarea className="input" rows={3} value={form.bio} onChange={e=>up("bio",e.target.value)} placeholder="Tell schools about yourself..." /></div>
+
+          {/* ADDED: admin approval — only Active (Approved) tutors appear on Browse Tutors & Home */}
+          <div style={sec}>✅ Approval — Public Visibility</div>
+          <div className="fg"><label className="flabel">Profile Status</label>
+            <div style={{ display:"flex", gap:10, marginTop:6, flexWrap:"wrap" }}>
+              {[["Active","#059669","Approved · visible on Browse Tutors & Home"],["Pending","#D97706","Awaiting approval · hidden from public"],["Inactive","#DC2626","Hidden from public"]].map(([v,color,hint]) => {
+                const on = (form.profile_status || "Pending") === v;
+                return (
+                  <label key={v} onClick={()=>up("profile_status",v)} title={hint}
+                    style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 18px", borderRadius:22, border:`2px solid ${on?color:"#D1D5DB"}`, background:on?color+"18":"#fff", cursor:"pointer", fontSize:13, fontWeight:700, color:on?color:"#374151", userSelect:"none" }}>
+                    <div style={{ width:8, height:8, borderRadius:"50%", background:on?color:"#D1D5DB" }} />{v==="Active"?"Active (Approved)":v}
+                  </label>
+                );
+              })}
+            </div>
+            <div style={{ fontSize:12, color:"#6B7280", marginTop:8 }}>Set to <b style={{color:"#059669"}}>Active (Approved)</b> and click <b>Save Changes</b> to publish this tutor on Browse Tutors and the home page. <b>Pending</b>/<b>Inactive</b> keeps them hidden.</div>
+          </div>
 
           <div style={{ display:"flex", gap:10, alignItems:"center", marginTop:8, paddingTop:18, borderTop:"1px solid #E5E7EB" }}>
             <button className={"btn btn-sm " + (tutor.is_active ? "btn-danger" : "btn-success")} onClick={() => onToggle(tutor.id)}>
@@ -1558,12 +1600,15 @@ function ParentEditModal({ parent, api, hdr, onClose, onToggle, onSaved }) {
   }
   const sec = { fontWeight:800, fontSize:13, color:"#059669", textTransform:"uppercase", letterSpacing:1, marginTop:22, marginBottom:14, paddingBottom:6, borderBottom:"2px solid #ECFDF5" };
 
+  /* Full-page mode (additive): overrides spread AFTER existing styles — nothing removed */
+  const FULLPAGE_MODAL  = { width:"100vw", maxWidth:"100vw", height:"100vh", maxHeight:"100vh", borderRadius:0, margin:0 };
+  const FULLPAGE_HEADER = { borderRadius:0 };
   return (
-    <div className="overlay" onClick={onClose}>
+    <div className="overlay" onClick={onClose} style={{ padding:0 }}>
       <SuccessPopup show={msg.startsWith("✓")} onClose={onClose} />
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:720, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
-        <div style={{ background:"linear-gradient(135deg,#047857,#059669)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:720, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)", ...FULLPAGE_MODAL }}>
+        <div style={{ background:"linear-gradient(135deg,#047857,#059669)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10, ...FULLPAGE_HEADER }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16, maxWidth:1000, margin:"0 auto", width:"100%" }}>
             <div style={{ minWidth:0 }}>
               <div style={{ color:"#A7F3D0", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>👨‍👩‍👧 Parent Profile</div>
               <div style={{ color:"#fff", fontSize:20, fontWeight:800 }}>{form.name}</div>
@@ -1572,7 +1617,7 @@ function ParentEditModal({ parent, api, hdr, onClose, onToggle, onSaved }) {
             <button onClick={onClose} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, flexShrink:0 }}>✕</button>
           </div>
         </div>
-        <div style={{ padding:"24px 28px" }}>
+        <div style={{ padding:"24px 28px", maxWidth:1000, margin:"0 auto", width:"100%" }}>
           {msg && <div className={"alert " + (msg.startsWith("✓") ? "a-ok" : "a-warn")} style={{ marginBottom:16 }}>{msg}</div>}
 
           <div style={{ ...sec, marginTop:0 }}>👤 Parent Account</div>
@@ -1732,11 +1777,14 @@ function JobEditModal({ job, api, hdr, onClose, onApprove, onReject, onSaved }) 
     finally { setSaving(false); }
   }
 
+  /* Full-page mode (additive): overrides spread AFTER existing styles — nothing removed */
+  const FULLPAGE_MODAL  = { width:"100vw", maxWidth:"100vw", height:"100vh", maxHeight:"100vh", borderRadius:0, margin:0 };
+  const FULLPAGE_HEADER = { borderRadius:0 };
   return (
-    <div className="overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:760, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)" }}>
-        <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16 }}>
+    <div className="overlay" onClick={onClose} style={{ padding:0 }}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:760, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,.18)", ...FULLPAGE_MODAL }}>
+        <div style={{ background:"linear-gradient(135deg,#1E429F,#1A56DB)", padding:"22px 28px", borderRadius:"20px 20px 0 0", position:"sticky", top:0, zIndex:10, ...FULLPAGE_HEADER }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:16, maxWidth:1000, margin:"0 auto", width:"100%" }}>
             <div style={{ minWidth:0 }}>
               <div style={{ color:"#93C5FD", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>💼 Job Requirement</div>
               <div style={{ color:"#fff", fontSize:20, fontWeight:800 }}>{(form.requirement_type || "Teacher")} — {form.subject || "—"}</div>
@@ -1746,7 +1794,7 @@ function JobEditModal({ job, api, hdr, onClose, onApprove, onReject, onSaved }) 
             <button onClick={onClose} style={{ background:"rgba(255,255,255,.15)", border:"none", color:"#fff", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:18, flexShrink:0 }}>✕</button>
           </div>
         </div>
-        <div style={{ padding:"24px 28px" }}>
+        <div style={{ padding:"24px 28px", maxWidth:1000, margin:"0 auto", width:"100%" }}>
           {msg && <div className={"alert " + (msg.startsWith("✓") ? "a-ok" : "a-warn")} style={{ marginBottom:16 }}>{msg}</div>}
           <AdminJobForm form={form} up={up} />
           <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap", marginTop:8, paddingTop:18, borderTop:"1px solid #E5E7EB" }}>

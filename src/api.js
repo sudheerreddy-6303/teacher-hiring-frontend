@@ -84,6 +84,15 @@ export const profileAPI = {
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
+// TUTOR API (ADDED: tuitions database + apply, used by the tutor dashboard)
+// ═════════════════════════════════════════════════════════════════════════════
+export const tutorAPI = {
+  tuitions:              ()         => request('GET',  '/tutor/tuitions',                    null, true),
+  myTuitionApplications: ()         => request('GET',  '/tutor/tuition-applications',        null, true),
+  applyTuition:          (parentId) => request('POST', `/tutor/tuitions/${parentId}/apply`,  null, true),
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
 // JOBS API
 // ═════════════════════════════════════════════════════════════════════════════
 export const jobsAPI = {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { SUBS } from "../../constants";
+import { COUNTRIES, INDIAN_STATES, citiesForState } from "../../locationData"; // ADDED: location dropdown data
 import { Toast, Spinner, JobCard, OtpBoxes, InlineBrowseJobs, FilterBar } from "../../components/common/Shared";
 import './Auth.css';
 
@@ -18,7 +19,7 @@ function AuthPage({ mode, setPage }) {
   const { login } = useAuth();
   const [form, setForm] = useState(() => {
     const savedRole = localStorage.getItem("acadhr_selected_role") || "teacher";
-    return { name:"", email:"", password:"", role: savedRole, phone:"", city:"", subject:"", experience:"", qualification:"", bio:"", institute_type:"", est_year:"", student_count:"", website:"", hourly_rate:"", teaching_mode:"Both", subjects:[], qualifications:[], availability:[], address:"", tutor_location:"", pincode:"", class_link:"", resume_base64:"", resume_name:"", resume_type:"", preferred_times:[], parent_subjects:[], parent_courses:[], parent_days:[], parent_pincode:"", parent_state:"", parent_landmark:"", hourly_budget:"", institute_name:"", gender:"" };
+    return { name:"", email:"", password:"", role: savedRole, phone:"", city:"", subject:"", experience:"", qualification:"", bio:"", institute_type:"", est_year:"", student_count:"", website:"", hourly_rate:"", teaching_mode:"Both", subjects:[], qualifications:[], availability:[], address:"", tutor_location:"", pincode:"", class_link:"", tutor_courses:[], demo_class_link:"", about_yourself:"", tutor_terms_accepted:false, resume_base64:"", resume_name:"", resume_type:"", preferred_times:[], parent_subjects:[], parent_courses:[], parent_days:[], parent_pincode:"", parent_state:"", parent_landmark:"", hourly_budget:"", institute_name:"", gender:"", tutor_photo_base64:"", tutor_photo_name:"", tutor_photo_type:"", classes_taught:[], state:"", country:"India", city_other:"", state_other:"" };
   });
   const [step, setStep]           = useState(1);
   const [err,  setErr]            = useState("");
@@ -81,6 +82,26 @@ function AuthPage({ mode, setPage }) {
       up("resume_type", file.type || "application/octet-stream");
     };
     reader.readAsDataURL(file);
+  }
+  // ADDED: read an uploaded tutor photo into the form as base64
+  function onTutorPhoto(file) {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setErr("Photo must be under 5 MB."); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      up("tutor_photo_base64", reader.result);
+      up("tutor_photo_name", file.name);
+      up("tutor_photo_type", file.type || "image/jpeg");
+    };
+    reader.readAsDataURL(file);
+  }
+  // ADDED: multi-select toggle with a maximum pick limit (used for "Which Class Can Teach", max 3)
+  function toggleMultiMax(key, val, max) {
+    const arr = form[key] || [];
+    if (arr.includes(val)) { up(key, arr.filter(x => x !== val)); return; }
+    if (arr.length >= max) { setErr(`You can select up to ${max} only.`); return; }
+    setErr("");
+    up(key, [...arr, val]);
   }
 
   // ── Resend countdown ────────────────────────────────────────────────────────
@@ -225,6 +246,9 @@ function AuthPage({ mode, setPage }) {
       // ADDED (mandatory fields): all step-1 fields are required
       if (!form.name.trim())     { setErr("Full name is required."); return; }
       if (!form.city.trim())     { setErr("City is required."); return; }
+      // ADDED (mandatory fields): tutors must also pick State & Country
+      if (form.role === "tutor" && !String(form.state === "Other" ? form.state_other : form.state || "").trim()) { setErr("State is required."); return; }
+      if (form.role === "tutor" && !String(form.country || "").trim()) { setErr("Country is required."); return; }
       if (!form.password.trim()) { setErr("Password is required."); return; }
       setStep(2); return;
     }
@@ -241,16 +265,33 @@ function AuthPage({ mode, setPage }) {
       }
       // Validate tutor-specific required fields
       if (form.role === "tutor") {
+        // ADDED (mandatory fields): photo & classes are required
+        if (!String(form.tutor_photo_base64 || "").trim()) { setErr("Please upload your photo."); return; }
+        if (!(form.classes_taught && form.classes_taught.length)) { setErr("Please select which class you can teach (up to 3)."); return; }
         if (!(form.subjects && form.subjects.length)) { setErr("Please select at least one subject."); return; }
         // ADDED (mandatory fields): all tutor fields are required
         if (!String(form.qualification || "").trim() && !(form.qualifications && form.qualifications.length)) { setErr("Please select your qualification."); return; }
+        // ADDED (mandatory fields): experience is required
+        if (!String(form.experience || "").trim()) { setErr("Please select your experience."); return; }
         if (!(form.availability && form.availability.length)) { setErr("Please select your availability."); return; }
         if (!String(form.hourly_rate || "").trim())    { setErr("Hourly rate is required."); return; }
+        /* CHANGED per request (NOT deleted — kept here, deactivated): these four fields are now OPTIONAL
         if (!String(form.address || "").trim())        { setErr("Address is required."); return; }
         if (!String(form.tutor_location || "").trim()) { setErr("Location/area is required."); return; }
         if (!String(form.pincode || "").trim())        { setErr("Pincode is required."); return; }
         if (!String(form.class_link || "").trim())     { setErr("Online class link is required."); return; }
+        */
         if (!String(form.gender || "").trim())         { setErr("Please select your gender."); return; }
+        // ADDED (mandatory fields): resume & bio are required
+        if (!String(form.resume_base64 || "").trim()) { setErr("Please upload your resume / CV."); return; }
+        // ADDED (mandatory fields): course selection & about-yourself (~300 words)
+        if (!(form.tutor_courses && form.tutor_courses.length)) { setErr("Please select at least one course."); return; }
+        if (!String(form.about_yourself || "").trim()) { setErr("Please write about yourself (around 300 words)."); return; }
+        // ADDED (mandatory): tutor must accept the Terms & Conditions
+        if (!form.tutor_terms_accepted) { setErr("Please accept the Terms & Conditions to continue."); return; }
+        /* CHANGED per request (NOT deleted — deactivated): Short Bio is no longer required for tutors
+        if (!String(form.bio || "").trim()) { setErr("Please write a short bio."); return; }
+        */
       }
       // ADDED (mandatory fields): teacher fields are required
       if (form.role === "teacher") {
@@ -302,6 +343,10 @@ function AuthPage({ mode, setPage }) {
         tutor_gender_pref: form.tutor_gender_pref,
         experience_req:    form.experience_req,
         notes:             form.lead_notes,
+        // ADDED: tutor extras — classes (max 3, joined), resolved state, country
+        classes_taught:    (form.classes_taught||[]).join(", "),
+        state:             form.state === "Other" ? (form.state_other || "Other") : form.state,
+        country:           form.country,
       };
       const data = await import('../../api.js').then(m => m.authAPI.signup(payload));
       login(data.user, data.token);
@@ -324,6 +369,8 @@ function AuthPage({ mode, setPage }) {
 
   const SUBS   = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Zoology"];
   const EXPS   = ["Fresher (0-1 year)","1-3 years","3-5 years","5-10 years","10+ years"];
+  // ADDED: classes a tutor can teach (up to Class 12 + competitive courses) — max 3 selections
+  const CLASSES = ["Class 1","Class 2","Class 3","Class 4","Class 5","Class 6","Class 7","Class 8","Class 9","Class 10","Class 11","Class 12","JEE","NEET","FOUNDATION","IPMAT","CA FOUNDATION"];
   const QUALS  = ["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil"];
   const ITYPES = ["School (CBSE)","School (ICSE)","School (State Board)","Junior College","Degree College","Coaching Institute","Tuition Centre","Online Platform"];
   const stepLabels = ["Your Info","Details","Verify Email"];
@@ -360,7 +407,7 @@ function AuthPage({ mode, setPage }) {
       </div>
 
       {/* ── Right form panel ── */}
-      <div className="auth-panel-right" style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:"60px 52px", background:"#F9FAFB", overflowY:"auto" }}>
+      <div className="auth-panel-right" style={{ display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"60px 52px", background:"#F9FAFB", overflowY:"auto" }}>
         <div className="auth-card-inner" style={{ maxWidth:420 }}>
 
           {/* Back button */}
@@ -642,7 +689,33 @@ function AuthPage({ mode, setPage }) {
                       <label className="flabel">Phone Number *</label>
                       <input className="input" type="tel" placeholder="+91 98765 43210" value={form.phone} onChange={e => up("phone", e.target.value)} required pattern="[0-9+\s\-]{7,15}" title="Enter a valid phone number" />
                     </div>
-                    <div className="fg"><label className="flabel">City</label><input className="input" placeholder="Hyderabad" value={form.city} onChange={e => up("city", e.target.value)} /></div>
+                    <div className="fg"><label className="flabel">City *</label>
+                      {/* ADDED: City is now a dropdown (filtered by selected State). "Other" reveals the original text input below — nothing removed. */}
+                      <select className="input" value={citiesForState(form.state).includes(form.city) ? form.city : (form.city ? "Other" : "")} onChange={e => { const v = e.target.value; if (v === "Other") { up("city", form.city_other || ""); up("city_other", form.city_other || " "); } else { up("city", v); up("city_other", ""); } }}>
+                        <option value="">Select City</option>
+                        {citiesForState(form.state).map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      {(form.city_other !== "" || (form.city && !citiesForState(form.state).includes(form.city))) && (
+                        <input className="input" style={{ marginTop:8 }} placeholder="Hyderabad" value={form.city} onChange={e => { up("city", e.target.value); up("city_other", e.target.value || " "); }} />
+                      )}
+                    </div>
+                  </div>
+                  {/* ADDED: State & Country dropdowns shown right after City */}
+                  <div className="grid2">
+                    <div className="fg"><label className="flabel">State *</label>
+                      <select className="input" value={form.state} onChange={e => { up("state", e.target.value); }}>
+                        <option value="">Select State</option>
+                        {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      {form.state === "Other" && (
+                        <input className="input" style={{ marginTop:8 }} placeholder="Enter your state" value={form.state_other} onChange={e => up("state_other", e.target.value)} />
+                      )}
+                    </div>
+                    <div className="fg"><label className="flabel">Country *</label>
+                      <select className="input" value={form.country} onChange={e => up("country", e.target.value)}>
+                        {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
                   </div>
                   <div className="fg"><label className="flabel">Password *</label>
                     <input className="input" type="password" placeholder="Min. 8 characters" value={form.password} onChange={e => up("password", e.target.value)} required minLength={8} />
@@ -683,7 +756,30 @@ function AuthPage({ mode, setPage }) {
 
                   {form.role==="tutor" && (
                     <>
-                      <div className="fg"><label className="flabel">Subjects (select one or more)</label>
+                      {/* ADDED: Tutor photo upload */}
+                      <div className="fg"><label className="flabel">Tutor Photo *</label>
+                        <label style={tutorUpload}>
+                          <input type="file" accept="image/*" onChange={e => onTutorPhoto(e.target.files && e.target.files[0])} style={{ display:"none" }} />
+                          {form.tutor_photo_base64
+                            ? <img src={form.tutor_photo_base64} alt="Tutor" style={{ width:84, height:84, borderRadius:"50%", objectFit:"cover", border:"3px solid #C7D2FE" }} />
+                            : <span style={{ fontSize:22 }}>📷</span>}
+                          <span style={{ fontSize:13, color:"#374151", fontWeight:700 }}>{form.tutor_photo_name ? "Change photo" : "Tap to upload your photo"}</span>
+                          <span style={{ fontSize:11, color:"#9CA3AF" }}>JPG or PNG, max 5 MB</span>
+                        </label>
+                        {form.tutor_photo_name && <div style={{ fontSize:12, color:"#059669", marginTop:7, fontWeight:700 }}>✓ {form.tutor_photo_name} attached</div>}
+                      </div>
+
+                      {/* ADDED: Which class can teach — multi select, maximum 3 */}
+                      <div className="fg"><label className="flabel">Which Class Can Teach * (select up to 3)</label>
+                        <div style={tutorChipBox}>
+                          {CLASSES.map(c => (
+                            <span key={c} onClick={() => toggleMultiMax("classes_taught", c, 3)} style={tutorChip((form.classes_taught||[]).includes(c))}>{c}</span>
+                          ))}
+                        </div>
+                        <div style={{ fontSize:11, color:"#9CA3AF", marginTop:6 }}>{(form.classes_taught||[]).length}/3 selected</div>
+                      </div>
+
+                      <div className="fg"><label className="flabel">Subjects * (select one or more)</label>
                         <div style={tutorChipBox}>
                           {SUBS.map(s => (
                             <span key={s} onClick={() => toggleMulti("subjects", s)} style={tutorChip((form.subjects||[]).includes(s))}>{s}</span>
@@ -691,7 +787,7 @@ function AuthPage({ mode, setPage }) {
                         </div>
                       </div>
 
-                      <div className="fg"><label className="flabel">Qualifications (select one or more)</label>
+                      <div className="fg"><label className="flabel">Qualifications * (select one or more)</label>
                         <div style={tutorChipBox}>
                           {QUALS.filter(Boolean).map(q => (
                             <span key={q} onClick={() => toggleMulti("qualifications", q)} style={tutorChip((form.qualifications||[]).includes(q))}>{q}</span>
@@ -700,29 +796,29 @@ function AuthPage({ mode, setPage }) {
                       </div>
 
                       <div className="grid2">
-                        <div className="fg"><label className="flabel">Experience</label>
-                          <select className="input" value={form.experience} onChange={e => up("experience", e.target.value)}>{EXPS.map(s => <option key={s}>{s}</option>)}</select>
+                        <div className="fg"><label className="flabel">Experience *</label>
+                          <select className="input" value={form.experience} onChange={e => up("experience", e.target.value)}><option value="">Select Experience</option>{EXPS.map(s => <option key={s}>{s}</option>)}</select>
                         </div>
-                        <div className="fg"><label className="flabel">Hourly Charges</label>
+                        <div className="fg"><label className="flabel">Hourly Charges *</label>
                           <input className="input" placeholder="e.g. ₹800/hr" value={form.hourly_rate} onChange={e => up("hourly_rate", e.target.value)} />
                         </div>
                       </div>
 
                       <div className="grid2">
-                        <div className="fg"><label className="flabel">Gender</label>
+                        <div className="fg"><label className="flabel">Gender *</label>
                           <select className="input" value={form.gender} onChange={e => up("gender", e.target.value)}>
                             <option value="">Select</option>
                             <option>Male</option><option>Female</option><option>Other</option>
                           </select>
                         </div>
-                        <div className="fg"><label className="flabel">Teaching Mode</label>
+                        <div className="fg"><label className="flabel">Teaching Mode *</label>
                           <select className="input" value={form.teaching_mode} onChange={e => up("teaching_mode", e.target.value)}>
                             <option>Online</option><option>Offline</option><option>Both</option>
                           </select>
                         </div>
                       </div>
 
-                      <div className="fg"><label className="flabel">Available Timings (select one or more)</label>
+                      <div className="fg"><label className="flabel">Available Timings * (select one or more)</label>
                         <div style={tutorChipBox}>
                           {["Morning","Afternoon","Evening","Any Time"].map(t => (
                             <span key={t} onClick={() => toggleMulti("availability", t)} style={tutorChip((form.availability||[]).includes(t))}>{t}</span>
@@ -730,24 +826,48 @@ function AuthPage({ mode, setPage }) {
                         </div>
                       </div>
 
-                      <div className="fg"><label className="flabel">Address</label>
+                      <div className="fg"><label className="flabel">Address (Optional)</label>
                         <input className="input" placeholder="House no., street, area" value={form.address} onChange={e => up("address", e.target.value)} />
                       </div>
 
                       <div className="grid2">
-                        <div className="fg"><label className="flabel">Location</label>
+                        <div className="fg"><label className="flabel">Location (Optional)</label>
                           <input className="input" placeholder="e.g. Banjara Hills, Hyderabad" value={form.tutor_location} onChange={e => up("tutor_location", e.target.value)} />
                         </div>
-                        <div className="fg"><label className="flabel">Pincode</label>
+                        <div className="fg"><label className="flabel">Pincode (Optional)</label>
                           <input className="input" placeholder="e.g. 500034" value={form.pincode} onChange={e => up("pincode", e.target.value)} />
                         </div>
                       </div>
 
-                      <div className="fg"><label className="flabel">Class Link (Google Meet / Zoom)</label>
+                      <div className="fg"><label className="flabel">Class Link (Google Meet / Zoom) (Optional)</label>
                         <input className="input" placeholder="https://meet.google.com/..." value={form.class_link} onChange={e => up("class_link", e.target.value)} />
                       </div>
 
-                      <div className="fg"><label className="flabel">Resume / CV</label>
+                      {/* ADDED: Courses — multi-select (JEE / FOUNDATION / NEET / IP MAT / CA FOUNDATION) */}
+                      <div className="fg"><label className="flabel">Courses * (select one or more)</label>
+                        <div style={tutorChipBox}>
+                          {["JEE","FOUNDATION","NEET","IP MAT","CA FOUNDATION"].map(c => (
+                            <span key={c} onClick={() => toggleMulti("tutor_courses", c)} style={tutorChip((form.tutor_courses||[]).includes(c))}>{c}</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* ADDED: Demo class link (YouTube / Instagram) */}
+                      <div className="fg"><label className="flabel">Demo Class Link (YouTube / Instagram) (Optional)</label>
+                        <input className="input" placeholder="https://youtube.com/...  or  https://instagram.com/..." value={form.demo_class_link} onChange={e => up("demo_class_link", e.target.value)} />
+                      </div>
+
+                      {/* ADDED: Write about yourself in ~300 words (required) */}
+                      <div className="fg"><label className="flabel">Write About Yourself (in 300 words) *</label>
+                        <textarea className="input" rows={7} placeholder="Tell students & parents about your teaching journey, style, achievements, and what makes you a great tutor... (aim for around 300 words)" value={form.about_yourself} onChange={e => up("about_yourself", e.target.value)} />
+                        {(() => {
+                          const wc = (form.about_yourself || "").trim().split(/\s+/).filter(Boolean).length;
+                          const over = wc > 300;
+                          return <div style={{ fontSize:12, marginTop:6, fontWeight:700, color: over ? "#DC2626" : (wc >= 250 ? "#059669" : "#9CA3AF") }}>{wc} / 300 words{over ? " — a little over 300, please trim" : ""}</div>;
+                        })()}
+                      </div>
+
+                      <div className="fg"><label className="flabel">Resume / CV *</label>
                         <label style={tutorUpload}>
                           <input type="file" accept=".pdf,.doc,.docx,image/*" onChange={e => onResume(e.target.files && e.target.files[0])} style={{ display:"none" }} />
                           <span style={{ fontSize:22 }}>📄</span>
@@ -756,12 +876,38 @@ function AuthPage({ mode, setPage }) {
                         </label>
                         {form.resume_name && <div style={{ fontSize:12, color:"#059669", marginTop:7, fontWeight:700 }}>✓ {form.resume_name} attached</div>}
                       </div>
+
+                      {/* ADDED: Tutor Registration — Terms & Conditions (must be accepted) */}
+                      <div className="fg"><label className="flabel">Terms &amp; Conditions *</label>
+                        <div style={{ border:"1px solid #E5E7EB", borderRadius:12, padding:"14px 16px", background:"#FAFBFC", maxHeight:220, overflowY:"auto" }}>
+                          <div style={{ fontSize:14, fontWeight:800, color:"#111827", marginBottom:10 }}>Tutor Registration – Terms &amp; Conditions</div>
+                          <ol style={{ margin:0, paddingLeft:20, color:"#374151", fontSize:13, lineHeight:1.7 }}>
+                            <li>I confirm that the information provided during registration is true and accurate.</li>
+                            <li>I agree to upload only valid and genuine documents.</li>
+                            <li>My profile will be reviewed and approved by the AcadHR team before it becomes active.</li>
+                            <li>Registering on AcadHR does not guarantee job placement or student assignments.</li>
+                            <li>I agree to maintain professional and respectful behavior with students, parents, and schools.</li>
+                            <li>I understand that my profile information (such as my name, qualifications, subjects, experience, location, and contact details, where applicable) may be shared with parents or schools to help them find suitable tutors. I consent to this sharing.</li>
+                            <li>I will keep my profile and contact information updated.</li>
+                            <li>I am responsible for all activities carried out through my account.</li>
+                            <li>AcadHR reserves the right to reject, suspend, or remove my profile if any false information or policy violation is found.</li>
+                            <li>By registering, I accept these Terms &amp; Conditions and the AcadHR Privacy Policy.</li>
+                          </ol>
+                        </div>
+                        <label style={{ display:"flex", alignItems:"flex-start", gap:10, marginTop:12, cursor:"pointer" }}>
+                          <input type="checkbox" checked={!!form.tutor_terms_accepted} onChange={e => up("tutor_terms_accepted", e.target.checked)} style={{ width:18, height:18, marginTop:2, cursor:"pointer", flexShrink:0 }} />
+                          <span style={{ fontSize:13, color:"#374151", fontWeight:600 }}>I have read and agree to the Terms &amp; Conditions. *</span>
+                        </label>
+                      </div>
                     </>
                   )}
 
-                  <div className="fg"><label className="flabel">Short Bio (Optional)</label>
+                  {/* CHANGED per request: Short Bio hidden for tutors (kept for teachers — not deleted) */}
+                  {form.role !== "tutor" && (
+                  <div className="fg"><label className="flabel">{(form.role==="teacher" || form.role==="tutor") ? "Short Bio *" : "Short Bio (Optional)"}</label>
                     <textarea className="input" rows={3} placeholder="Tell schools about yourself..." value={form.bio} onChange={e => up("bio", e.target.value)} />
                   </div>
+                  )}
                 </>
               )}
               {step===2 && form.role==="school" && (

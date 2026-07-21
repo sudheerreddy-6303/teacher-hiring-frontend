@@ -45,7 +45,7 @@
 }
 
 /* ── Auth split layout ── */
-.auth-layout { min-height: 100vh; display: flex; width: 100%; }
+.auth-layout { height: 100vh; min-height: 100vh; display: flex; width: 100%; overflow: hidden; }
 .auth-panel-left {
   flex: 0 0 420px;
   max-width: 42%;
@@ -57,6 +57,8 @@
 .auth-panel-right {
   flex: 1;
   min-width: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 /* ── Home hero ── */
@@ -284,7 +286,7 @@
 
 /* ── Tablets portrait (≤900px) ── */
 @media (max-width: 900px) {
-  .auth-layout { flex-direction: column; }
+  .auth-layout { flex-direction: column; height: auto; overflow: visible; }
   .auth-panel-left {
     flex: none;
     max-width: 100%;
@@ -294,6 +296,8 @@
   }
   .auth-panel-right {
     padding: 28px 20px !important;
+    height: auto;
+    overflow: visible;
   }
 
   .school-sidebar {

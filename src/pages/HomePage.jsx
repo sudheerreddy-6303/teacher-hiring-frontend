@@ -819,14 +819,14 @@ function HomePage({ setPage }) {
   }, []);
 
   // Hero poster carousel — cycles through your actual files in frontend/public:
-  // "teachers poster.png", "tutors poster.png", "parents poster.png"
+  // "teachers image.png", "tutors image.png", "parents image.png"
   const heroPosters = [
-    { src: "/teachers poster.png", alt: "AcadHr for Teachers" },
-    { src: "/tutors poster.png",   alt: "AcadHr for Tutors" },
-    { src: "/parents poster.png",  alt: "AcadHr for Parents" },
+    { src: "/teachers image.png", alt: "AcadHr for Teachers" },
+    { src: "/tutors image.png",   alt: "AcadHr for Tutors" },
+    { src: "/parents image.png",  alt: "AcadHr for Parents" },
   ];
   const [heroSlide, setHeroSlide] = useState(0);
-  const [heroPosterMissing, setHeroPosterMissing] = useState({}); // { "/teachers poster.png": true } once an image fails to load
+  const [heroPosterMissing, setHeroPosterMissing] = useState({}); // { "/teachers image.png": true } once an image fails to load
   useEffect(() => {
     const t = setInterval(() => setHeroSlide(i => (i + 1) % heroPosters.length), 5000);
     return () => clearInterval(t);
@@ -1310,9 +1310,9 @@ function HomePage({ setPage }) {
       {/* ── HERO: poster carousel (teacher / tuition / parent) ──────────────── */}
       <section
         className="hero-poster-carousel"
-        style={{ position:"relative", width:"100%", overflow:"hidden", background:"#F3F4F6", paddingTop: isMobile ? 72 : 90 }}
+        style={{ position:"relative", width:"100%", overflow:"hidden", background:"#fff", paddingTop: 90 }}
       >
-        <div style={{ position:"relative", width:"100%", paddingTop: isMobile ? "62%" : "50%" }}>
+        <div style={{ position:"relative", width:"100%", paddingTop: isMobile ? "46%" : "36%" }}>
           {heroPosters.map((p, i) => (
             heroPosterMissing[p.src] ? (
               <div
@@ -1336,7 +1336,7 @@ function HomePage({ setPage }) {
                 alt={p.alt}
                 onError={() => setHeroPosterMissing(m => ({ ...m, [p.src]: true }))}
                 style={{
-                  position:"absolute", inset:0, width:"100%", height:"100%", objectFit: isMobile ? "contain" : "cover",
+                  position:"absolute", inset:0, width:"100%", height:"100%", objectFit: "contain",
                   opacity: i === heroSlide ? 1 : 0,
                   transition:"opacity .6s ease",
                   pointerEvents: i === heroSlide ? "auto" : "none",
