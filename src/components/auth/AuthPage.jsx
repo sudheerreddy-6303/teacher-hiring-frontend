@@ -284,8 +284,7 @@ function AuthPage({ mode, setPage }) {
         if (!String(form.gender || "").trim())         { setErr("Please select your gender."); return; }
         // ADDED (mandatory fields): resume & bio are required
         if (!String(form.resume_base64 || "").trim()) { setErr("Please upload your resume / CV."); return; }
-        // ADDED (mandatory fields): course selection & about-yourself (~300 words)
-        if (!(form.tutor_courses && form.tutor_courses.length)) { setErr("Please select at least one course."); return; }
+        // ADDED (mandatory fields): about-yourself (~300 words)
         if (!String(form.about_yourself || "").trim()) { setErr("Please write about yourself (around 300 words)."); return; }
         // ADDED (mandatory): tutor must accept the Terms & Conditions
         if (!form.tutor_terms_accepted) { setErr("Please accept the Terms & Conditions to continue."); return; }
@@ -841,15 +840,6 @@ function AuthPage({ mode, setPage }) {
 
                       <div className="fg"><label className="flabel">Class Link (Google Meet / Zoom) (Optional)</label>
                         <input className="input" placeholder="https://meet.google.com/..." value={form.class_link} onChange={e => up("class_link", e.target.value)} />
-                      </div>
-
-                      {/* ADDED: Courses — multi-select (JEE / FOUNDATION / NEET / IP MAT / CA FOUNDATION) */}
-                      <div className="fg"><label className="flabel">Courses * (select one or more)</label>
-                        <div style={tutorChipBox}>
-                          {["JEE","FOUNDATION","NEET","IP MAT","CA FOUNDATION"].map(c => (
-                            <span key={c} onClick={() => toggleMulti("tutor_courses", c)} style={tutorChip((form.tutor_courses||[]).includes(c))}>{c}</span>
-                          ))}
-                        </div>
                       </div>
 
                       {/* ADDED: Demo class link (YouTube / Instagram) */}
