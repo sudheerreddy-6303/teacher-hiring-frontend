@@ -760,9 +760,9 @@ export default function PricingPage({ setPage }) {
                 style={{ background:"#fff", color:"#1A56DB", fontWeight:800 }}>
                 Start Free Today →
               </button>
-              <button onClick={() => setPage("howitworks")}
+              <button onClick={() => setPage("collaboration")}
                 style={{ background:"transparent", border:"2px solid rgba(255,255,255,.4)", color:"#fff", padding:"12px 24px", borderRadius:10, cursor:"pointer", fontWeight:700, fontSize:15, fontFamily:"Nunito,sans-serif" }}>
-                See How It Works
+                How We Collaborate
               </button>
             </div>
           </div>

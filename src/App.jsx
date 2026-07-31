@@ -4,7 +4,7 @@ import "./styles/responsive.css";
 import { AuthContext } from "./context/AuthContext";
 
 import HomePage           from "./pages/HomePage";
-import HowItWorksPage     from "./pages/HowItWorksPage";
+import CollaborationPage  from "./pages/CollaborationPage";
 import JobsPage           from "./pages/JobsPage";
 import BrowseTeachersPage from "./pages/BrowseTeachersPage";
 import BrowseTutorsPage   from "./pages/BrowseTutorsPage";
@@ -88,7 +88,7 @@ export default function App() {
   return (
     <AuthContext.Provider value={{ user, login, logout, token }}>
       {page === "home"       && <HomePage           setPage={setPage} />}
-      {page === "howitworks" && <HowItWorksPage     setPage={setPage} />}
+      {page === "collaboration" && <CollaborationPage setPage={setPage} />}
       {page === "jobs"       && <JobsPage           setPage={setPage} />}
       {page === "teachers"   && <BrowseTeachersPage setPage={setPage} />}
       {page === "tutors"     && <BrowseTutorsPage   setPage={setPage} />}

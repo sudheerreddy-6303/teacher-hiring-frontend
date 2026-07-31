@@ -896,12 +896,6 @@ function HomePage({ setPage }) {
     { n:"Rajesh Kumar",  r:"Principal",           s:"St. Mary's School, Chennai", t:"We received 30+ qualified applications within a week. The candidate quality on AcadHr is outstanding.", a:"👨‍💼" },
     { n:"Ananya Singh",  r:"Physics Tutor",       s:"Working with 5 students",    t:"Four tutoring requests in my first week. The platform makes it genuinely easy to connect with students.", a:"👩‍🔬" },
   ];
-  const HOW = [
-    { step:"01", who:"Teachers",  icon:"👩‍🏫", items:["Create your free profile","List subjects and experience","Browse verified job listings","Apply in one click","Get hired and start teaching"] },
-    { step:"02", who:"Institutes",icon:"🏫",   items:["Register your institution","Post a vacancy for review","Admin approves and publishes","Receive qualified applications","Shortlist, interview, hire"] },
-    { step:"03", who:"Tutors",    icon:"📚",   items:["Create your tutor profile","List subjects and availability","Set your mode and rates","Receive student requests","Start tutoring and earn"] },
-    { step:"04", who:"Parents",   icon:"👪",   items:["Post your tuition requirement","Specify class, board and subjects","Browse verified tutors","Connect and compare profiles","Hire the right tutor"] },
-  ];
 
   const GROUPS = [
     {
@@ -1608,35 +1602,6 @@ function HomePage({ setPage }) {
                   onMouseLeave={e => { e.currentTarget.style.background=c.accent; }}>
                   {c.cta} →
                 </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section className="section" style={{ background:"#F9FAFB", borderTop:"1px solid #E5E7EB" }}>
-        <div className="container">
-          <div style={{ textAlign:"center", marginBottom:52 }}>
-            <div className="sec-eye" style={{ justifyContent:"center" }}>Process</div>
-            <h2 className="sec-title">How <em style={{ color:"#1A56DB" }}>AcadHr</em> Works</h2>
-            <p className="sec-sub" style={{ margin:"0 auto" }}>A streamlined hiring process built for education professionals.</p>
-          </div>
-          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : (isTablet ? "1fr 1fr" : "repeat(4,1fr)"), gap: isMobile?16:20, alignItems:"stretch" }}>
-            {HOW.map(h => (
-              <div key={h.who} className="card" style={{ padding:24 }}>
-                <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:18 }}>
-                  <div style={{ width:48, height:48, borderRadius:12, background:"#EBF5FF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>{h.icon}</div>
-                  <div>
-                    <div style={{ fontSize:10.5, color:"#1A56DB", fontWeight:800, textTransform:"uppercase", letterSpacing:1.5 }}>Step {h.step}</div>
-                    <h3 style={{ fontSize:18, marginTop:2 }}>For {h.who}</h3>
-                  </div>
-                </div>
-                <ol style={{ paddingLeft:18 }}>
-                  {h.items.map((item,i) => (
-                    <li key={i} style={{ color:"#374151", padding:"7px 0", fontSize:13, lineHeight:1.4, borderBottom:i < h.items.length - 1 ? "1px solid #F3F4F6" : "none" }}>{item}</li>
-                  ))}
-                </ol>
               </div>
             ))}
           </div>
