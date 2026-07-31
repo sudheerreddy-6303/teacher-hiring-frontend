@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { profileAPI } from "../../api";
+// ADDED: same country/state lists the signup form uses, for the new profile fields
+import { COUNTRIES, INDIAN_STATES } from "../../locationData";
+// ADDED: /uploads/... paths are served by the BACKEND. Without this prefix the browser
+// requested them from the React host and the photo silently 404'd.
+import { apiOrigin } from "../../config/apiBase";
 import { tutorAPI } from "../../api"; // ADDED: tuitions database + apply
 
 import { Toast, Divider, InlineBrowseJobs } from "../../components/common/Shared";
@@ -29,7 +34,11 @@ function TutorDashboard({ user, setPage }) {
     // Full registration fields
     subjects: "", qualifications: "", availability: "", gender: "",
     address: "", location: "", pincode: "", class_link: "",
-    teaching_mode: "Both", hourly_rate: "", resume_name: "", resume_link: ""
+    teaching_mode: "Both", hourly_rate: "", resume_name: "", resume_link: "",
+    // ADDED: fields collected at signup that were never shown here
+    email: user.email || "", photo_link: "", photo_file_name: "",
+    classes_taught: "", state: "", country: "", tutor_courses: "",
+    demo_class_link: "", about_yourself: "", terms_accepted: 0,
   });
   const [editMode, setEditMode] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -73,11 +82,22 @@ function TutorDashboard({ user, setPage }) {
         pincode:       profile.pincode,
         class_link:    profile.class_link,
         gender:        profile.gender,
+        // ADDED: newly editable signup fields
+        classes_taught:  profile.classes_taught,
+        state:           profile.state,
+        country:         profile.country,
+        demo_class_link: profile.demo_class_link,
+        about_yourself:  profile.about_yourself,
+        // ADDED: only sent when the tutor actually picked a new file
+        ...(profile.photo_base64 ? { tutor_photo_base64: profile.photo_base64, tutor_photo_name: profile.photo_new_name, tutor_photo_type: profile.photo_type } : {}),
+        ...(profile.resume_base64 ? { resume_base64: profile.resume_base64, resume_name: profile.resume_new_name, resume_type: profile.resume_type } : {}),
       });
       setEditMode(false);
       setSaved(true);
       setShowSavePopup(true);
       await loadProfile();   // re-fetch from DB so the form shows the saved data
+      // ADDED: drop the staged file data so the next save doesn't re-upload it
+      setProfile(p => ({ ...p, photo_base64:"", resume_base64:"" }));
     } catch (e) {
       setSaved(false);
       alert("Could not save profile: " + (e.message || "please try again"));
@@ -93,7 +113,36 @@ function TutorDashboard({ user, setPage }) {
   const PROF_SUBS  = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Zoology"];
   const PROF_QUALS = ["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil"];
   const PROF_EXPS  = ["Fresher (0-1 year)","1-3 years","3-5 years","5-10 years","10+ years"];
+  // ADDED: resolve a stored /uploads/... path against the backend origin
+  function fileUrl(p) {
+    const s = String(p || "");
+    if (!s) return "";
+    return s.startsWith("http") || s.startsWith("data:") ? s : apiOrigin() + s;
+  }
+  // ADDED: read a chosen file as base64 so it can go through the existing JSON PATCH
+  function pickFile(e, kind) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (kind === "photo") {
+        setProfile(p => ({ ...p, photo_base64: reader.result, photo_new_name: file.name, photo_type: file.type || "image/jpeg" }));
+      } else {
+        setProfile(p => ({ ...p, resume_base64: reader.result, resume_new_name: file.name, resume_type: file.type || "application/octet-stream" }));
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
   const PROF_TIMES = ["Morning","Afternoon","Evening","Any Time"];
+  // ADDED: same class list the signup form uses (max 3 selectable)
+  const PROF_CLASSES = ["Class 1","Class 2","Class 3","Class 4","Class 5","Class 6","Class 7","Class 8","Class 9","Class 10","Class 11","Class 12","JEE","NEET","FOUNDATION","IPMAT","CA FOUNDATION"];
+  // ADDED: cap "Classes You Can Teach" at 3, matching signup
+  function toggleCsvMax(key, val, max) {
+    const arr = csvArr(key);
+    if (!arr.includes(val) && arr.length >= max) return;
+    setProfile(p => ({ ...p, [key]: (arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]).join(", ") }));
+  }
   const profChip = (on, editable) => ({
     padding:"6px 12px", borderRadius:20, fontSize:12, fontWeight:600, userSelect:"none",
     cursor: editable ? "pointer" : "default",
@@ -136,6 +185,18 @@ function TutorDashboard({ user, setPage }) {
         resume_name:    p.resume_file_name || prev.resume_name,
         resume_link:    p.resume_link || prev.resume_link,
         profile_status: p.profile_status || prev.profile_status || "",
+        // ADDED: signup fields — the API already returns these (SELECT * FROM tutors),
+        // they were simply never read into the form.
+        email:           u.email || prev.email,
+        photo_link:      p.photo_link || prev.photo_link,
+        photo_file_name: p.photo_file_name || prev.photo_file_name,
+        classes_taught:  p.classes_taught || prev.classes_taught,
+        state:           p.state || prev.state,
+        country:         p.country || prev.country,
+        tutor_courses:   p.tutor_courses || prev.tutor_courses,
+        demo_class_link: p.demo_class_link || prev.demo_class_link,
+        about_yourself:  p.about_yourself || prev.about_yourself,
+        terms_accepted:  p.terms_accepted != null ? p.terms_accepted : prev.terms_accepted,
       }));
     } catch (e) { /* keep current values if the fetch fails */ }
   }
@@ -149,6 +210,7 @@ function TutorDashboard({ user, setPage }) {
     { id:"overview",  icon:"🏠", label:"Overview" },
     { id:"students",  icon:"🧑‍🎓", label:"My Students" },
     { id:"tuitions",  icon:"📚", label:"Tuitions Database" },
+    { id:"videos",    icon:"🎥", label:"My Videos" },
     { id:"schedule",  icon:"📅", label:"Schedule" },
     { id:"earnings",  icon:"💰", label:"Earnings" },
     { id:"profile",   icon:"👤", label:"My Profile" },
@@ -196,6 +258,76 @@ function TutorDashboard({ user, setPage }) {
       setApplyMsg(r.message || "Applied successfully!");
     } catch (e) { setApplyMsg("Error: " + e.message); }
     finally { setApplyBusy(null); }
+  }
+
+  // ═══ ADDED: My Videos — intro/demo videos, added as a link or an uploaded file ═══
+  const [videos, setVideos]             = useState([]);
+  const [videosLoading, setVideosLoading] = useState(false);
+  const [videosError, setVideosError]   = useState("");
+  const [videoMode, setVideoMode]       = useState("link");   // "link" | "file"
+  const [videoTitle, setVideoTitle]     = useState("");
+  const [videoLink, setVideoLink]       = useState("");
+  const [videoFile, setVideoFile]       = useState(null);     // { base64, name, type }
+  const [videoBusy, setVideoBusy]       = useState(false);
+  const [videoMsg, setVideoMsg]         = useState("");
+  const MAX_VIDEO_MB = 15; // uploads travel as base64 (~+33%) in a JSON body capped at 25MB server-side; keep files small, use a link for big videos
+
+  function loadVideos() {
+    setVideosLoading(true); setVideosError("");
+    tutorAPI.videos()
+      .then(list => setVideos(Array.isArray(list) ? list : []))
+      .catch(e => setVideosError(e.message || "Could not load your videos."))
+      .finally(() => setVideosLoading(false));
+  }
+  useEffect(() => { if (tab === "videos") loadVideos(); }, [tab]);
+
+  function pickVideoFile(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (file.size > MAX_VIDEO_MB * 1024 * 1024) {
+      setVideoMsg(`Error: File is too large (max ${MAX_VIDEO_MB} MB). For bigger videos, upload to YouTube/Drive and paste the link instead.`);
+      e.target.value = ""; setVideoFile(null); return;
+    }
+    setVideoMsg("");
+    const reader = new FileReader();
+    reader.onload = () => setVideoFile({ base64: reader.result, name: file.name, type: file.type || "video/mp4" });
+    reader.readAsDataURL(file);
+  }
+
+  async function handleAddVideo() {
+    setVideoMsg("");
+    if (videoMode === "link" && !videoLink.trim()) { setVideoMsg("Error: Please paste a video link."); return; }
+    if (videoMode === "file" && !videoFile)        { setVideoMsg("Error: Please choose a video file."); return; }
+    setVideoBusy(true);
+    try {
+      const payload = videoMode === "file"
+        ? { title: videoTitle.trim(), video_base64: videoFile.base64, video_name: videoFile.name, video_type: videoFile.type }
+        : { title: videoTitle.trim(), url: videoLink.trim() };
+      const r = await tutorAPI.addVideo(payload);
+      // Prepend the new video so it shows immediately
+      if (r && r.video) setVideos(v => [r.video, ...v]); else loadVideos();
+      setVideoTitle(""); setVideoLink(""); setVideoFile(null);
+      setVideoMsg(r.message || "Video added!");
+    } catch (e) { setVideoMsg("Error: " + e.message); }
+    finally { setVideoBusy(false); }
+  }
+
+  async function handleDeleteVideo(id) {
+    if (!window.confirm("Remove this video?")) return;
+    try {
+      await tutorAPI.deleteVideo(id);
+      setVideos(v => v.filter(x => x.id !== id));
+    } catch (e) { setVideoMsg("Error: " + e.message); }
+  }
+
+  // Turn a YouTube / Vimeo watch link into an embeddable URL so it can play inline.
+  // Anything else is left as-is and shown as an "Open video" link card.
+  function videoEmbedUrl(u) {
+    const s = String(u || "");
+    let m;
+    if ((m = s.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/i))) return `https://www.youtube.com/embed/${m[1]}`;
+    if ((m = s.match(/vimeo\.com\/(?:video\/)?(\d+)/i))) return `https://player.vimeo.com/video/${m[1]}`;
+    return "";
   }
 
   // Earnings — no backend source yet, so start empty (no fake data)
@@ -431,6 +563,107 @@ function TutorDashboard({ user, setPage }) {
           </div>
         )}
 
+        {/* ── ADDED: My Videos — add a video by link or file, and see all added videos ── */}
+        {tab === "videos" && (
+          <div className="fadeUp">
+            <div className="page-title">My Videos</div>
+            <div className="page-sub">Add intro or demo videos — paste a link (YouTube, Drive, Vimeo…) or upload a file. They appear on your tutor profile.</div>
+
+            {/* Add-video card */}
+            <div className="card" style={{ padding:24, maxWidth:640, marginBottom:24 }}>
+              <h3 style={{ fontSize:16, marginBottom:16 }}>Add a video</h3>
+
+              {/* Mode toggle */}
+              <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
+                {[["link","🔗 Paste a link"],["file","⬆️ Upload a file"]].map(([key,label]) => (
+                  <span key={key} onClick={() => { setVideoMode(key); setVideoMsg(""); }}
+                    style={{ padding:"8px 16px", borderRadius:999, fontSize:13, fontWeight:700, cursor:"pointer", userSelect:"none",
+                      border:`1.5px solid ${videoMode===key ? "#1A56DB" : "#E5E7EB"}`,
+                      background: videoMode===key ? "#EBF5FF" : "#fff",
+                      color: videoMode===key ? "#1A56DB" : "#6B7280" }}>{label}</span>
+                ))}
+              </div>
+
+              <div className="fg"><label className="flabel">Title (optional)</label>
+                <input className="input" placeholder="e.g. Chemistry demo — Chapter 3" value={videoTitle} onChange={e => setVideoTitle(e.target.value)} />
+              </div>
+
+              {videoMode === "link" ? (
+                <div className="fg"><label className="flabel">Video Link</label>
+                  <input className="input" placeholder="https://youtube.com/watch?v=…" value={videoLink} onChange={e => setVideoLink(e.target.value)} />
+                  <div style={{ fontSize:11, color:"#9CA3AF", marginTop:6 }}>YouTube and Vimeo links play right here. Other links (Google Drive, Instagram…) open in a new tab.</div>
+                </div>
+              ) : (
+                <div className="fg"><label className="flabel">Video File</label>
+                  <label style={{ display:"inline-block", fontSize:13, fontWeight:700, color:"#1A56DB", cursor:"pointer", border:"1px solid #BFDBFE", borderRadius:8, padding:"9px 14px", background:"#F5F9FF" }}>
+                    {videoFile ? `✓ ${videoFile.name}` : "Choose a video (MP4 / MOV / WebM)"}
+                    <input type="file" accept="video/*" style={{ display:"none" }} onChange={pickVideoFile} />
+                  </label>
+                  <div style={{ fontSize:11, color:"#9CA3AF", marginTop:6 }}>Max {MAX_VIDEO_MB} MB. For longer videos, upload to YouTube/Drive and paste the link instead.</div>
+                </div>
+              )}
+
+              {videoMsg && (
+                <div className={"alert " + (videoMsg.startsWith("Error") ? "a-warn" : "a-ok")} style={{ margin:"6px 0 12px" }}>{videoMsg}</div>
+              )}
+
+              <button className="btn btn-primary" disabled={videoBusy} onClick={handleAddVideo}>
+                {videoBusy ? "Adding…" : "Add Video ✓"}
+              </button>
+            </div>
+
+            {/* Previously added videos */}
+            <h3 style={{ fontSize:16, marginBottom:14 }}>Your videos {videos.length > 0 && <span style={{ color:"#9CA3AF", fontWeight:600 }}>({videos.length})</span>}</h3>
+
+            {videosLoading && <div className="card" style={{ textAlign:"center", color:"#9CA3AF", padding:"32px 0" }}>Loading your videos…</div>}
+            {!videosLoading && videosError && <div className="card" style={{ textAlign:"center", color:"#B91C1C", padding:"26px 16px" }}>{videosError}</div>}
+            {!videosLoading && !videosError && videos.length === 0 && (
+              <div className="card" style={{ textAlign:"center", color:"#9CA3AF", padding:"36px 16px" }}>
+                No videos added yet — add your first one above. 🎬
+              </div>
+            )}
+
+            {!videosLoading && !videosError && videos.length > 0 && (
+              <div className="responsive-grid-3" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:20 }}>
+                {videos.map(v => {
+                  const embed = v.source === "link" ? videoEmbedUrl(v.url) : "";
+                  return (
+                    <div key={v.id} className="card" style={{ padding:0, overflow:"hidden", display:"flex", flexDirection:"column" }}>
+                      {/* Player / preview */}
+                      <div style={{ background:"#000", aspectRatio:"16 / 9", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        {v.source === "file" ? (
+                          <video controls src={fileUrl(v.url)} style={{ width:"100%", height:"100%", objectFit:"contain", background:"#000" }} />
+                        ) : embed ? (
+                          <iframe src={embed} title={v.title || "video"} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ width:"100%", height:"100%", border:0 }} />
+                        ) : (
+                          <a href={v.url} target="_blank" rel="noreferrer" style={{ color:"#fff", textDecoration:"none", textAlign:"center", padding:16 }}>
+                            <div style={{ fontSize:34, marginBottom:8 }}>▶️</div>
+                            <div style={{ fontSize:13, fontWeight:700 }}>Open video ↗</div>
+                          </a>
+                        )}
+                      </div>
+                      {/* Meta */}
+                      <div style={{ padding:"12px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                        <div style={{ minWidth:0 }}>
+                          <div style={{ fontWeight:700, fontSize:13, color:"#111827", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{v.title || "Untitled video"}</div>
+                          <div style={{ fontSize:11, color:"#9CA3AF", marginTop:2 }}>
+                            {v.source === "file" ? "⬆️ Uploaded" : "🔗 Link"}
+                            {v.created_at ? " · " + new Date(v.created_at).toLocaleDateString() : ""}
+                          </div>
+                        </div>
+                        <button onClick={() => handleDeleteVideo(v.id)} title="Remove video"
+                          style={{ flexShrink:0, border:"1px solid #FECACA", background:"#FEF2F2", color:"#B91C1C", borderRadius:8, padding:"6px 10px", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                          🗑 Remove
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {tab === "students" && !pendingApproval && (
           <div className="fadeUp">
             <div className="page-title">My Students</div>
@@ -513,11 +746,23 @@ function TutorDashboard({ user, setPage }) {
             {saved && <div className="alert a-ok">✓ Profile updated!</div>}
             <div className="card" style={{ padding:28, maxWidth:600 }}>
               <div style={{ display:"flex", gap:16, alignItems:"center", marginBottom:24 }}>
-                <div style={{ width:70, height:70, borderRadius:18, background:"#EBF5FF", border:"2px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:36 }}>🧑‍🎓</div>
+                {/* ADDED: show the photo uploaded at signup, and let the tutor replace it.
+                    The emoji tile below is kept as the fallback when no photo is saved.
+                    photo_link is a backend path, so it must be resolved with fileUrl(). */}
+                {(profile.photo_base64 || profile.photo_link)
+                  ? <img src={profile.photo_base64 || fileUrl(profile.photo_link)} alt={profile.name || "Tutor"} style={{ width:70, height:70, borderRadius:18, objectFit:"cover", border:"2px solid #BFDBFE" }} />
+                  : <div style={{ width:70, height:70, borderRadius:18, background:"#EBF5FF", border:"2px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:36 }}>🧑‍🎓</div>}
                 <div>
                   <div style={{ fontWeight:800, fontSize:18, color:"#111827" }}>{profile.name}</div>
                   <div style={{ fontSize:13, color:"#059669", fontWeight:600 }}>{[profile.subject ? `${profile.subject} Tutor` : "Tutor", profile.city].filter(Boolean).join(" · ")}</div>
                   <div style={{ fontSize:12, color:"#D97706", fontWeight:700, marginTop:4 }}>{[profile.rate, profile.mode].filter(Boolean).join(" · ")}</div>
+                  {/* ADDED: photo change — only while editing */}
+                  {editMode && (
+                    <label style={{ display:"inline-block", marginTop:8, fontSize:12, fontWeight:700, color:"#1A56DB", cursor:"pointer", border:"1px solid #BFDBFE", borderRadius:8, padding:"5px 10px", background:"#F5F9FF" }}>
+                      {profile.photo_base64 ? "✓ New photo selected" : (profile.photo_link ? "Change photo" : "Upload photo")}
+                      <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => pickFile(e, "photo")} />
+                    </label>
+                  )}
                 </div>
               </div>
               <Divider />
@@ -525,6 +770,22 @@ function TutorDashboard({ user, setPage }) {
                 <div className="grid2">
                   <div className="fg"><label className="flabel">Full Name</label><input className="input" disabled={!editMode} value={profile.name} onChange={e => setProfile(p => ({...p, name:e.target.value}))} /></div>
                   <div className="fg"><label className="flabel">Phone</label><input className="input" disabled={!editMode} value={profile.phone} onChange={e => setProfile(p => ({...p, phone:e.target.value}))} /></div>
+                </div>
+
+                {/* ADDED: email — shown read-only because changing the login email needs admin action */}
+                <div className="fg"><label className="flabel">Email (login ID — contact admin to change)</label>
+                  <input className="input" disabled value={profile.email} readOnly />
+                </div>
+
+                {/* ADDED: classes you can teach — collected at signup, never shown here before */}
+                <div className="fg"><label className="flabel">Classes You Can Teach (up to 3)</label>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:8, border:"1px solid #E5E7EB", borderRadius:10, padding:12, background:!editMode?"#F9FAFB":"#FAFBFC" }}>
+                    {PROF_CLASSES.map(c => {
+                      const on = csvArr("classes_taught").includes(c);
+                      return <span key={c} onClick={() => editMode && toggleCsvMax("classes_taught", c, 3)} style={profChip(on, editMode)}>{c}</span>;
+                    })}
+                  </div>
+                  <div style={{ fontSize:11, color:"#9CA3AF", marginTop:6 }}>{csvArr("classes_taught").length}/3 selected</div>
                 </div>
 
                 <div className="fg"><label className="flabel">Subject(s) (select all that apply)</label>
@@ -585,10 +846,34 @@ function TutorDashboard({ user, setPage }) {
                   <div className="fg"><label className="flabel">City</label><input className="input" disabled={!editMode} value={profile.city} onChange={e => setProfile(p => ({...p, city:e.target.value}))} /></div>
                 </div>
 
+                {/* ADDED: state & country — required at signup, previously not visible or editable here */}
+                <div className="grid2">
+                  <div className="fg"><label className="flabel">State</label>
+                    <select className="input" disabled={!editMode} value={INDIAN_STATES.includes(profile.state) ? profile.state : (profile.state ? "Other" : "")} onChange={e => setProfile(p => ({...p, state:e.target.value}))}>
+                      <option value="">Select</option>
+                      {INDIAN_STATES.map(s => <option key={s}>{s}</option>)}
+                      <option>Other</option>
+                    </select>
+                    {profile.state && !INDIAN_STATES.includes(profile.state) && (
+                      <input className="input" style={{ marginTop:8 }} disabled={!editMode} placeholder="Enter your state" value={profile.state} onChange={e => setProfile(p => ({...p, state:e.target.value}))} />
+                    )}
+                  </div>
+                  <div className="fg"><label className="flabel">Country</label>
+                    <select className="input" disabled={!editMode} value={profile.country} onChange={e => setProfile(p => ({...p, country:e.target.value}))}>
+                      <option value="">Select</option>
+                      {COUNTRIES.map(c => <option key={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+
                 <div className="grid2">
                   <div className="fg"><label className="flabel">Pincode</label><input className="input" disabled={!editMode} placeholder="e.g. 500034" value={profile.pincode} onChange={e => setProfile(p => ({...p, pincode:e.target.value}))} /></div>
                   <div className="fg"><label className="flabel">Class Link (Google Meet / Zoom)</label><input className="input" disabled={!editMode} placeholder="https://meet.google.com/..." value={profile.class_link} onChange={e => setProfile(p => ({...p, class_link:e.target.value}))} /></div>
                 </div>
+
+                {/* ADDED: demo class link, collected at signup.
+                    (No "Courses" field here — the tutor registration form does not have one.) */}
+                <div className="fg"><label className="flabel">Demo Class Link (YouTube / Instagram)</label><input className="input" disabled={!editMode} placeholder="https://youtube.com/..." value={profile.demo_class_link} onChange={e => setProfile(p => ({...p, demo_class_link:e.target.value}))} /></div>
 
                 {profile.resume_name && (
                   <div className="fg"><label className="flabel">Resume / CV</label>
@@ -596,7 +881,40 @@ function TutorDashboard({ user, setPage }) {
                   </div>
                 )}
 
+                {/* ADDED: the resume was shown as a filename only, with no way to open it.
+                    resume_link is a backend path, so it needs fileUrl() too. */}
+                {profile.resume_link && (
+                  <div className="fg"><label className="flabel">Resume / CV Link</label>
+                    <a href={fileUrl(profile.resume_link)} target="_blank" rel="noreferrer" style={{ fontSize:13, color:"#1A56DB", fontWeight:700, wordBreak:"break-all" }}>🔗 Open resume</a>
+                  </div>
+                )}
+
+                {/* ADDED: resume replacement — only while editing */}
+                {editMode && (
+                  <div className="fg"><label className="flabel">Replace Resume / CV</label>
+                    <label style={{ display:"inline-block", fontSize:12, fontWeight:700, color:"#1A56DB", cursor:"pointer", border:"1px solid #BFDBFE", borderRadius:8, padding:"7px 12px", background:"#F5F9FF" }}>
+                      {profile.resume_base64 ? `✓ ${profile.resume_new_name}` : "Choose a file (PDF / DOC)"}
+                      <input type="file" accept=".pdf,.doc,.docx" style={{ display:"none" }} onChange={e => pickFile(e, "resume")} />
+                    </label>
+                  </div>
+                )}
+
                 <div className="fg"><label className="flabel">Bio</label><textarea className="input" rows={4} disabled={!editMode} value={profile.bio} onChange={e => setProfile(p => ({...p, bio:e.target.value}))} /></div>
+
+                {/* ADDED: about yourself (~300 words) — required at signup, previously invisible here */}
+                <div className="fg"><label className="flabel">About Yourself (around 300 words)</label>
+                  <textarea className="input" rows={7} disabled={!editMode} placeholder="Your teaching journey, style, achievements, and what makes you a great tutor..." value={profile.about_yourself} onChange={e => setProfile(p => ({...p, about_yourself:e.target.value}))} />
+                  <div style={{ fontSize:11, color:"#9CA3AF", marginTop:4 }}>
+                    {(profile.about_yourself || "").trim().split(/\s+/).filter(Boolean).length} words
+                  </div>
+                </div>
+
+                {/* ADDED: terms status, read-only — accepted once at signup */}
+                <div className="fg"><label className="flabel">Terms &amp; Conditions</label>
+                  <div style={{ fontSize:13, fontWeight:700, color: Number(profile.terms_accepted) ? "#059669" : "#B45309" }}>
+                    {Number(profile.terms_accepted) ? "✓ Accepted at signup" : "Not recorded"}
+                  </div>
+                </div>
                 {editMode && <button className="btn btn-primary" disabled={saving} onClick={handleSave}>{saving ? "Saving…" : "Save Changes ✓"}</button>}
               </div>
             </div>

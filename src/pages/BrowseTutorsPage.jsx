@@ -8,6 +8,15 @@ const MODES    = ["All","Online","Offline","Both"];
 const CITIES   = ["All","Hyderabad","Delhi","Mumbai","Bangalore","Chennai","Pune","Kolkata","Visakhapatnam","Vijayawada"];
 const EXPS     = ["All","Fresher","1 Year","2 Years","3 Years","4 Years","5+ Years"];
 
+// Show only the first `n` comma-separated items on the card, then "…" if there are more.
+// n <= 0 (or omitted) means show the full value uncapped. Empty value shows "—".
+function capList(value, n) {
+  if (value === undefined || value === null || String(value).trim() === "") return "—";
+  const parts = String(value).split(",").map(x => x.trim()).filter(Boolean);
+  if (!n || n <= 0 || parts.length <= n) return parts.join(", ");
+  return parts.slice(0, n).join(", ") + "…";
+}
+
 export default function BrowseTutorsPage({ setPage }) {
   const { user } = useAuth();
   const [selected, setSelected] = useState(null);
@@ -127,7 +136,9 @@ export default function BrowseTutorsPage({ setPage }) {
         <div style={{ background:"linear-gradient(135deg,#4C1D95,#6D28D9)", padding:"52px 0 40px" }}>
           <div className="container" style={{ textAlign:"center" }}>
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(255,255,255,.15)", borderRadius:20, padding:"5px 16px", fontSize:13, color:"#DDD6FE", fontWeight:600, marginBottom:16 }}>
-              🧑‍🎓 {loading ? "..." : tutors.length.toLocaleString()}+ Verified Tutors
+              {/* CHANGED (per request): tutor count number removed from this badge. Original kept below:
+              🧑‍🎓 {loading ? "..." : tutors.length.toLocaleString()}+ Verified Tutors */}
+              🧑‍🎓 Verified Tutors
             </div>
             <h1 style={{ fontSize:38, fontWeight:900, color:"#fff", marginBottom:12 }}>Find the Perfect Tutor</h1>
             <p style={{ color:"#C4B5FD", fontSize:16, marginBottom:28, maxWidth:520, margin:"0 auto 28px" }}>
@@ -195,11 +206,13 @@ export default function BrowseTutorsPage({ setPage }) {
           {/* Main content */}
           <div className="browse-main">
 
+          {/* CHANGED (per request): "N tutors found" count removed. Original kept below so it can be re-enabled:
           <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:16 }}>
             <span style={{ fontSize:13, color:"#6B7280", fontWeight:600 }}>
               {filtered.length} tutor{filtered.length!==1?"s":""} found
             </span>
           </div>
+          */}
 
           {error && (
             <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:10, padding:"14px 18px", marginBottom:20, color:"#DC2626", fontWeight:600, fontSize:14 }}>
@@ -223,10 +236,10 @@ export default function BrowseTutorsPage({ setPage }) {
               </p>
             </div>
           ) : (
-            <div className="responsive-grid-3" style={{ display:"grid", gap:20 }}>
+            <div className="responsive-grid-3" style={{ display:"grid", gap:20, alignItems:"stretch" }}>
               {filtered.map(t => (
                 <div key={t.id}
-                  style={{ background:"#fff", borderRadius:16, border:"1px solid #E5E7EB", padding:24, transition:"all .2s" }}
+                  style={{ background:"#fff", borderRadius:16, border:"1px solid #E5E7EB", padding:24, transition:"all .2s", height:"100%", display:"flex", flexDirection:"column", boxSizing:"border-box" }}
                   onMouseEnter={e => { e.currentTarget.style.boxShadow="0 8px 28px rgba(109,40,217,.12)"; e.currentTarget.style.borderColor="#C4B5FD"; e.currentTarget.style.transform="translateY(-2px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.borderColor="#E5E7EB"; e.currentTarget.style.transform="none"; }}>
 
@@ -236,7 +249,7 @@ export default function BrowseTutorsPage({ setPage }) {
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{t.name}</div>
-                      <div style={{ fontSize:12, color:"#6D28D9", fontWeight:600, marginTop:2 }}>{t.subjects || t.subject || "Tutor"}</div>
+                      <div style={{ fontSize:12, color:"#6D28D9", fontWeight:600, marginTop:2 }}>{(t.subjects || t.subject) ? capList(t.subjects || t.subject, 3) : "Tutor"}</div>
                       {(t.qualifications || t.qualification) && <div style={{ fontSize:11, color:"#6B7280", marginTop:1 }}>{t.qualifications || t.qualification}</div>}
                     </div>
                     {user && (
@@ -260,6 +273,10 @@ export default function BrowseTutorsPage({ setPage }) {
 
                   {/* Details */}
                   <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:14 }}>
+                    {/* CHANGED (per request): rows now match the Browse Teachers card format —
+                        every row always shows (with "—" when blank) and long lists are capped at 3 items.
+                        Note: the public tutors API does not return pincode / address / class_link,
+                        so those rows were always empty on the card. Original rows kept below:
                     {[
                       ["Availability",   t.availability],
                       ["Pincode",        t.pincode],
@@ -270,11 +287,23 @@ export default function BrowseTutorsPage({ setPage }) {
                         <span style={{ flexShrink:0, color:"#9CA3AF", fontWeight:700, minWidth:96 }}>{label}</span>
                         <span style={{ color:"#374151", fontWeight:600, wordBreak:"break-word" }}>{value}</span>
                       </div>
-                    ) : null)}
+                    ) : null)} */}
+                    {[
+                      ["Subjects",       t.subjects || t.subject, 3],
+                      ["Qualifications", t.qualifications || t.qualification, 3],
+                      ["Availability",   t.availability, 3],
+                      ["Location",       t.location || t.city, 3],
+                      ["Hourly Rate",    t.hourly_rate, 0],
+                    ].map(([label, value, cap]) => (
+                      <div key={label} style={{ display:"flex", gap:8, fontSize:12, lineHeight:1.4 }}>
+                        <span style={{ flexShrink:0, color:"#9CA3AF", fontWeight:700, minWidth:96 }}>{label}</span>
+                        <span style={{ color:"#374151", fontWeight:600, wordBreak:"break-word" }}>{capList(value, cap)}</span>
+                      </div>
+                    ))}
                   </div>
 
                   <button
-                    style={{ width:"100%", padding:"9px 0", borderRadius:10, border:"1.5px solid #DDD6FE", background:"#F5F3FF", color:"#6D28D9", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s" }}
+                    style={{ width:"100%", padding:"9px 0", borderRadius:10, border:"1.5px solid #DDD6FE", background:"#F5F3FF", color:"#6D28D9", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s", marginTop:"auto" }}
                     onClick={() => user ? setSelected(t) : setPage("signup")}
                     onMouseEnter={e => { e.currentTarget.style.background="#6D28D9"; e.currentTarget.style.color="#fff"; }}
                     onMouseLeave={e => { e.currentTarget.style.background="#F5F3FF"; e.currentTarget.style.color="#6D28D9"; }}>

@@ -7,6 +7,15 @@ const SUBJECTS = ["All","Mathematics","Physics","Chemistry","Biology","English",
 const MODES    = ["All","Online","Offline","Both"];
 const CITIES   = ["All","Hyderabad","Delhi","Mumbai","Bangalore","Chennai","Pune","Kolkata","Visakhapatnam","Vijayawada"];
 
+// Show only the first `n` comma-separated items on the card, then "…" if there are more.
+// n <= 0 (or omitted) means show the full value uncapped. Empty value shows "—".
+function capList(value, n) {
+  if (value === undefined || value === null || String(value).trim() === "") return "—";
+  const parts = String(value).split(",").map(x => x.trim()).filter(Boolean);
+  if (!n || n <= 0 || parts.length <= n) return parts.join(", ");
+  return parts.slice(0, n).join(", ") + "…";
+}
+
 const SUBJECT_ICON = {
   mathematics:"➗", maths:"➗", math:"➗", physics:"🔬", chemistry:"⚗️", biology:"🧬",
   english:"📖", hindi:"🔤", "computer science":"💻", economics:"📈", accountancy:"📊",
@@ -108,7 +117,9 @@ export default function BrowseTuitionsPage({ setPage }) {
         <div style={{ background:"linear-gradient(135deg,#065F46,#0E7490)", padding:"52px 0 40px" }}>
           <div className="container" style={{ textAlign:"center" }}>
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(255,255,255,.15)", borderRadius:20, padding:"5px 16px", fontSize:13, color:"#A7F3D0", fontWeight:600, marginBottom:16 }}>
-              📚 {loading ? "..." : tuitions.length.toLocaleString()}+ Tuition Requirements
+              {/* CHANGED (per request): tuition count number removed from this badge. Original kept below:
+              📚 {loading ? "..." : tuitions.length.toLocaleString()}+ Tuition Requirements */}
+              📚 Tuition Requirements
             </div>
             <h1 style={{ fontSize:38, fontWeight:900, color:"#fff", marginBottom:12 }}>Browse Tuitions</h1>
             <p style={{ color:"#A7F3D0", fontSize:16, marginBottom:28, maxWidth:560, margin:"0 auto 28px" }}>
@@ -175,11 +186,13 @@ export default function BrowseTuitionsPage({ setPage }) {
           {/* Main content */}
           <div className="browse-main">
 
+          {/* CHANGED (per request): "N tuitions found" count removed. Original kept below so it can be re-enabled:
           <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:16 }}>
             <span style={{ fontSize:13, color:"#6B7280", fontWeight:600 }}>
               {filtered.length} tuition{filtered.length!==1?"s":""} found
             </span>
           </div>
+          */}
 
           {error && (
             <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:10, padding:"14px 18px", marginBottom:20, color:"#DC2626", fontWeight:600, fontSize:14 }}>
@@ -203,12 +216,12 @@ export default function BrowseTuitionsPage({ setPage }) {
               </p>
             </div>
           ) : (
-            <div className="responsive-grid-3" style={{ display:"grid", gap:20 }}>
+            <div className="responsive-grid-3" style={{ display:"grid", gap:20, alignItems:"stretch" }}>
               {filtered.map(t => {
                 const sub  = [t.student_class, t.board].filter(Boolean).join(" · ");
                 return (
                 <div key={t.id}
-                  style={{ background:"#fff", borderRadius:16, border:"1px solid #E5E7EB", padding:24, transition:"all .2s" }}
+                  style={{ background:"#fff", borderRadius:16, border:"1px solid #E5E7EB", padding:24, transition:"all .2s", height:"100%", display:"flex", flexDirection:"column", boxSizing:"border-box" }}
                   onMouseEnter={e => { e.currentTarget.style.boxShadow="0 8px 28px rgba(14,116,144,.12)"; e.currentTarget.style.borderColor="#67E8F9"; e.currentTarget.style.transform="translateY(-2px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.borderColor="#E5E7EB"; e.currentTarget.style.transform="none"; }}>
 
@@ -217,7 +230,7 @@ export default function BrowseTuitionsPage({ setPage }) {
                       {iconFor(t.subject)}
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontWeight:800, fontSize:16, color:"#111827" }}>{t.subject || "Tuition Required"}</div>
+                      <div style={{ fontWeight:800, fontSize:16, color:"#111827" }}>{t.subject ? capList(t.subject, 3) : "Tuition Required"}</div>
                       {sub && <div style={{ fontSize:12, color:"#0E7490", fontWeight:600, marginTop:2 }}>{sub}</div>}
                       <div style={{ fontSize:11, color:"#6B7280", marginTop:1 }}>Posted by {t.name || "a parent"}</div>
                     </div>
@@ -244,6 +257,23 @@ export default function BrowseTuitionsPage({ setPage }) {
                     {t.tutor_gender_pref && <span style={{ background:"#FDF2F8", color:"#DB2777", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>👤 {t.tutor_gender_pref}</span>}
                   </div>
 
+                  {/* Details — ADDED (per request): same row format as the Browse Teachers / Tutors cards.
+                      Every row always shows ("—" when blank) and long lists are capped at 3 items. */}
+                  <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:14 }}>
+                    {[
+                      ["Subject",        t.subject, 3],
+                      ["Class / Grade",  t.student_class, 3],
+                      ["Board",          t.board, 3],
+                      ["Location",       t.location || t.user_city, 3],
+                      ["Preferred Time", t.preferred_time, 0],
+                    ].map(([label, value, cap]) => (
+                      <div key={label} style={{ display:"flex", gap:8, fontSize:12, lineHeight:1.4 }}>
+                        <span style={{ flexShrink:0, color:"#9CA3AF", fontWeight:700, minWidth:96 }}>{label}</span>
+                        <span style={{ color:"#374151", fontWeight:600, wordBreak:"break-word" }}>{capList(value, cap)}</span>
+                      </div>
+                    ))}
+                  </div>
+
                   {user ? (
                     t.budget && (
                       <div style={{ fontWeight:800, fontSize:16, color:"#059669", marginBottom:t.notes?10:14 }}>
@@ -263,7 +293,7 @@ export default function BrowseTuitionsPage({ setPage }) {
                   )}
 
                   <button
-                    style={{ width:"100%", padding:"9px 0", borderRadius:10, border:"1.5px solid #A5F3FC", background:"#ECFEFF", color:"#0E7490", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s" }}
+                    style={{ width:"100%", padding:"9px 0", borderRadius:10, border:"1.5px solid #A5F3FC", background:"#ECFEFF", color:"#0E7490", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s", marginTop:"auto" }}
                     onClick={() => user ? setSelected(t) : setPage("signup")}
                     onMouseEnter={e => { e.currentTarget.style.background="#0E7490"; e.currentTarget.style.color="#fff"; }}
                     onMouseLeave={e => { e.currentTarget.style.background="#ECFEFF"; e.currentTarget.style.color="#0E7490"; }}>

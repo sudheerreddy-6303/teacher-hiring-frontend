@@ -90,6 +90,10 @@ export const tutorAPI = {
   tuitions:              ()         => request('GET',  '/tutor/tuitions',                    null, true),
   myTuitionApplications: ()         => request('GET',  '/tutor/tuition-applications',        null, true),
   applyTuition:          (parentId) => request('POST', `/tutor/tuitions/${parentId}/apply`,  null, true),
+  // ADDED: My Videos — list / add (link or file) / delete
+  videos:                ()         => request('GET',    '/tutor/videos',        null,    true),
+  addVideo:              (payload)  => request('POST',   '/tutor/videos',        payload, true),
+  deleteVideo:           (id)       => request('DELETE', `/tutor/videos/${id}`,  null,    true),
 };
 
 // ═════════════════════════════════════════════════════════════════════════════

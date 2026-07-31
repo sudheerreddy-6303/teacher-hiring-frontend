@@ -136,7 +136,9 @@ function JobsPage({ setPage }) {
         <div className="container" style={{ position:"relative", zIndex:2 }}>
           <div style={{ textAlign:"left", maxWidth:560 }}>
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(255,255,255,.15)", borderRadius:20, padding:"5px 16px", fontSize:13, color:"#FFEDD5", fontWeight:600, marginBottom:16 }}>
-              💼 {loading ? "..." : jobs.length.toLocaleString()}+ Teaching Jobs
+              {/* CHANGED (per request): job count number removed from this badge. Original kept below:
+              💼 {loading ? "..." : jobs.length.toLocaleString()}+ Teaching Jobs */}
+              💼 Teaching Jobs
             </div>
             <h1 style={{ fontSize:38, fontWeight:900, color:"#fff", marginBottom:12 }}>Browse Teaching Jobs</h1>
             <p style={{ color:"#FED7AA", fontSize:16, marginBottom:28, maxWidth:520 }}>
@@ -161,6 +163,7 @@ function JobsPage({ setPage }) {
           <div className="page-header-row" style={{ marginBottom:16 }}>
             <div>
               <h1 style={{ fontSize:30, fontWeight:900, color:"#111827", marginBottom:5 }}>Browse Teaching Jobs</h1>
+              {/* CHANGED (per request): total/live/pending job count numbers removed. Original kept below:
               <p style={{ color:"#6B7280", fontSize:14 }}>
                 {loading ? "Loading from acadhr.jobs..." : (
                   <>
@@ -170,6 +173,7 @@ function JobsPage({ setPage }) {
                   </>
                 )}
               </p>
+              */}
             </div>
             {user?.role === "school" && (
               <button className="btn btn-primary" onClick={() => setPage("dashboard")}>+ Post a Job</button>
@@ -270,9 +274,11 @@ function JobsPage({ setPage }) {
           </div>
         ) : (
           <>
+            {/* CHANGED (per request): "Showing X of Y jobs" count removed. Original kept below:
             <div style={{ fontSize:13, color:"#6B7280", marginBottom:20 }}>
               Showing <strong style={{ color:"#111827" }}>{filtered.length}</strong> of <strong style={{ color:"#111827" }}>{jobs.length}</strong> jobs
             </div>
+            */}
 
             <div className="grid3">
               {filtered.map(job => {

@@ -848,12 +848,33 @@ function HomePage({ setPage }) {
   const [liveSchools,  setLiveSchools]  = useState([]);
   const [liveParents,  setLiveParents]  = useState([]);
   const [liveJobs,     setLiveJobs]     = useState([]);
+  // ── Homepage lists ONLY teachers whose profile is filled out fully ──────────
+  // A teacher qualifies when their name plus every key profile field the card
+  // shows is present. Teachers with partial/empty profiles are skipped so the
+  // "Teachers Available to Hire" row shows complete profiles only. This is
+  // purely additive — every other category and the sample-data fallback below
+  // are untouched. (To use a looser bar instead, swap the check for
+  // Number(r.completion_pct) >= 70.)
+  const TEACHER_KEY_FIELDS = [
+    "specialization", "qualification", "total_experience",
+    "subjects", "current_location", "grades_handling", "boards_handled",
+    "languages", "work_mode",
+  ];
+  const isTeacherProfileFull = (r) => {
+    if (!r) return false;
+    const has = (f) => {
+      const v = r[f];
+      return v !== undefined && v !== null && String(v).trim() !== "";
+    };
+    const nameOk = has("name") || has("full_name");
+    return nameOk && TEACHER_KEY_FIELDS.every(has);
+  };
   useEffect(() => {
     const j = (p) => fetch(`${apiBase()}${p}`)
       .then(r => (r.ok ? r.json() : []))
       .then(d => (Array.isArray(d) ? d : []))
       .catch(() => []);
-    j("/admin/public/teachers").then(setLiveTeachers);
+    j("/admin/public/teachers").then(rows => setLiveTeachers(rows.filter(isTeacherProfileFull)));
     j("/admin/public/tutors").then(setLiveTutors);
     j("/admin/public/schools").then(setLiveSchools);
     j("/admin/public/parents").then(setLiveParents);
@@ -949,6 +970,7 @@ function HomePage({ setPage }) {
       ..._pick(i),
     }));
     if (key === "teachers") return liveTeachers.map((r, i) => ({
+      raw: r, // full DB record kept alongside the mapped shape so the browse-style card can read every field
       name: r.name || r.full_name || "Teacher",
       role: r.specialization || r.current_role || "Teacher",
       city: r.current_location || r.city || "",
@@ -1038,6 +1060,80 @@ function HomePage({ setPage }) {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, [liveTeachers, liveTutors, liveSchools, liveParents, liveJobs]);
+
+  // Renders a single teacher card in the SAME structure/style as the Browse Teachers page
+  // (photo avatar + tag chips + Preferred Location/Subjects/Languages/Grades/Boards details + full-width button).
+  // Used only for the "Teachers Available to Hire" row so it visually matches Browse Teachers.
+  // renderCommunityCard below is left fully intact and still used by every other group.
+  const renderBrowseTeacherCard = (t, i, group) => {
+    const r = t.raw || {}; // live DB record (present for live teachers); falls back to card fields for sample data
+    const capList = (value, n) => {
+      if (value === undefined || value === null || String(value).trim() === "") return "\u2014";
+      const parts = String(value).split(",").map(x => x.trim()).filter(Boolean);
+      if (!n || n <= 0 || parts.length <= n) return parts.join(", ");
+      return parts.slice(0, n).join(", ") + "\u2026";
+    };
+    const photo       = r.profile_photo;
+    const displayName = t.name || r.name || r.full_name || "Teacher";
+    const displayRole = r.specialization || r.current_role || (t.role && t.role !== "Teacher" ? t.role : "Educator");
+    const city        = t.city || r.current_location || r.city || "";
+    const exp         = r.total_experience || r.experience || (t.exp && t.exp !== "\u2014" ? t.exp : "");
+    const qual        = r.qualification || (t.qual && t.qual !== "\u2014" ? t.qual : "");
+    const mode        = r.work_mode || r.teaching_mode || "";
+    const goProfile   = () => { if (!user) { setPage("login"); return; } setPage("teachers"); };
+    return (
+      <div key={i}
+        style={{ background:"#fff", borderRadius:16, border:"1px solid #E5E7EB", padding:24, transition:"all .2s", cursor:"default", height:"100%", display:"flex", flexDirection:"column", boxSizing:"border-box" }}
+        onMouseEnter={e => { e.currentTarget.style.boxShadow="0 8px 28px rgba(26,86,219,.12)"; e.currentTarget.style.borderColor="#93C5FD"; e.currentTarget.style.transform="translateY(-2px)"; }}
+        onMouseLeave={e => { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.borderColor="#E5E7EB"; e.currentTarget.style.transform="none"; }}>
+
+        {/* Photo + Name */}
+        <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:16 }}>
+          <div style={{ width:54, height:54, borderRadius:"50%", overflow:"hidden", background:"#EBF5FF", border:"2px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>
+            {photo
+              ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + photo} alt={displayName} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+              : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></svg>}
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{displayName}</div>
+            <div style={{ fontSize:12, color:"#1A56DB", fontWeight:600, marginTop:2 }}>{displayRole}</div>
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 }}>
+          {city && <span style={{ background:"#F3F4F6", color:"#374151", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>📍 {city}</span>}
+          {exp  && <span style={{ background:"#EBF5FF", color:"#1A56DB", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>⏳ {exp}</span>}
+          {qual && <span style={{ background:"#F5F3FF", color:"#6D28D9", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>🎓 {qual}</span>}
+          {mode && <span style={{ background:"#ECFDF5", color:"#059669", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>{mode}</span>}
+        </div>
+
+        {/* Details */}
+        <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
+          {[
+            ["Preferred Location", r.preferred_locations, 3],
+            ["Subjects",           r.subjects || r.specialization, 3],
+            ["Languages",          r.languages, 0],
+            ["Grades",             r.grades_handling, 3],
+            ["Boards",             r.boards_handled, 3],
+          ].map(([label, value, cap]) => (
+            <div key={label} style={{ display:"flex", gap:8, fontSize:12, lineHeight:1.4 }}>
+              <span style={{ flexShrink:0, color:"#9CA3AF", fontWeight:700, minWidth:96 }}>{label}</span>
+              <span style={{ color:"#374151", fontWeight:600, wordBreak:"break-word" }}>{capList(value, cap)}</span>
+            </div>
+          ))}
+        </div>
+
+        <button
+          style={{ width:"100%", padding:"9px 0", borderRadius:10, border:"1.5px solid #BFDBFE", background:"#EBF5FF", color:"#1A56DB", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s", marginTop:"auto" }}
+          onClick={goProfile}
+          onMouseEnter={e => { e.currentTarget.style.background="#1A56DB"; e.currentTarget.style.color="#fff"; }}
+          onMouseLeave={e => { e.currentTarget.style.background="#EBF5FF"; e.currentTarget.style.color="#1A56DB"; }}>
+          {user ? "View Profile →" : "Contact Teacher →"}
+        </button>
+      </div>
+    );
+  };
 
   // Renders a single community card — used by both the normal grid layout
   // and the Jobs marquee below. Content/markup is unchanged from before.
@@ -1450,7 +1546,7 @@ function HomePage({ setPage }) {
                     style={{ display:"flex", gap:22, overflowX:"auto", scrollBehavior:"smooth", scrollbarWidth:"none", paddingBottom:4 }}
                   >
                     {group.cards.map((t,i) => (
-                      <div key={i} style={{ flexShrink:0, width:340 }}>{renderCommunityCard(t, i, group)}</div>
+                      <div key={i} style={{ flexShrink:0, width:340 }}>{group.key === "teachers" ? renderBrowseTeacherCard(t, i, group) : renderCommunityCard(t, i, group)}</div>
                     ))}
                   </div>
 

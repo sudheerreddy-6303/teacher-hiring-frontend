@@ -19,6 +19,15 @@ function isSameSubjects(a, b) {
   return small.every(x => large.includes(x));
 }
 
+// Show only the first `n` comma-separated items on the card, then "…" if there are more.
+// n <= 0 (or omitted) means show the full value uncapped. Empty value shows "—".
+function capList(value, n) {
+  if (value === undefined || value === null || String(value).trim() === "") return "—";
+  const parts = String(value).split(",").map(x => x.trim()).filter(Boolean);
+  if (!n || n <= 0 || parts.length <= n) return parts.join(", ");
+  return parts.slice(0, n).join(", ") + "…";
+}
+
 export default function BrowseTeachersPage({ setPage }) {
   const { user } = useAuth();
   const [selected, setSelected] = useState(null);
@@ -119,7 +128,9 @@ export default function BrowseTeachersPage({ setPage }) {
         <div style={{ background:"linear-gradient(135deg,#1E3A8A,#1A56DB)", padding:"52px 0 40px" }}>
           <div className="container" style={{ textAlign:"center" }}>
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(255,255,255,.15)", borderRadius:20, padding:"5px 16px", fontSize:13, color:"#BAE6FD", fontWeight:600, marginBottom:16 }}>
-              👩‍🏫 {loading ? "..." : teachers.length.toLocaleString()}+ Verified Teachers
+              {/* CHANGED (per request): teacher count number removed from this badge. Original kept below:
+              👩‍🏫 {loading ? "..." : teachers.length.toLocaleString()}+ Verified Teachers */}
+              👩‍🏫 Verified Teachers
             </div>
             <h1 style={{ fontSize:38, fontWeight:900, color:"#fff", marginBottom:12 }}>Browse Qualified Teachers</h1>
             <p style={{ color:"#93C5FD", fontSize:16, marginBottom:28, maxWidth:520, margin:"0 auto 28px" }}>
@@ -187,11 +198,13 @@ export default function BrowseTeachersPage({ setPage }) {
           {/* Main content */}
           <div className="browse-main">
 
+          {/* CHANGED (per request): "N teachers found" count removed. Original kept below so it can be re-enabled:
           <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:16 }}>
             <span style={{ fontSize:13, color:"#6B7280", fontWeight:600 }}>
               {filtered.length} teacher{filtered.length!==1?"s":""} found
             </span>
           </div>
+          */}
 
           {/* States */}
           {error && (
@@ -216,10 +229,10 @@ export default function BrowseTeachersPage({ setPage }) {
               </p>
             </div>
           ) : (
-            <div className="responsive-grid-3" style={{ display:"grid", gap:20 }}>
+            <div className="responsive-grid-3" style={{ display:"grid", gap:20, alignItems:"stretch" }}>
               {filtered.map(t => (
                 <div key={t.id}
-                  style={{ background:"#fff", borderRadius:16, border:"1px solid #E5E7EB", padding:24, transition:"all .2s", cursor:"default" }}
+                  style={{ background:"#fff", borderRadius:16, border:"1px solid #E5E7EB", padding:24, transition:"all .2s", cursor:"default", height:"100%", display:"flex", flexDirection:"column", boxSizing:"border-box" }}
                   onMouseEnter={e => { e.currentTarget.style.boxShadow="0 8px 28px rgba(26,86,219,.12)"; e.currentTarget.style.borderColor="#93C5FD"; e.currentTarget.style.transform="translateY(-2px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.borderColor="#E5E7EB"; e.currentTarget.style.transform="none"; }}>
 
@@ -233,7 +246,9 @@ export default function BrowseTeachersPage({ setPage }) {
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{t.name}</div>
                       <div style={{ fontSize:12, color:"#1A56DB", fontWeight:600, marginTop:2 }}>{isSameSubjects(t.specialization, t.subjects) ? (t.current_role || "Educator") : (t.specialization || t.current_role || "Educator")}</div>
-                      {t.current_org && <div style={{ fontSize:11, color:"#6B7280", marginTop:1 }}>{t.current_org}</div>}
+                      {/* CHANGED (per request): previous school/college/institute is no longer shown on the browse card.
+                          Original line kept below (commented) so nothing is deleted and it can be re-enabled anytime:
+                      {t.current_org && <div style={{ fontSize:11, color:"#6B7280", marginTop:1 }}>{t.current_org}</div>} */}
                     </div>
                     {user && (
                       <button onClick={(e) => shareTeacher(t, e)} title="Share this teacher"
@@ -255,20 +270,21 @@ export default function BrowseTeachersPage({ setPage }) {
                   {/* Details */}
                   <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
                     {[
-                      ["Subjects",       t.subjects || t.specialization],
-                      ["Languages",      t.languages],
-                      ["Grades",         t.grades_handling],
-                      ["Boards",         t.boards_handled],
-                    ].map(([label, value]) => value ? (
+                      ["Preferred Location", t.preferred_locations, 3],
+                      ["Subjects",       t.subjects || t.specialization, 3],
+                      ["Languages",      t.languages, 0],
+                      ["Grades",         t.grades_handling, 3],
+                      ["Boards",         t.boards_handled, 3],
+                    ].map(([label, value, cap]) => (
                       <div key={label} style={{ display:"flex", gap:8, fontSize:12, lineHeight:1.4 }}>
                         <span style={{ flexShrink:0, color:"#9CA3AF", fontWeight:700, minWidth:96 }}>{label}</span>
-                        <span style={{ color:"#374151", fontWeight:600, wordBreak:"break-word" }}>{value}</span>
+                        <span style={{ color:"#374151", fontWeight:600, wordBreak:"break-word" }}>{capList(value, cap)}</span>
                       </div>
-                    ) : null)}
+                    ))}
                   </div>
 
                   <button
-                    style={{ width:"100%", padding:"9px 0", borderRadius:10, border:"1.5px solid #BFDBFE", background:"#EBF5FF", color:"#1A56DB", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s" }}
+                    style={{ width:"100%", padding:"9px 0", borderRadius:10, border:"1.5px solid #BFDBFE", background:"#EBF5FF", color:"#1A56DB", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s", marginTop:"auto" }}
                     onClick={() => user ? setSelected(t) : setPage("signup")}
                     onMouseEnter={e => { e.currentTarget.style.background="#1A56DB"; e.currentTarget.style.color="#fff"; }}
                     onMouseLeave={e => { e.currentTarget.style.background="#EBF5FF"; e.currentTarget.style.color="#1A56DB"; }}>

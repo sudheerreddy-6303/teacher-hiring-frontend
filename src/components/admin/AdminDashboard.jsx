@@ -42,7 +42,30 @@ function waTutorMatchesSubject(tutor, subject) {
   if (!s) return false;
   const a = (tutor.subject  || "").toLowerCase();
   const b = (tutor.subjects || "").toLowerCase();
-  return a === s || a.includes(s) || b.includes(s) || (!!a && s.includes(a));
+  // ADDED: the original whole-string comparison is kept exactly as it was, and the
+  // token-aware check below is OR-ed onto it — so anything that matched before still
+  // matches, and multi-subject rows now match too.
+  return a === s || a.includes(s) || b.includes(s) || (!!a && s.includes(a)) || waSubjectsOverlap(tutor, subject);
+}
+/* ADDED: token-aware subject matching.
+   The comparison above works on the whole comma-separated string, so a parent
+   asking for "Mathematics, Science" never matched a tutor who teaches
+   "Mathematics, Physics" — the tutor's string would have had to contain that
+   exact combined phrase. This splits both sides into individual subjects and
+   matches when ANY single subject is shared. */
+function waSplitSubjects(raw) {
+  return String(raw || "")
+    .split(/[,/;|&]|\band\b/i)
+    .map(x => x.trim().toLowerCase())
+    .filter(Boolean);
+}
+function waSubjectsOverlap(tutor, subject) {
+  const wanted = waSplitSubjects(subject);
+  const taught = [...waSplitSubjects(tutor && tutor.subject), ...waSplitSubjects(tutor && tutor.subjects)];
+  if (!wanted.length || !taught.length) return false;
+  return wanted.some(w => taught.some(t =>
+    t === w || (w.length >= 3 && t.includes(w)) || (t.length >= 3 && w.includes(t))
+  ));
 }
 /* Build the WhatsApp message body from the tuition requirement's real details. */
 function waBuildTuitionMessage(job, tutor) {
@@ -2530,9 +2553,17 @@ function AdminDashboard({ setPage }) {
                           <td data-label="Action">
                             <div style={{ display:"flex", gap:8, flexWrap:"nowrap", alignItems:"center" }}>
                               <button className="btn btn-sm" style={{ color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }} onClick={(e) => { e.stopPropagation(); setSelectedTutor(t); }}>👁 View</button>
-                              {(t.subject || t.subjects) && (
-                                <button className="btn btn-sm" style={{ color:"#0F6E56", borderColor:"#9FE1CB", background:"#E1F5EE", display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"6px 10px" }} onClick={(e) => { e.stopPropagation(); openMatchTuitionsForTutor(t); }} title="Send this tutor's profile to matching tuitions on WhatsApp" aria-label="Send to tuitions on WhatsApp"><svg width="17" height="17" viewBox="0 0 24 24" fill="#25D366"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-5.9c-.2-.1-1.4-.7-1.7-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8.9-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7.3 7.3 0 0 1-1.4-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4c.1-.1 0-.3 0-.4l-.8-1.9c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 4 3.4.6.3 1 .4 1.4.5.6.2 1.1.2 1.5.1.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1 0-.1-.2-.2-.4-.3z"/></svg></button>
-                              )}
+                              {/* ADDED: this button used to render only when the tutor already had
+                                  a subject saved — so a tutor with a blank Subject column showed no
+                                  WhatsApp button at all and there was no way to tell why. It now
+                                  always renders; with no subject it is dimmed and the tooltip (and
+                                  the modal it opens) explain what needs fixing. */}
+                              {(() => {
+                                const waReady = !!(t.subject || t.subjects);
+                                return (
+                                <button className="btn btn-sm" style={{ color: waReady ? "#0F6E56" : "#9CA3AF", borderColor: waReady ? "#9FE1CB" : "#E5E7EB", background: waReady ? "#E1F5EE" : "#F3F4F6", display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"6px 10px" }} onClick={(e) => { e.stopPropagation(); openMatchTuitionsForTutor(t); }} title={waReady ? "Send this tutor's profile to matching tuitions on WhatsApp" : "No subject saved for this tutor — open to see why matching can't run"} aria-label="Send to tuitions on WhatsApp"><svg width="17" height="17" viewBox="0 0 24 24" fill={waReady ? "#25D366" : "#9CA3AF"}><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-5.9c-.2-.1-1.4-.7-1.7-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8.9-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7.3 7.3 0 0 1-1.4-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4c.1-.1 0-.3 0-.4l-.8-1.9c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 4 3.4.6.3 1 .4 1.4.5.6.2 1.1.2 1.5.1.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1 0-.1-.2-.2-.4-.3z"/></svg></button>
+                                );
+                              })()}
                               <button className={"btn btn-sm "+(t.is_active?"btn-danger":"btn-success")} onClick={(e) => { e.stopPropagation(); toggleUser(t.id); }}>{t.is_active?"Deactivate":"Activate"}</button>
                               {t.profile_status === "Pending" && (
                                 <button className="btn btn-sm btn-success" title="Approve — publish on Browse Tutors & Home"
@@ -3102,8 +3133,20 @@ function AdminDashboard({ setPage }) {
                 ) : matched.length === 0 ? (
                   <div style={{ textAlign:"center", padding:"30px 0", color:"#6B7280" }}>
                     <div style={{ fontSize:40, marginBottom:8 }}>🔍</div>
-                    <div style={{ fontWeight:700, color:"#111827" }}>No matching tuitions found</div>
-                    <div style={{ fontSize:13, marginTop:4 }}>Tuitions whose subject matches this tutor will appear here.</div>
+                    {/* ADDED: distinguish "this tutor has no subject" from "no parent wants
+                        this subject" — the two used to show the same unhelpful message. */}
+                    {!(waTutor.subject || waTutor.subjects) ? (
+                      <>
+                        <div style={{ fontWeight:700, color:"#111827" }}>No subject saved for this tutor</div>
+                        <div style={{ fontSize:13, marginTop:4 }}>Matching works on subject, so nothing can be matched yet.</div>
+                        <div style={{ fontSize:13, marginTop:4 }}>Open the tutor's profile, add their subject(s), and save — the matches will appear here.</div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontWeight:700, color:"#111827" }}>No matching tuitions found</div>
+                        <div style={{ fontSize:13, marginTop:4 }}>Tuitions whose subject matches this tutor will appear here.</div>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <>
