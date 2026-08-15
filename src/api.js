@@ -38,7 +38,20 @@ async function request(method, path, body = null, authRequired = false) {
       throw new Error('Invalid response from server.');
     }
   }
-  if (!res.ok) throw new Error(data.message || `Request failed (${res.status}).`);
+  if (!res.ok) {
+    // ── Auto-logout on expired / invalid token ──────────────────────────────
+    // Backend returns 401 with "Invalid or expired token." when the JWT is
+    // expired. Instead of just showing that message, clear the session and
+    // signal the app to log the user out directly.
+    if (res.status === 401 && authRequired) {
+      removeToken();
+      localStorage.removeItem('acadhr_user');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('acadhr:unauthorized'));
+      }
+    }
+    throw new Error(data.message || `Request failed (${res.status}).`);
+  }
   return data;
 }
 

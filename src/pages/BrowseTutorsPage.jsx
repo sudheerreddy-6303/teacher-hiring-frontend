@@ -108,6 +108,7 @@ export default function BrowseTutorsPage({ setPage }) {
     const lines = [];
     if (t.name)               lines.push(`👤 ${t.name}`);
     if (t.subjects || t.subject) lines.push(`📚 Subjects: ${t.subjects || t.subject}`);
+    if (t.classes_taught)        lines.push(`🎯 Classes Taught: ${t.classes_taught}`);
     if (t.qualifications || t.qualification) lines.push(`🎓 Qualification: ${t.qualifications || t.qualification}`);
     if (t.experience)         lines.push(`⏳ Experience: ${t.experience}`);
     if (t.teaching_mode)      lines.push(`💼 Mode: ${t.teaching_mode}`);
@@ -290,10 +291,11 @@ export default function BrowseTutorsPage({ setPage }) {
                     ) : null)} */}
                     {[
                       ["Subjects",       t.subjects || t.subject, 3],
+                      ["Classes Taught", t.classes_taught, 3],
                       ["Qualifications", t.qualifications || t.qualification, 3],
-                      ["Availability",   t.availability, 3],
+                      ["Available Timing", t.availability, 3],
                       ["Location",       t.location || t.city, 3],
-                      ["Hourly Rate",    t.hourly_rate, 0],
+                      ["Hourly Price",    t.hourly_rate, 0],
                     ].map(([label, value, cap]) => (
                       <div key={label} style={{ display:"flex", gap:8, fontSize:12, lineHeight:1.4 }}>
                         <span style={{ flexShrink:0, color:"#9CA3AF", fontWeight:700, minWidth:96 }}>{label}</span>
@@ -332,9 +334,10 @@ export default function BrowseTutorsPage({ setPage }) {
               {[
                 ["Email", selected.email], ["Phone", selected.phone],
                 ["Subjects", selected.subjects || selected.subject], ["Qualifications", selected.qualifications || selected.qualification],
-                ["Experience", selected.experience], ["Hourly Rate", selected.hourly_rate],
+                ["Classes Taught", selected.classes_taught],
+                ["Experience", selected.experience], ["Hourly Price", selected.hourly_rate],
                 ["Gender", selected.gender],
-                ["Teaching Mode", selected.teaching_mode], ["Availability", selected.availability],
+                ["Teaching Mode", selected.teaching_mode], ["Available Timing", selected.availability],
                 ["Location", selected.location || selected.city], ["Pincode", selected.pincode],
                 ["Address", selected.address], ["Class Link", selected.class_link],
               ].map(([label, value]) => value ? (

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./index.css";
 import "./styles/responsive.css";
 import { AuthContext } from "./context/AuthContext";
@@ -57,6 +57,20 @@ export default function App() {
     localStorage.removeItem("acadhr_user");
     setPage("home");
   }
+
+  // Auto-logout when the token expires: api.js fires 'acadhr:unauthorized'
+  // on any 401 (expired / invalid token) → run logout() directly.
+  useEffect(() => {
+    function handleUnauthorized() {
+      setUser(null);
+      setToken("");
+      localStorage.removeItem("acadhr_token");
+      localStorage.removeItem("acadhr_user");
+      setPage("login");
+    }
+    window.addEventListener("acadhr:unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("acadhr:unauthorized", handleUnauthorized);
+  }, []);
 
   // Restore session on refresh
   if (!user) {
