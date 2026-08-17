@@ -366,11 +366,11 @@ function AuthPage({ mode, setPage }) {
     } catch (ex) { setOtpErr(ex.message); }
   }
 
-  const SUBS   = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Zoology"];
+  const SUBS   = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","French","Telugu","Kannada","Tamil","History","Geography","Civics","Accountancy","Business Studies","Zoology"];
   const EXPS   = ["Fresher (0-1 year)","1-3 years","3-5 years","5-10 years","10+ years"];
   // ADDED: classes a tutor can teach (up to Class 12 + competitive courses) — max 3 selections
   const CLASSES = ["Class 1","Class 2","Class 3","Class 4","Class 5","Class 6","Class 7","Class 8","Class 9","Class 10","Class 11","Class 12","JEE","NEET","FOUNDATION","IPMAT","CA FOUNDATION"];
-  const QUALS  = ["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil"];
+  const QUALS  = ["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil","MBBS","BDS","B.Pharm","M.Pharm","B.Arch","LLB","LLM","CA","CS","CMA","B.Sc Nursing"];
   const ITYPES = ["School (CBSE)","School (ICSE)","School (State Board)","Junior College","Degree College","Coaching Institute","Tuition Centre","Online Platform"];
   const stepLabels = ["Your Info","Details","Verify Email"];
 
