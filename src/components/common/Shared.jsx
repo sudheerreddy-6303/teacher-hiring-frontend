@@ -35,7 +35,7 @@ function Navbar({ setPage, page }) {
           <span className="nav-link" onClick={() => go("teachers")} style={isActive("teachers") ? activeLinkStyle : undefined}>Browse Teachers</span>
           <span className="nav-link" onClick={() => go("tutors")} style={isActive("tutors") ? activeLinkStyle : undefined}>Browse Tutors</span>
           <span className="nav-link" onClick={() => go("tuitions")} style={isActive("tuitions") ? activeLinkStyle : undefined}>Browse Tuitions</span>
-          <span className="nav-link" onClick={() => go("collaboration")} style={isActive("collaboration") ? activeLinkStyle : undefined}>Collaboration</span>
+          <span className="nav-link" onClick={() => go("collaboration")} style={isActive("collaboration") ? activeLinkStyle : undefined}>School Solutions</span>
           <span className="nav-link" onClick={() => go("faq")} style={isActive("faq") ? activeLinkStyle : undefined}>FAQ</span>
           <span className="nav-link" onClick={() => go("pricing")} style={isActive("pricing") ? activeLinkStyle : undefined}>Pricing</span>
           {user ? (
