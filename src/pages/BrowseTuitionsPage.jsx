@@ -113,7 +113,15 @@ export default function BrowseTuitionsPage({ setPage }) {
       <Navbar setPage={setPage} page="tuitions" />
       <div style={{ paddingTop:90 }}>
 
-        {/* Hero */}
+        {/* ADDED: Browse Tuitions top banner (image in public/ as "browse tutors up banner.png") */}
+        <img
+          src="/browse tutors up banner.png"
+          alt="Browse Tuitions"
+          style={{ width:"100%", height:400, objectFit:"cover", objectPosition:"center", display:"block" }}
+        />
+
+        {/* Hero — REMOVED from view per request (kept in code, NOT deleted). Change false to true to bring it back. */}
+        {false && (
         <div style={{ background:"linear-gradient(135deg,#065F46,#0E7490)", padding:"52px 0 40px" }}>
           <div className="container" style={{ textAlign:"center" }}>
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(255,255,255,.15)", borderRadius:20, padding:"5px 16px", fontSize:13, color:"#A7F3D0", fontWeight:600, marginBottom:16 }}>
@@ -136,6 +144,7 @@ export default function BrowseTuitionsPage({ setPage }) {
             </div>
           </div>
         </div>
+        )}
 
         <div className="container browse-layout" style={{ padding:"32px 0 60px" }}>
 

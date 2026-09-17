@@ -124,8 +124,15 @@ function JobsPage({ setPage }) {
   return (
     <div className="browse-page" style={{ paddingTop:66, minHeight:"100vh", background:"#F9FAFB" }}>
       <Navbar setPage={setPage} page="jobs" />
+      {/* ADDED: Browse Jobs top banner (image in public/ as "browse jobs top banner.png") */}
+      <img
+        src="/browse jobs top banner.png"
+        alt="Browse Teaching Jobs"
+        style={{ width:"100%", height:"auto", display:"block" }}
+      />
 
-      {/* Hero */}
+      {/* Hero — REMOVED from view per request (kept in code, NOT deleted). Change false to true to bring it back. */}
+      {false && (
       <div style={{ background:"linear-gradient(135deg,#B45309,#EA580C)", padding:"52px 0 40px", position:"relative", overflow:"hidden", minHeight:440 }}>
         <img
           src="https://images.pexels.com/photos/8613089/pexels-photo-8613089.jpeg?auto=compress&cs=tinysrgb&h=1200&fit=crop&w=1200"
@@ -156,6 +163,7 @@ function JobsPage({ setPage }) {
           </div>
         </div>
       </div>
+      )}
 
       {/* Header */}
       <div style={{ background:"#fff", borderBottom:"1px solid #E5E7EB", padding:"40px 0 0" }}>
