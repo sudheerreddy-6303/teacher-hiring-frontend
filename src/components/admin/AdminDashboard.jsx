@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { FilterBar, Toast } from "../common/Shared";
 import SuccessPopup from "../common/SuccessPopup";
+import PaymentHistory from "../common/PaymentHistory"; // ADDED: payment history
+import AdminPlansManager from "./AdminPlansManager"; // ADDED: manage pricing
+import AdminBannersManager from "./AdminBannersManager"; // ADDED: manage banners
 import { SUBS, INDIA_LOCATIONS } from "../../constants";
 import './Admin.css';
 
@@ -2095,6 +2098,9 @@ function AdminDashboard({ setPage }) {
     { id:"tutors",     icon:"🧑‍🎓", label:"Tutors" },
     { id:"parents",    icon:"👨‍👩‍👧", label:"Tuitions" },
     { id:"payments",   icon:"💳", label:"Payments" },
+    { id:"payhistory", icon:"🧾", label:"Payment History" },
+    { id:"manageplans",icon:"🏷️", label:"Manage Pricing" },
+    { id:"managebanners",icon:"🖼️", label:"Manage Banners" },
     { id:"analytics",  icon:"📈", label:"Analytics" },
     { id:"feedbacks",  icon:"💬", label:"Feedbacks" },
     { id:"leads",      icon:"🏢", label:"Enterprise Leads" },
@@ -2684,6 +2690,10 @@ function AdminDashboard({ setPage }) {
         )}
 
         {/* ══ PAYMENTS ══ */}
+        {tab==="manageplans" && <AdminPlansManager />}
+        {tab==="managebanners" && <AdminBannersManager />}
+        {tab==="payhistory" && <PaymentHistory admin={true} />}
+
         {tab==="payments" && (
           <div className="fadeUp">
             <div className="page-title">Payments</div>

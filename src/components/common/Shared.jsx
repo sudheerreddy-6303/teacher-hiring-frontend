@@ -15,9 +15,21 @@ function Brand({ size, onClick }) {
   );
 }
 
+// ─── ADDED: Social Media links shown in the navbar dropdown ────────────────────
+// Replace each "#" below with your real profile URL. To hide a platform, set its
+// url to "" (empty) or delete that line. Nothing else needs to change.
+const SOCIAL_LINKS = [
+  { label: "Instagram", icon: "📸", url: "https://www.instagram.com/acadhr/" },
+  { label: "Facebook",  icon: "📘", url: "" },   // paste your URL, e.g. "https://facebook.com/acadhr"
+  { label: "LinkedIn",  icon: "💼", url: "https://www.linkedin.com/company/acad-hr/" },   // e.g. "https://linkedin.com/company/acadhr"
+  { label: "YouTube",   icon: "▶️", url: "https://www.youtube.com/@acadhr" },   // e.g. "https://youtube.com/@acadhr"
+  { label: "WhatsApp",  icon: "💬", url: "" },   // e.g. "https://wa.me/919876543210"
+];
+
 function Navbar({ setPage, page }) {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [socialOpen, setSocialOpen] = useState(false); // ADDED: Social Media dropdown
   const go = (p) => { setMenuOpen(false); setPage(p); };
   const isActive = (id) => page === id;
   const activeLinkStyle = { color: "#1A56DB", fontWeight: 800, borderBottom: "2px solid #1A56DB" };
@@ -36,7 +48,30 @@ function Navbar({ setPage, page }) {
           <span className="nav-link" onClick={() => go("tutors")} style={isActive("tutors") ? activeLinkStyle : undefined}>Browse Tutors</span>
           <span className="nav-link" onClick={() => go("tuitions")} style={isActive("tuitions") ? activeLinkStyle : undefined}>Browse Tuitions</span>
           <span className="nav-link" onClick={() => go("collaboration")} style={isActive("collaboration") ? activeLinkStyle : undefined}>School Solutions</span>
-          <span className="nav-link" onClick={() => go("faq")} style={isActive("faq") ? activeLinkStyle : undefined}>FAQ</span>
+          {/* CHANGED: "FAQ" replaced with a "Social Media" dropdown (FAQ page kept in code, just no nav link). */}
+          <span className="nav-link"
+            style={{ position:"relative", cursor:"pointer" }}
+            onMouseEnter={() => setSocialOpen(true)}
+            onMouseLeave={() => setSocialOpen(false)}
+            onClick={() => setSocialOpen(o => !o)}>
+            Social Media <span style={{ fontSize:11 }}>▾</span>
+            {socialOpen && (
+              <div style={{ position:"absolute", top:"100%", left:0, marginTop:6, background:"#fff", border:"1px solid #E5E7EB", borderRadius:10, boxShadow:"0 12px 32px rgba(0,0,0,.14)", padding:6, minWidth:190, zIndex:1200 }}>
+                {SOCIAL_LINKS.filter(s => s.url && s.url.trim() !== "").length === 0 ? (
+                  <div style={{ padding:"9px 12px", fontSize:13, color:"#9CA3AF" }}>Links coming soon</div>
+                ) : (
+                  SOCIAL_LINKS.filter(s => s.url && s.url.trim() !== "").map(s => (
+                    <a key={s.label} href={s.url} target="_blank" rel="noreferrer"
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", borderRadius:8, fontSize:14, fontWeight:600, color:"#374151", textDecoration:"none" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "#F0F4FF"}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                      <span style={{ fontSize:17 }}>{s.icon}</span>{s.label}
+                    </a>
+                  ))
+                )}
+              </div>
+            )}
+          </span>
           <span className="nav-link" onClick={() => go("pricing")} style={isActive("pricing") ? activeLinkStyle : undefined}>Pricing</span>
           {user ? (
             <>
@@ -958,7 +993,7 @@ function OtpBoxes({ arr, setter, prefix, disabled, onChangeFn, onKeyDownFn }) {
 
 
 // ── InlineBrowseJobs — used inside dashboards so user stays in dashboard ────
-function InlineBrowseJobs({ user, canApply, onApplyBlocked }) {
+function InlineBrowseJobs({ user, canApply, onApplyBlocked, onApplied, credits, onNoCredits }) {
   const [jobs,      setJobs]      = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [filter,    setFilter]    = useState({ subject:"", type:"", location:"", search:"" });
@@ -1024,6 +1059,7 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked }) {
     if (!user) return;
     if (user.role !== "teacher") { alert("Only teachers can apply for jobs."); return; }
     if (!canApply) { onApplyBlocked && onApplyBlocked(); return; }
+    if (typeof credits === "number" && credits <= 0) { onNoCredits && onNoCredits(); return; }
     if (applied.includes(job.id)) { setSelected(null); setApplyJob(job); return; }
     setApplying(true); setApplyErr("");
     try {
@@ -1038,6 +1074,9 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked }) {
         setApplied(a => [...a, job.id]);
         setSelected(null);
         setApplyJob(job);
+        if (res.ok && onApplied) onApplied(); // refresh credits after a real new application
+      } else if (res.status === 402) {
+        onNoCredits && onNoCredits(); // out of credits — show the zero-credits popup
       } else {
         setApplyErr(data.message || "Failed to apply.");
       }

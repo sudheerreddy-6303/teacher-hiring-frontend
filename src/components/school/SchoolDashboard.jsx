@@ -3,11 +3,21 @@ import { useAuth } from "../../context/AuthContext";
 import { INDIA_LOCATIONS, SUBS } from "../../constants";
 import { Toast, Divider, FilterBar } from "../../components/common/Shared";
 import SuccessPopup from "../../components/common/SuccessPopup";
+import SaveErrorPopup from "../../components/common/SaveErrorPopup"; // ADDED: profile save-error popup
+import { startPayment } from "../../payments"; // ADDED: payments
+import PaymentHistory from "../../components/common/PaymentHistory"; // ADDED: payment history
+import NoCreditsPopup from "../../components/common/NoCreditsPopup"; // ADDED: zero-credits popup
 import './School.css';
 
 function SchoolDashboard({ user, setPage }) {
   const { logout } = useAuth();
   const [tab, setTab] = useState("overview");
+  const [noCredits, setNoCredits] = useState(false); // ADDED
+  const [catalog, setCatalog] = useState({}); // ADDED: admin-editable plans catalog
+  useEffect(() => {
+    fetch((process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/payments/config")
+      .then(r => r.json()).then(d => setCatalog(d && d.catalog ? d.catalog : {})).catch(() => {});
+  }, []);
   const [showPost, setShowPost] = useState(false);
   const [autoReqId, setAutoReqId] = useState("");
   const [reqIdLoading, setReqIdLoading] = useState(false);
@@ -48,7 +58,57 @@ function SchoolDashboard({ user, setPage }) {
   const [resumeApplicant, setResumeApplicant] = useState(null); // applicant resume modal
 
   const showToast = m => { setToast(m); setTimeout(() => setToast(""), 3000); };
+  // ── Credits: live balance from the payments API ──────────────────────────
+  const [creditInfo, setCreditInfo] = useState({ available: null, used: 0, daysLeft: null });
+  const loadCredits = async () => {
+    try {
+      const token = localStorage.getItem("acadhr_token");
+      const headers = token ? { Authorization: "Bearer " + token } : {};
+      const base = (process.env.REACT_APP_API_URL || "http://localhost:5000/api");
+      const [balRes, histRes] = await Promise.all([
+        fetch(base + "/payments/credits", { headers }),
+        fetch(base + "/payments/mine",    { headers }),
+      ]);
+      const bal  = await balRes.json().catch(() => ({}));
+      const hist = await histRes.json().catch(() => ([]));
+      const purchased = Array.isArray(hist)
+        ? hist.filter(x => x.status === "paid").reduce((sum, x) => sum + (Number(x.credits_added) || 0), 0)
+        : 0;
+      const available = Number(bal.credits) || 0;
+      const daysLeft  = (typeof bal.days_left === "number") ? bal.days_left : null; // ADDED: plan days left
+      setCreditInfo({ available, used: Math.max(purchased - available, 0), daysLeft });
+    } catch (e) { /* keep previous values on error */ }
+  };
+  useEffect(() => { loadCredits(); }, []);
+  useEffect(() => { if (tab === "credits" || tab === "overview") loadCredits(); }, [tab]);
   const up = (k, v) => setForm(f => ({...f, [k]:v}));
+
+  // ADDED: viewing a teacher's contact spends 1 credit (charged once per teacher).
+  const handleViewContact = async (t) => {
+    // quick guard: no credits → show the upgrade popup instead of charging
+    if (creditInfo.available !== null && creditInfo.available <= 0) { setNoCredits(true); return; }
+    try {
+      const token = localStorage.getItem("acadhr_token");
+      const base  = (process.env.REACT_APP_API_URL || "http://localhost:5000/api");
+      const res = await fetch(base + "/admin/school/unlock-contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ teacher_id: t.id || t.user_id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 402) { setNoCredits(true); return; } // out of credits → popup → Pricing
+      // update the visible balance immediately from the server's authoritative value
+      if (res.ok && typeof data.credits === "number") {
+        setCreditInfo(prev => ({ ...prev, available: data.credits }));
+      }
+      // success (or already unlocked): open the contact and re-sync the balance
+      setContactTeacher(t);
+      loadCredits();
+    } catch (e) {
+      // network hiccup → don't block the school; open the contact anyway
+      setContactTeacher(t);
+    }
+  };
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
   // ── Fetch school's own jobs from acadhr.jobs ──────────────────────────────
@@ -130,6 +190,8 @@ function SchoolDashboard({ user, setPage }) {
       need(form.demo_required, "Demo Required"); need(form.positions, "Positions");
       if (missing.length) { alert("Please fill all mandatory fields: " + missing.join(", ")); return; }
     }
+    // ADDED: block posting at 0 credits, show the zero-credits popup
+    if (creditInfo.available !== null && creditInfo.available <= 0) { setNoCredits(true); return; }
     try {
       const token = localStorage.getItem("acadhr_token");
       const payload = {
@@ -150,6 +212,7 @@ function SchoolDashboard({ user, setPage }) {
         }
       );
       const data = await res.json();
+      if (res.status === 402) { setNoCredits(true); return; } // ADDED: out of credits -> popup
       if (!res.ok) throw new Error(data.message || "Failed to submit job");
 
       const title = (form.requirement_type || "Teacher") + " — " + form.subject;
@@ -177,6 +240,7 @@ function SchoolDashboard({ user, setPage }) {
         assigned_recruiter:"", notes:""
       });
       showToast("Job submitted! ID: " + data.requirement_id);
+      loadCredits(); // ADDED: refresh credit balance after a post (1 credit used)
       setTab("overview");
     } catch (err) {
       console.error('[postJob]', err);
@@ -220,7 +284,120 @@ function SchoolDashboard({ user, setPage }) {
   const [profileEditMode, setProfileEditMode] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
   const [showSavePopup, setShowSavePopup] = useState(false);
+  const [saveError, setSaveError] = useState("");   // ADDED: profile save-error popup message
+  const [savingProfile, setSavingProfile] = useState(false); // ADDED
   const upProfile = (k, v) => setSchoolProfile(p => ({...p, [k]:v}));
+
+  // ADDED: load the saved school profile from the DB on mount so edits persist across refreshes.
+  useEffect(() => {
+    const token = localStorage.getItem("acadhr_token");
+    if (!token) return;
+    fetch(`${API_BASE}/teacher/general-profile`, { headers: { Authorization: "Bearer " + token } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d) return;
+        const p = d.profile || {};
+        const u = d.user || {};
+        setSchoolProfile(prev => ({
+          ...prev,
+          institute_name:        p.institute_name        || u.name  || prev.institute_name,
+          email:                 u.email                 || prev.email,
+          phone:                 u.phone                 || prev.phone,
+          city:                  u.city                  || prev.city,
+          institute_type:        p.institute_type        || prev.institute_type,
+          affiliation_board:     p.affiliation_board     || prev.affiliation_board,
+          est_year:              p.est_year              || prev.est_year,
+          student_count:         p.student_count         || prev.student_count,
+          medium_of_instruction: p.medium_of_instruction || prev.medium_of_instruction,
+          classes_offered:       p.classes_offered       || prev.classes_offered,
+          streams_available:     p.streams_available     || prev.streams_available,
+          principal_name:        p.principal_name        || prev.principal_name,
+          total_teachers:        p.total_teachers        || prev.total_teachers,
+          non_teaching_staff:    p.non_teaching_staff     || prev.non_teaching_staff,
+          infrastructure:        p.infrastructure        || prev.infrastructure,
+          address:               p.address               || prev.address,
+          state:                 p.state                 || prev.state,
+          pincode:               p.pincode               || prev.pincode,
+          website:               p.website               || prev.website,
+          contact_person:        p.contact_person        || prev.contact_person,
+          designation:           p.designation           || prev.designation,
+          alternate_phone:       p.alternate_phone       || prev.alternate_phone,
+          description:           p.description           || prev.description,
+          hiring_for:            p.hiring_for            || prev.hiring_for,
+          social_media:          p.social_media          || prev.social_media,
+        }));
+        // ADDED: auto-fill the "Post a New Requirement" institution fields from the
+        // school's registration, so the school doesn't retype them. Only fills fields
+        // that are still empty, so anything the user typed is never overwritten.
+        // Normalise state/city so they match the post-form dropdown values.
+        const _stateKeys = Object.keys(INDIA_LOCATIONS || {});
+        const _rawState  = p.state || "";
+        const _state     = _stateKeys.find(s => s.toLowerCase() === String(_rawState).toLowerCase()) || _rawState;
+        const _cityList  = (INDIA_LOCATIONS && INDIA_LOCATIONS[_state]) || [];
+        const _rawCity   = u.city || p.city || "";
+        const _city      = _cityList.find(c => c.toLowerCase() === String(_rawCity).toLowerCase()) || _rawCity;
+        setForm(prev => ({
+          ...prev,
+          institution_name: prev.institution_name || p.institute_name || u.name || "",
+          institution_type: prev.institution_type || p.institute_type || "",
+          location_state:   prev.location_state   || _state,
+          location_city:    prev.location_city    || _city,
+          contact_person:   prev.contact_person   || p.contact_person || u.name || "",
+          contact_number:   prev.contact_number   || u.phone || p.alternate_phone || "",
+          email:            prev.email            || u.email || "",
+        }));
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line
+
+  // ADDED: actually persist the school profile to the DB, then show a success / error popup.
+  async function saveSchoolProfile() {
+    if (!validateSchoolProfile()) return;   // keeps the existing mandatory-field check
+    setSavingProfile(true); setSaveError("");
+    try {
+      const token = localStorage.getItem("acadhr_token");
+      const r = await fetch(`${API_BASE}/teacher/general-profile`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({
+          // users table
+          name:  schoolProfile.institute_name,
+          city:  schoolProfile.city,
+          phone: schoolProfile.phone,
+          // schools table
+          institute_name:        schoolProfile.institute_name,
+          institute_type:        schoolProfile.institute_type,
+          affiliation_board:     schoolProfile.affiliation_board,
+          est_year:              schoolProfile.est_year,
+          student_count:         schoolProfile.student_count,
+          medium_of_instruction: schoolProfile.medium_of_instruction,
+          classes_offered:       schoolProfile.classes_offered,
+          streams_available:     schoolProfile.streams_available,
+          principal_name:        schoolProfile.principal_name,
+          total_teachers:        schoolProfile.total_teachers,
+          non_teaching_staff:    schoolProfile.non_teaching_staff,
+          infrastructure:        schoolProfile.infrastructure,
+          address:               schoolProfile.address,
+          state:                 schoolProfile.state,
+          pincode:               schoolProfile.pincode,
+          website:               schoolProfile.website,
+          contact_person:        schoolProfile.contact_person,
+          designation:           schoolProfile.designation,
+          alternate_phone:       schoolProfile.alternate_phone,
+          description:           schoolProfile.description,
+          hiring_for:            schoolProfile.hiring_for,
+          social_media:          schoolProfile.social_media,
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.message || "Please try again.");
+      setProfileEditMode(false);
+      setProfileSaved(true);
+      setShowSavePopup(true);
+    } catch (err) {
+      setSaveError(err.message || "Please try again.");
+    } finally { setSavingProfile(false); }
+  }
   // ADDED (mandatory fields): all school profile fields are required before saving
   function validateSchoolProfile() {
     const missing = [];
@@ -243,7 +420,9 @@ function SchoolDashboard({ user, setPage }) {
     { id:"applicants", icon:"👥",  label:"Applicants"       },
     { id:"database",   icon:"🗄️",  label:"Teacher Database" },
     { id:"analytics",  icon:"📊",  label:"Analytics"        },
+    { id:"pricing",    icon:"🏷️",  label:"Pricing"          },
     { id:"credits",    icon:"💳",  label:"Credits"          },
+    { id:"payments",   icon:"🧾",  label:"Payment History"  },
     { id:"settings",   icon:"⚙️",  label:"Settings"         },
   ];
   const EXPS = ["Fresher OK","1+ Years","2+ Years","3+ Years","5+ Years","10+ Years"];
@@ -253,6 +432,7 @@ function SchoolDashboard({ user, setPage }) {
     <div className="school-layout" style={{ background:"#F7F8FA", fontFamily:"Nunito,sans-serif" }}>
 
       <SuccessPopup show={showSavePopup} onClose={() => setShowSavePopup(false)} />
+      <SaveErrorPopup show={!!saveError} onClose={() => setSaveError("")} message={saveError} />
 
       <button type="button" className="mobile-nav-toggle school-mobile-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
       <div className={"sidebar-backdrop" + (navOpen ? " show" : "")} onClick={() => setNavOpen(false)} />
@@ -313,10 +493,17 @@ function SchoolDashboard({ user, setPage }) {
         {/* Top bar */}
         <div className="school-topbar" style={{ background:"#fff", borderBottom:"1px solid #E5E7EB", padding:"0 28px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:200 }}>
           <div style={{ fontWeight:700, fontSize:15, color:"#111827" }}>
-                {tab==="overview"?"Overview":tab==="profile"?"My Profile":tab==="jobs"?"My Jobs":tab==="applicants"?"Applicants":tab==="database"?"Teacher Database":tab==="analytics"?"Analytics":tab==="credits"?"Credits":"Settings"}
+                {tab==="overview"?"Overview":tab==="profile"?"My Profile":tab==="jobs"?"My Jobs":tab==="applicants"?"Applicants":tab==="database"?"Teacher Database":tab==="analytics"?"Analytics":tab==="pricing"?"Pricing":tab==="payments"?"Payment History":tab==="credits"?"Credits":"Settings"}
               </div>
           <div className="school-topbar-actions">
-            <div style={{ display:"flex", alignItems:"center", gap:6, background:"#FFF7ED", border:"1px solid #FDE68A", borderRadius:20, padding:"4px 14px", fontSize:13, fontWeight:700, color:"#D97706" }}><span>🪙</span> 0 +</div>
+<NoCreditsPopup show={noCredits} onGoPricing={() => { setNoCredits(false); setTab("pricing"); }} />
+                        <div style={{ display:"flex", alignItems:"center", gap:6, background:"#FFF7ED", border:"1px solid #FDE68A", borderRadius:20, padding:"4px 14px", fontSize:13, fontWeight:700, color:"#D97706" }}><span>🪙</span> {creditInfo.available == null ? 0 : creditInfo.available} +</div>
+                        {/* ADDED: days left on the active plan */}
+                        {creditInfo.daysLeft !== null && (
+                          <div style={{ display:"flex", alignItems:"center", gap:6, background: creditInfo.daysLeft > 0 ? "#ECFDF5" : "#FEF2F2", border:`1px solid ${creditInfo.daysLeft > 0 ? "#A7F3D0" : "#FECACA"}`, borderRadius:20, padding:"4px 14px", fontSize:13, fontWeight:700, color: creditInfo.daysLeft > 0 ? "#047857" : "#B91C1C" }}>
+                            <span>📅</span> {creditInfo.daysLeft > 0 ? `${creditInfo.daysLeft} day${creditInfo.daysLeft === 1 ? "" : "s"} left` : "Plan expired"}
+                          </div>
+                        )}
             <button className="btn btn-primary btn-sm" onClick={async () => {
               setShowPost(true);
               setReqIdLoading(true);
@@ -363,7 +550,7 @@ function SchoolDashboard({ user, setPage }) {
                 { icon:"✅", label:"Live Jobs",          value:liveJobs.length,    color:"#059669", bg:"#ECFDF5", onClick:()=>setTab("jobs") },
                 { icon:"⏳", label:"Pending Review",     value:pendJobs.length,    color:"#D97706", bg:"#FFFBEB", onClick:()=>setTab("jobs") },
                 { icon:"👥", label:"Total Applicants",   value:totalCandidates,    color:"#1A56DB", bg:"#EBF5FF", onClick:()=>setTab("applicants") },
-                { icon:"💳", label:"Credits",            value:0,                  color:"#6D28D9", bg:"#F5F3FF", onClick:()=>setTab("credits") },
+                { icon:"💳", label:"Credits",            value:(creditInfo.available == null ? 0 : creditInfo.available), color:"#6D28D9", bg:"#F5F3FF", onClick:()=>setTab("credits") },
               ].map(s => (
                 <div key={s.label} onClick={s.onClick}
                   style={{ background:s.bg, borderRadius:14, padding:"20px 18px", cursor:"pointer", transition:"transform .15s, box-shadow .15s" }}
@@ -624,7 +811,7 @@ function SchoolDashboard({ user, setPage }) {
                   </div>
                   <div style={{ display:"flex", gap:10 }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => { setProfileEditMode(false); setProfileSaved(false); }}>✕ Cancel</button>
-                    <button className="btn btn-primary btn-sm" onClick={() => { if (!validateSchoolProfile()) return; setProfileEditMode(false); setProfileSaved(true); setShowSavePopup(true); }}>Save ✓</button>
+                    <button className="btn btn-primary btn-sm" disabled={savingProfile} onClick={saveSchoolProfile}>{savingProfile ? "Saving…" : "Save ✓"}</button>
                   </div>
                 </div>
 
@@ -721,7 +908,7 @@ function SchoolDashboard({ user, setPage }) {
 
                 <div style={{ display:"flex", gap:10, marginBottom:20 }}>
                   <button className="btn btn-ghost" style={{ flex:1, justifyContent:"center" }} onClick={() => { setProfileEditMode(false); setProfileSaved(false); }}>Cancel</button>
-                  <button className="btn btn-primary" style={{ flex:2, justifyContent:"center" }} onClick={() => { if (!validateSchoolProfile()) return; setProfileEditMode(false); setProfileSaved(true); setShowSavePopup(true); }}>Save All Changes ✓</button>
+                  <button className="btn btn-primary" style={{ flex:2, justifyContent:"center" }} disabled={savingProfile} onClick={saveSchoolProfile}>{savingProfile ? "Saving…" : "Save All Changes ✓"}</button>
                 </div>
               </>
             )}
@@ -974,6 +1161,14 @@ function SchoolDashboard({ user, setPage }) {
             (!dbFilter.mode       || (t.work_mode||"").toLowerCase().includes(dbFilter.mode.toLowerCase()))
           );
 
+          // ADDED: truncate a comma list to N items + "…" (like the Browse Teachers card)
+          const capList = (v, n) => {
+            if (!v) return "";
+            const a = String(v).split(",").map(s => s.trim()).filter(Boolean);
+            if (!n || a.length <= n) return a.join(", ");
+            return a.slice(0, n).join(", ") + "…";
+          };
+
           const FilterSection = ({ label, icon, children }) => {
             const [open, setOpen] = useState(true);
             return (
@@ -1101,113 +1296,77 @@ function SchoolDashboard({ user, setPage }) {
                 ) : (
                   <div className="school-db-grid" style={{ display:"flex", flexDirection:"column", gap:12 }}>
                     {filtered.map(t => (
-                      <div key={t.id} style={{ background:"#fff", borderRadius:14, border:"1px solid #E5E7EB", padding:"18px 22px", transition:"all .2s" }}
+                      <div key={t.id} style={{ background:"#fff", borderRadius:14, border:"1px solid #E5E7EB", padding:"18px 22px", transition:"all .2s", display:"flex", flexDirection:"column", height:"100%" }}
                         onMouseEnter={e => { e.currentTarget.style.boxShadow="0 4px 20px rgba(26,86,219,.09)"; e.currentTarget.style.borderColor="#BFDBFE"; }}
                         onMouseLeave={e => { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.borderColor="#E5E7EB"; }}>
 
-                        {/* Row 1 — Avatar + Name + Badge + Feedback */}
-                        <div className="school-db-cardhead" style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:10 }}>
-                          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                            {/* Avatar */}
-                            <div style={{ width:44, height:44, borderRadius:10, overflow:"hidden", background:"#E0E7FF", border:"1px solid #C7D2FE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:800, color:"#4338CA", flexShrink:0 }}>
-                              {t.profile_photo
-                                ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + t.profile_photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                                : (t.name||"T").charAt(0).toUpperCase()}
+                        {/* ── Photo + Name + role (Browse-Teachers card style) ── */}
+                        <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:16 }}>
+                          <div style={{ width:54, height:54, borderRadius:"50%", overflow:"hidden", background:"#EBF5FF", border:"2px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, fontWeight:800, color:"#1A56DB", flexShrink:0 }}>
+                            {t.profile_photo
+                              ? <img src={(process.env.REACT_APP_API_URL||"http://localhost:5000/api").replace("/api","") + t.profile_photo} alt={t.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                              : (t.name||"T").charAt(0).toUpperCase()}
+                          </div>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                              <span style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{t.name}</span>
+                              {(t.completion_pct||0) >= 70 && (
+                                <span style={{ background:"#ECFDF5", color:"#059669", border:"1px solid #A7F3D0", borderRadius:20, padding:"2px 9px", fontSize:11, fontWeight:700 }}>Top Match</span>
+                              )}
                             </div>
-                            <div>
-                              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                                <span style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{t.name}</span>
-                                {(t.completion_pct||0) >= 70 && (
-                                  <span style={{ background:"#ECFDF5", color:"#059669", border:"1px solid #A7F3D0", borderRadius:20, padding:"2px 9px", fontSize:11, fontWeight:700 }}>Top Match</span>
-                                )}
-                              </div>
-                              <div style={{ fontSize:12, color:"#6B7280", marginTop:2 }}>
-                                {[t.total_experience||"Fresher", t.gender].filter(Boolean).join(", ")}
-                              </div>
+                            <div style={{ fontSize:12, color:"#1A56DB", fontWeight:600, marginTop:2 }}>
+                              {t.specialization || t.current_role || "Teacher"}
                             </div>
                           </div>
-                          {/* Relevance feedback */}
+                        </div>
+
+                        {/* Relevance feedback — kept in code (hidden) so nothing is deleted */}
+                        {false && (
                           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                             <span style={{ fontSize:11, color:"#9CA3AF" }}>Is this candidate relevant?</span>
                             <button style={{ background:"none", border:"1px solid #E5E7EB", borderRadius:8, width:30, height:30, cursor:"pointer", fontSize:14 }}>👍</button>
                             <button style={{ background:"none", border:"1px solid #E5E7EB", borderRadius:8, width:30, height:30, cursor:"pointer", fontSize:14 }}>👎</button>
                           </div>
+                        )}
+
+                        {/* ── Chips ── */}
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 }}>
+                          {(t.city || t.current_location) && <span style={{ background:"#F3F4F6", color:"#374151", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>📍 {t.city || t.current_location}</span>}
+                          {(t.total_experience || t.experience) && <span style={{ background:"#EBF5FF", color:"#1A56DB", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>⏳ {t.total_experience || t.experience}</span>}
+                          {t.qualification && <span style={{ background:"#F5F3FF", color:"#6D28D9", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>🎓 {t.qualification}</span>}
+                          {(t.work_mode || t.teaching_mode) && <span style={{ background:"#ECFDF5", color:"#059669", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:600 }}>{t.work_mode || t.teaching_mode}</span>}
                         </div>
 
-                        {/* Row 2 — Experience + Location + Language */}
-                        <div style={{ display:"flex", alignItems:"center", gap:20, marginBottom:8, flexWrap:"wrap" }}>
-                          <span style={{ display:"flex", alignItems:"center", gap:5, fontSize:13, color:"#374151" }}>
-                            <span style={{ fontSize:14 }}>💼</span>
-                            <span style={{ fontWeight:600 }}>{t.total_experience || "Fresher"}</span>
-                          </span>
-                          {t.city && (
-                            <span style={{ display:"flex", alignItems:"center", gap:5, fontSize:13, color:"#374151" }}>
-                              <span style={{ fontSize:14 }}>📍</span>
-                              <span>{t.city}{t.current_location && t.current_location !== t.city ? `, ${t.current_location}` : ""}</span>
-                            </span>
-                          )}
-                          {t.languages && (
-                            <span style={{ display:"flex", alignItems:"center", gap:5, fontSize:13, color:"#374151" }}>
-                              <span style={{ fontSize:14 }}>🌐</span>
-                              <span>{t.languages.split(",")[0]}</span>
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Divider */}
-                        <div style={{ height:1, background:"#F3F4F6", margin:"10px 0" }} />
-
-                        {/* Row 3 — Details box */}
-                        <div style={{ background:"#F9FAFB", borderRadius:10, padding:"12px 16px", marginBottom:14, borderLeft:"3px solid #BFDBFE" }}>
-                          <div style={{ display:"flex", gap:8, marginBottom:7, alignItems:"flex-start" }}>
-                            <span style={{ fontSize:12, color:"#6B7280", fontWeight:600, minWidth:130, flexShrink:0 }}>Relevant Experience:</span>
-                            <span style={{ fontSize:13, color:"#111827" }}>
-                              {t.total_experience || "Fresher"} in{" "}
-                              <strong>{t.specialization || t.current_role || "Teaching"}</strong>
-                              {!t.total_experience ? " (Interested in Role)" : ""}
-                            </span>
-                          </div>
-                          <div style={{ display:"flex", gap:8, marginBottom:7, alignItems:"flex-start" }}>
-                            <span style={{ fontSize:12, color:"#6B7280", fontWeight:600, minWidth:130, flexShrink:0 }}>Education:</span>
-                            <span style={{ fontSize:13, color:"#111827" }}>{t.qualification || "—"}</span>
-                          </div>
-                          {t.subjects && (
-                            <div style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
-                              <span style={{ fontSize:12, color:"#6B7280", fontWeight:600, minWidth:130, flexShrink:0 }}>Subjects:</span>
-                              <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
-                                {t.subjects.split(",").map(s => s.trim()).filter(Boolean).map(s => (
-                                  <span key={s} style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:6, padding:"2px 9px", fontSize:12, color:"#374151", fontWeight:500 }}>{s}</span>
-                                ))}
-                              </div>
+                        {/* ── Labeled details ── */}
+                        <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
+                          {[
+                            ["Preferred Location", t.preferred_locations, 3],
+                            ["Subjects",           t.subjects || t.specialization, 3],
+                            ["Languages",          t.languages, 0],
+                            ["Grades",             t.grades_handling, 3],
+                            ["Boards",             t.boards_handled, 3],
+                            ["Education",          t.qualification, 0],
+                          ].filter(([, value]) => value && String(value).trim()).map(([label, value, cap]) => (
+                            <div key={label} style={{ display:"flex", gap:8, fontSize:12, lineHeight:1.4 }}>
+                              <span style={{ flexShrink:0, color:"#9CA3AF", fontWeight:700, minWidth:96 }}>{label}</span>
+                              <span style={{ color:"#374151", fontWeight:600, wordBreak:"break-word" }}>{capList(value, cap)}</span>
                             </div>
-                          )}
-                          {!t.subjects && t.specialization && (
-                            <div style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
-                              <span style={{ fontSize:12, color:"#6B7280", fontWeight:600, minWidth:130, flexShrink:0 }}>Specialization:</span>
-                              <span style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:6, padding:"2px 9px", fontSize:12, color:"#374151", fontWeight:500 }}>{t.specialization}</span>
-                            </div>
-                          )}
+                          ))}
                         </div>
 
-                        {/* Row 4 — Action buttons */}
-                        <div style={{ display:"flex", justifyContent:"flex-end", gap:10 }}>
-                          {/* CHANGED (per request): resume now shows inside View Contact only.
-                              Button kept (not deleted) — hidden via the school-db-resume-btn class. */}
-                          <button className="school-db-resume-btn"
-                            style={{ display:"flex", alignItems:"center", gap:7, padding:"8px 18px", borderRadius:9, border:"1.5px solid #D1D5DB", background:"#fff", color:"#374151", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s" }}
-                            onClick={() => setResumeTeacher(t)}
-                            onMouseEnter={e => { e.currentTarget.style.background="#F9FAFB"; e.currentTarget.style.borderColor="#9CA3AF"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor="#D1D5DB"; }}>
-                            📄 View Resume
-                          </button>
-                          <button
-                            style={{ display:"flex", alignItems:"center", gap:7, padding:"8px 18px", borderRadius:9, border:"none", background:"#1A56DB", color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"background .15s" }}
-                            onClick={() => setContactTeacher(t)}
-                            onMouseEnter={e => e.currentTarget.style.background="#1E429F"}
-                            onMouseLeave={e => e.currentTarget.style.background="#1A56DB"}>
-                            📞 View Contact
-                          </button>
-                        </div>
+                        {/* Hidden resume button — kept (not deleted) */}
+                        <button className="school-db-resume-btn"
+                          style={{ display:"none", alignItems:"center", gap:7, padding:"8px 18px", borderRadius:9, border:"1.5px solid #D1D5DB", background:"#fff", color:"#374151", fontWeight:700, fontSize:13, cursor:"pointer" }}
+                          onClick={() => setResumeTeacher(t)}>📄 View Resume</button>
+
+                        {/* ── Full-width action button (pinned to bottom) ── */}
+                        <button
+                          style={{ width:"100%", padding:"11px 0", borderRadius:10, border:"1.5px solid #BFDBFE", background:"#EBF5FF", color:"#1A56DB", fontWeight:700, fontSize:13.5, cursor:"pointer", fontFamily:"Nunito,sans-serif", transition:"all .15s", marginTop:"auto" }}
+                          onClick={() => handleViewContact(t)}
+                          onMouseEnter={e => { e.currentTarget.style.background="#1A56DB"; e.currentTarget.style.color="#fff"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background="#EBF5FF"; e.currentTarget.style.color="#1A56DB"; }}>
+                          📞 View Contact →
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -1527,11 +1686,93 @@ function SchoolDashboard({ user, setPage }) {
           </div>
         )}
 
+        {tab==="payments" && <PaymentHistory />}
+
+        {tab==="pricing" && (
+          <div style={{ padding:"28px 28px" }} className="fadeUp">
+            <h2 style={{ fontSize:22, fontWeight:800, color:"#111827", marginBottom:6 }}>Choose your plan</h2>
+            <p style={{ color:"#6B7280", fontSize:14, marginBottom:24 }}>Pick a plan that fits your hiring needs. Payments are processed securely via Razorpay.</p>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:20, maxWidth:1080 }}>
+              {(() => {
+                const _fallback = [
+                  {
+                    name:"Basic Recruitment", tagline:"For single schools getting started",
+                    periods:[
+                      { id:"school_basic_1m", label:"1 month",  price:"₹4,999"  },
+                      { id:"school_basic_3m", label:"3 months", price:"₹14,250", note:"save 5%"  },
+                      { id:"school_basic_6m", label:"6 months", price:"₹26,995", note:"save 10%" },
+                    ],
+                    features:["Post active jobs","Access to teacher database","School profile page","Basic recruitment reports"],
+                  },
+                  {
+                    name:"Professional Hiring", tagline:"For active, growing schools", highlight:true,
+                    periods:[
+                      { id:"school_pro_1m", label:"1 month",  price:"₹15,000" },
+                      { id:"school_pro_3m", label:"3 months", price:"₹42,750", note:"save 5%"  },
+                      { id:"school_pro_6m", label:"6 months", price:"₹81,000", note:"save 10%" },
+                    ],
+                    features:["Everything in Basic","Post up to 10 jobs/month","Featured school profile","Priority support","Advanced reports"],
+                  },
+                  {
+                    name:"Enterprise Chain School", tagline:"For groups with 5+ schools", enterprise:true,
+                    priceText:"₹25,000 – ₹1,00,000",
+                    features:["Everything in Professional","Unlimited jobs","Dedicated account manager","Custom integrations"],
+                  },
+                ];
+                const _db = (catalog && Array.isArray(catalog.school)) ? catalog.school : [];
+                const plans = _db.length ? _db : _fallback;
+                return plans.map(p => (
+                  <div key={p.name} style={{ background:"#fff", border:`2px solid ${p.highlight?"#1A56DB":"#E5E7EB"}`, borderRadius:16, padding:24, display:"flex", flexDirection:"column", position:"relative", boxShadow:p.highlight?"0 8px 24px rgba(26,86,219,.12)":"none" }}>
+                    {p.highlight && <span style={{ position:"absolute", top:-12, left:24, background:"#1A56DB", color:"#fff", fontSize:11, fontWeight:800, padding:"4px 12px", borderRadius:20 }}>MOST POPULAR</span>}
+                    <div style={{ fontWeight:800, fontSize:18, color:"#111827" }}>{p.name}</div>
+                    <div style={{ fontSize:13, color:"#6B7280", marginTop:4, marginBottom:16 }}>{p.tagline}</div>
+
+                    {p.enterprise ? (
+                      <>
+                        <div style={{ fontSize:24, fontWeight:900, color:"#111827", marginBottom:2 }}>{p.priceText}</div>
+                        <div style={{ fontSize:12, color:"#9CA3AF", marginBottom:16 }}>/month</div>
+                      </>
+                    ) : (
+                      <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
+                        {p.periods.map(per => (
+                          <button key={per.id}
+                            onClick={() => startPayment(per.id)}
+                            style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", padding:"11px 14px", borderRadius:10, border:`1.5px solid ${p.highlight?"#1A56DB":"#D1D5DB"}`, background:p.highlight?"#1A56DB":"#fff", color:p.highlight?"#fff":"#1A56DB", cursor:"pointer", fontWeight:800, fontFamily:"Nunito,sans-serif", fontSize:14 }}>
+                            <span>{per.label}</span>
+                            <span>{per.price}{per.note ? <span style={{ fontSize:11, fontWeight:700, opacity:.85, marginLeft:6 }}>· {per.note}</span> : null}</span>
+                          </button>
+                        ))}
+                        <div style={{ fontSize:11, color:"#9CA3AF", textAlign:"center", marginTop:2 }}>Tap a duration to pay</div>
+                      </div>
+                    )}
+
+                    <div style={{ borderTop:"1px solid #F3F4F6", paddingTop:14, marginTop:"auto" }}>
+                      {p.features.map(f => (
+                        <div key={f} style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:13, color:"#374151", marginBottom:8 }}>
+                          <span style={{ color:"#059669", fontWeight:800 }}>✓</span><span>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {p.enterprise && (
+                      <button onClick={() => showToast("Thanks! Our team will contact you about Enterprise plans.")}
+                        style={{ marginTop:14, width:"100%", padding:"12px 0", borderRadius:10, border:"none", background:"#111827", color:"#fff", fontWeight:800, fontSize:14, cursor:"pointer", fontFamily:"Nunito,sans-serif" }}>
+                        Contact Sales
+                      </button>
+                    )}
+                  </div>
+                ));
+              })()}
+            </div>
+            <p style={{ fontSize:12, color:"#9CA3AF", marginTop:20 }}>Prices are exclusive of GST where applicable. You'll be charged securely through Razorpay.</p>
+          </div>
+        )}
+
         {tab==="credits" && (
           <div style={{ padding:"28px 28px" }} className="fadeUp">
             <h2 style={{ fontSize:20, fontWeight:800, color:"#111827", marginBottom:22 }}>Credits</h2>
             <div className="dash-grid-3" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, marginBottom:28 }}>
-              {[["Available Credits","0","🪙","#D97706"],["Credits Used","0","📊","#1A56DB"],["Jobs Boosted","0","🚀","#059669"]].map(([l,v,i,c]) => (
+              {[["Available Credits", creditInfo.available == null ? "…" : String(creditInfo.available), "🪙","#D97706"],["Credits Used", String(creditInfo.used), "📊","#1A56DB"],["Jobs Boosted","0","🚀","#059669"]].map(([l,v,i,c]) => (
                 <div key={l} style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:14, padding:"24px 20px", textAlign:"center" }}>
                   <div style={{ fontSize:28, marginBottom:10 }}>{i}</div>
                   <div style={{ fontSize:28, fontWeight:800, color:c, fontFamily:"Playfair Display,serif" }}>{v}</div>
@@ -1631,9 +1872,11 @@ function SchoolDashboard({ user, setPage }) {
                 <div className="grid2">
                   <div className="fg">
                     <label className="flabel">City *</label>
-                    <select className="input" value={form.location_city} onChange={e => up("location_city", e.target.value)} required disabled={!form.location_state}>
+                    <select className="input" value={form.location_city} onChange={e => up("location_city", e.target.value)} required disabled={!form.location_state && !form.location_city}>
                       <option value="">{form.location_state ? "Select city" : "Select state first"}</option>
                       {form.location_state && (INDIA_LOCATIONS[form.location_state]||[]).map(c => <option key={c}>{c}</option>)}
+                      {/* ADDED: keep a prefilled/custom city visible even if it isn't in the state's list */}
+                      {form.location_city && !((INDIA_LOCATIONS[form.location_state]||[]).includes(form.location_city)) && <option key={form.location_city}>{form.location_city}</option>}
                     </select>
                   </div>
                   <div className="fg">

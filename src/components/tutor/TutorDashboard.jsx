@@ -10,6 +10,10 @@ import { tutorAPI } from "../../api"; // ADDED: tuitions database + apply
 
 import { Toast, Divider, InlineBrowseJobs } from "../../components/common/Shared";
 import SuccessPopup from "../../components/common/SuccessPopup";
+import SaveErrorPopup from "../../components/common/SaveErrorPopup"; // ADDED: profile save-error popup
+import PaymentHistory from "../../components/common/PaymentHistory"; // ADDED: payment history
+import { startPayment } from "../../payments"; // ADDED: payments
+import NoCreditsPopup from "../../components/common/NoCreditsPopup"; // ADDED: zero-credits popup
 import './Tutor.css';
 
 // ADDED: subject icon helper — same look as the public Browse Tuitions page
@@ -26,6 +30,27 @@ function tuitionIconFor(subject) {
 function TutorDashboard({ user, setPage }) {
   const { logout } = useAuth();
   const [tab, setTab] = useState("overview");
+  const [noCredits, setNoCredits] = useState(false); // ADDED
+  const [catalog, setCatalog] = useState({}); // ADDED: admin-editable plans catalog
+  useEffect(() => {
+    fetch((process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/payments/config")
+      .then(r => r.json()).then(d => setCatalog(d && d.catalog ? d.catalog : {})).catch(() => {});
+  }, []);
+
+  // ── Credits: live balance from the payments API (display only) ──
+  const [credits, setCredits] = useState(null);
+  const [planDays, setPlanDays] = useState(null); // ADDED: days left on the active plan
+  const loadCredits = async () => {
+    try {
+      const token = localStorage.getItem("acadhr_token");
+      const base  = (process.env.REACT_APP_API_URL || "http://localhost:5000/api");
+      const res   = await fetch(base + "/payments/credits", { headers: token ? { Authorization: "Bearer " + token } : {} });
+      const data  = await res.json();
+      setCredits(Number(data.credits) || 0);
+      setPlanDays(typeof data.days_left === "number" ? data.days_left : null); // ADDED
+    } catch (e) { /* keep previous value on error */ }
+  };
+  useEffect(() => { loadCredits(); }, [tab]);
   const [profile, setProfile] = useState({
     name: user.name, subject: user.subject || "", city: user.city || "",
     experience: "", qualification: "", phone: user.phone || "",
@@ -43,6 +68,7 @@ function TutorDashboard({ user, setPage }) {
   const [editMode, setEditMode] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showSavePopup, setShowSavePopup] = useState(false);
+  const [saveError, setSaveError] = useState(""); // ADDED: profile save-error popup message
   const [saving, setSaving] = useState(false);
 
   // Persist profile edits to the database
@@ -60,9 +86,9 @@ function TutorDashboard({ user, setPage }) {
       need(profile.bio, "Bio"); need(profile.availability, "Availability"); need(profile.gender, "Gender");
       need(profile.address, "Address"); need(profile.location, "Location"); need(profile.pincode, "Pincode");
       need(profile.class_link, "Class Link");
-      if (missing.length) { alert("Please fill all mandatory fields: " + missing.join(", ")); return; }
+      if (missing.length) { setSaveError("Please fill all mandatory fields: " + missing.join(", ")); return; }
     }
-    setSaving(true); setSaved(false);
+    setSaving(true); setSaved(false); setSaveError("");
     try {
       await profileAPI.update({
         name:          profile.name,
@@ -100,7 +126,7 @@ function TutorDashboard({ user, setPage }) {
       setProfile(p => ({ ...p, photo_base64:"", resume_base64:"" }));
     } catch (e) {
       setSaved(false);
-      alert("Could not save profile: " + (e.message || "please try again"));
+      setSaveError(e.message || "Please try again.");
     } finally { setSaving(false); }
   }
 
@@ -214,6 +240,8 @@ function TutorDashboard({ user, setPage }) {
     { id:"schedule",  icon:"📅", label:"Schedule" },
     { id:"earnings",  icon:"💰", label:"Earnings" },
     { id:"profile",   icon:"👤", label:"My Profile" },
+    { id:"pricing",   icon:"🏷️", label:"Pricing" },
+    { id:"payments",  icon:"🧾", label:"Payment History" },
   ];
 
   // ADDED: Tuitions Database — all open tuition requirements + this tutor's applications
@@ -251,12 +279,17 @@ function TutorDashboard({ user, setPage }) {
       .finally(() => setTuitionsLoading(false));
   }, [tab, pendingApproval]);
   async function handleApplyTuition(id) {
+    if (credits !== null && credits <= 0) { setNoCredits(true); return; } // ADDED: block at 0 credits
     setApplyBusy(id); setApplyMsg("");
     try {
       const r = await tutorAPI.applyTuition(id);
       setAppliedIds(ids => ids.includes(id) ? ids : [...ids, id]);
       setApplyMsg(r.message || "Applied successfully!");
-    } catch (e) { setApplyMsg("Error: " + e.message); }
+      loadCredits(); // ADDED: refresh credit balance after applying (1 credit used)
+    } catch (e) {
+      if (String(e.message || "").toLowerCase().includes("credit")) { setNoCredits(true); } // ADDED: out of credits
+      else { setApplyMsg("Error: " + e.message); }
+    }
     finally { setApplyBusy(null); }
   }
 
@@ -337,6 +370,7 @@ function TutorDashboard({ user, setPage }) {
   return (
     <div style={{ display:"flex", width:"100vw", overflowX:"hidden", minHeight:"100vh" }}>
       <SuccessPopup show={showSavePopup} onClose={() => setShowSavePopup(false)} />
+      <SaveErrorPopup show={!!saveError} onClose={() => setSaveError("")} message={saveError} />
       {/* Mobile nav toggle + backdrop */}
       <button className="mobile-nav-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
       <div className={"sidebar-backdrop" + (navOpen ? " show" : "")} onClick={() => setNavOpen(false)} />
@@ -348,10 +382,28 @@ function TutorDashboard({ user, setPage }) {
           </div>
           <div style={{ fontSize:11, color:"#6B7280", marginTop:6, fontWeight:700, textTransform:"uppercase", letterSpacing:1 }}>Tutor Portal</div>
         </div>
+        <NoCreditsPopup show={noCredits} onGoPricing={() => { setNoCredits(false); setTab("pricing"); }} />
+
         <div className="sidebar-user">
           <div style={{ fontSize:34, marginBottom:6 }}>🧑‍🎓</div>
           <div style={{ fontWeight:700, fontSize:15, color:"#111827" }}>{user.name}</div>
           <div style={{ fontSize:12, color:"#059669", fontWeight:600, marginTop:2 }}>{profile.subject ? `${profile.subject} Tutor` : "Tutor"}</div>
+          {credits === 0 ? (
+            <button onClick={() => setTab("pricing")}
+              style={{ marginTop:10, display:"inline-flex", alignItems:"center", gap:6, background:"#1A56DB", color:"#fff", border:"none", borderRadius:20, padding:"6px 16px", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"Nunito,sans-serif" }}>
+              ⚡ Upgrade
+            </button>
+          ) : (
+            <div style={{ marginTop:10, display:"inline-flex", alignItems:"center", gap:6, background:"#FFF7ED", border:"1px solid #FDE68A", borderRadius:20, padding:"4px 14px", fontSize:13, fontWeight:800, color:"#D97706" }}>
+              🪙 {credits == null ? "…" : credits} credits
+            </div>
+          )}
+          {/* ADDED: days left on the active plan */}
+          {planDays !== null && (
+            <div style={{ marginTop:8, display:"inline-flex", alignItems:"center", gap:6, background: planDays > 0 ? "#ECFDF5" : "#FEF2F2", border:`1px solid ${planDays > 0 ? "#A7F3D0" : "#FECACA"}`, borderRadius:20, padding:"4px 14px", fontSize:13, fontWeight:800, color: planDays > 0 ? "#047857" : "#B91C1C" }}>
+              📅 {planDays > 0 ? `${planDays} day${planDays === 1 ? "" : "s"} left` : "Plan expired"}
+            </div>
+          )}
         </div>
         <div className="sidebar-sec">Navigation</div>
         {MENU.map(m => (
@@ -732,6 +784,65 @@ function TutorDashboard({ user, setPage }) {
         )}
 
         {/* ── Profile ── */}
+        {tab === "pricing" && (
+          <div style={{ padding:"28px 28px" }} className="fadeUp">
+            <h2 style={{ fontSize:22, fontWeight:800, color:"#111827", marginBottom:6 }}>Choose your plan</h2>
+            <p style={{ color:"#6B7280", fontSize:14, marginBottom:24 }}>Upgrade to apply to more tuitions and boost your profile. Payments are secured via Razorpay.</p>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:20, maxWidth:760 }}>
+              {(() => {
+                const _fallback = [
+                  {
+                    name:"Inaugural Offer", tagline:"Great value to get started",
+                    periods:[
+                      { id:"tutor_inaugural_1m", label:"1 month",  price:"₹1,500" },
+                      { id:"tutor_inaugural_3m", label:"3 months", price:"₹4,050", note:"save 10%" },
+                    ],
+                    features:["Apply to up to 10 profiles","Improved profile visibility","Shortlisted job alerts"],
+                  },
+                  {
+                    name:"Pro Tutor", tagline:"For serious, active tutors", highlight:true,
+                    periods:[
+                      { id:"tutor_pro_1m", label:"1 month",  price:"₹3,000" },
+                      { id:"tutor_pro_3m", label:"3 months", price:"₹8,100", note:"save 10%" },
+                    ],
+                    features:["Up to 20 job applications","Priority profile shown to parents","Direct recruiter support","Highlighted profile"],
+                  },
+                ];
+                const _db = (catalog && Array.isArray(catalog.tutor)) ? catalog.tutor : [];
+                const plans = _db.length ? _db : _fallback;
+                return plans.map(p => (
+                  <div key={p.name} style={{ background:"#fff", border:`2px solid ${p.highlight?"#0E7490":"#E5E7EB"}`, borderRadius:16, padding:24, display:"flex", flexDirection:"column", position:"relative", boxShadow:p.highlight?"0 8px 24px rgba(14,116,144,.12)":"none" }}>
+                    {p.highlight && <span style={{ position:"absolute", top:-12, left:24, background:"#0E7490", color:"#fff", fontSize:11, fontWeight:800, padding:"4px 12px", borderRadius:20 }}>MOST POPULAR</span>}
+                    <div style={{ fontWeight:800, fontSize:18, color:"#111827" }}>{p.name}</div>
+                    <div style={{ fontSize:13, color:"#6B7280", marginTop:4, marginBottom:16 }}>{p.tagline}</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
+                      {p.periods.map(per => (
+                        <button key={per.id}
+                          onClick={() => startPayment(per.id)}
+                          style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", padding:"11px 14px", borderRadius:10, border:`1.5px solid ${p.highlight?"#0E7490":"#D1D5DB"}`, background:p.highlight?"#0E7490":"#fff", color:p.highlight?"#fff":"#0E7490", cursor:"pointer", fontWeight:800, fontFamily:"Nunito,sans-serif", fontSize:14 }}>
+                          <span>{per.label}</span>
+                          <span>{per.price}{per.note ? <span style={{ fontSize:11, fontWeight:700, opacity:.85, marginLeft:6 }}>&middot; {per.note}</span> : null}</span>
+                        </button>
+                      ))}
+                      <div style={{ fontSize:11, color:"#9CA3AF", textAlign:"center", marginTop:2 }}>Tap a duration to pay</div>
+                    </div>
+                    <div style={{ borderTop:"1px solid #F3F4F6", paddingTop:14, marginTop:"auto" }}>
+                      {p.features.map(f => (
+                        <div key={f} style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:13, color:"#374151", marginBottom:8 }}>
+                          <span style={{ color:"#059669", fontWeight:800 }}>✓</span><span>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+            <p style={{ fontSize:12, color:"#9CA3AF", marginTop:20 }}>Prices are exclusive of GST where applicable. You'll be charged securely through Razorpay.</p>
+          </div>
+        )}
+
+        {tab === "payments" && <PaymentHistory />}
+
         {tab === "profile" && (
           <div className="fadeUp">
             <div className="flexb" style={{ marginBottom:24 }}>

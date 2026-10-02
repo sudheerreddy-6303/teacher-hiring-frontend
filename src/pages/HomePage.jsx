@@ -473,6 +473,8 @@ import { useAuth } from "../context/AuthContext";
 
 import { Navbar, HeroSchoolsCarousel, JobCard, Toast, Brand, Divider } from "../components/common/Shared";
 import apiBase from "../config/apiBase";
+import SiteBanner from "../components/common/SiteBanner"; // ADDED: admin-managed banners
+import JobsBanner from "../components/common/JobsBanner"; // ADDED: live posted-jobs banner
 
 /* Lightweight inline icon set — consistent line icons replace emoji in the hero */
 function Ic({ name, size = 20, stroke = 1.7, style }) {
@@ -1397,7 +1399,9 @@ function HomePage({ setPage }) {
       </section>
       )}
 
-      {/* ── HERO: poster carousel (teacher / tuition / parent) ──────────────── */}
+      {/* ── HERO: poster carousel (teacher / tuition / parent) ────────────────
+           DISABLED per request — code kept, not deleted. Change false to true to re-enable. */}
+      {false && (
       <section
         className="hero-poster-carousel"
         style={{ position:"relative", width:"100%", overflow:"hidden", background:"#fff", paddingTop: 90 }}
@@ -1463,6 +1467,13 @@ function HomePage({ setPage }) {
           ))}
         </div>
       </section>
+      )}
+
+      {/* ── ADMIN-MANAGED HOME BANNERS (renders only when the admin adds some) ── */}
+      <SiteBanner placement="home" onNavigate={setPage} fallback={null} />
+
+      {/* ── LIVE POSTED-JOBS BANNER (auto — shows newest approved jobs) ── */}
+      <JobsBanner setPage={setPage} />
 
       {/* ── COUNTRIES WE ARE PROVIDING TUITION (marquee) ──────────────────── */}
       <CountriesMarquee />

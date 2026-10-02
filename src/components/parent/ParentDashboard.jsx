@@ -2,27 +2,55 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { Toast, Divider } from "../common/Shared";
 import SuccessPopup from "../common/SuccessPopup";
+import SaveErrorPopup from "../common/SaveErrorPopup"; // ADDED: profile save-error popup
+import PaymentHistory from "../common/PaymentHistory"; // ADDED: payment history
+import ParentTuitionPosts from "./ParentTuitionPosts"; // ADDED: multiple tuition posts
+import { startPayment } from "../../payments"; // ADDED: payments
 import './Parent.css';
+
+// ADDED: compact a comma-separated value to the first n items (used by the richer
+// Find-Tutors card). Empty → "—". n<=0 shows all.
+const tcap = (v, n) => {
+  if (v === undefined || v === null || String(v).trim() === "") return "—";
+  const parts = String(v).split(",").map(x => x.trim()).filter(Boolean);
+  if (!n || n <= 0 || parts.length <= n) return parts.join(", ");
+  return parts.slice(0, n).join(", ") + "…";
+};
 
 function ParentDashboard({ user, setPage }) {
   const { logout } = useAuth();
   const [tab, setTab] = useState("overview");
   // ADDED (credit system): show remaining contact credits on the Overview page too
   const [overviewCredits, setOverviewCredits] = useState(null);
-  useEffect(() => {
+  const [planDays, setPlanDays] = useState(null); // ADDED: days left on the active plan
+  const refreshCredits = () => {
     const _t = localStorage.getItem("acadhr_token");
     if (!_t) return;
-    fetch((process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/admin/parent/credits", { headers: { Authorization: "Bearer " + _t } })
+    const _base = (process.env.REACT_APP_API_URL || "http://localhost:5000/api");
+    fetch(_base + "/admin/parent/credits", { headers: { Authorization: "Bearer " + _t } })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d && typeof d.credits === "number") setOverviewCredits(d.credits); })
       .catch(() => {});
-  }, [tab]);
+    // ADDED: plan days-left comes from the shared payments/credits endpoint
+    fetch(_base + "/payments/credits", { headers: { Authorization: "Bearer " + _t } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setPlanDays(typeof d.days_left === "number" ? d.days_left : null); })
+      .catch(() => {});
+  };
+  useEffect(() => { refreshCredits(); }, [tab]); // eslint-disable-line
+  // ADDED: admin-editable plans catalog (same source the teacher/tutor pricing use)
+  const [catalog, setCatalog] = useState({});
+  useEffect(() => {
+    fetch((process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/payments/config")
+      .then(r => r.json()).then(d => setCatalog(d && d.catalog ? d.catalog : {})).catch(() => {});
+  }, []);
   const [profile, setProfile] = useState({
     student_name:"", student_class:"", board:"", subject:"",
     location:"", mode:"", preferred_time:"", budget:"",
     tutor_gender_pref:"", experience_req:"", status:"Open",
     assigned_tutor:"", notes:"",
-    state:"", pincode:"", landmark:"", institute_name:"", hourly_budget:""
+    state:"", pincode:"", landmark:"", institute_name:"", hourly_budget:"",
+    time_from:"", time_to:""   // ADDED: preferred start / end timing
   });
   const [editMode, setEditMode] = useState(false);
   const [saved, setSaved]       = useState(false);
@@ -31,6 +59,25 @@ function ParentDashboard({ user, setPage }) {
   const [saveError, setSaveError] = useState("");
 
   const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+
+  // ADDED: tutors who applied to this parent's requirement
+  const [applicants, setApplicants] = useState([]);
+  const [applicantsLoading, setApplicantsLoading] = useState(false);
+  const [applicantContacted, setApplicantContacted] = useState([]); // revealed cards (FREE, no credit)
+  const loadApplicants = () => {
+    const _t = localStorage.getItem("acadhr_token");
+    if (!_t) return;
+    setApplicantsLoading(true);
+    fetch(API + "/tutor/my-tuition-applicants", { headers: { Authorization: "Bearer " + _t } })
+      .then(r => r.ok ? r.json() : [])
+      .then(d => setApplicants(Array.isArray(d) ? d : []))
+      .catch(() => setApplicants([]))
+      .finally(() => setApplicantsLoading(false));
+  };
+  useEffect(() => { if (tab === "applicants") loadApplicants(); }, [tab]); // eslint-disable-line
+  // ADDED: local contact helpers for the Applicants cards (main-component scope)
+  const waLinkA = (phone) => { const d = String(phone || "").replace(/[^0-9]/g, ""); return "https://wa.me/" + (d.length === 10 ? "91" + d : d); };
+  const contactRowA = { display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:700, textDecoration:"none", border:"1px solid", cursor:"pointer" };
 
   useEffect(() => {
     const token = localStorage.getItem("acadhr_token");
@@ -60,6 +107,8 @@ function ParentDashboard({ user, setPage }) {
             landmark:          p.landmark          || "",
             institute_name:    p.institute_name    || "",
             hourly_budget:     p.hourly_budget     || "",
+            time_from:         p.time_from         || "",
+            time_to:           p.time_to           || "",
           }));
         }
       }).catch(() => {});
@@ -94,7 +143,8 @@ function ParentDashboard({ user, setPage }) {
           tutor_gender_pref: profile.tutor_gender_pref, experience_req: profile.experience_req,
           notes: profile.notes,
           state: profile.state, pincode: profile.pincode, landmark: profile.landmark,
-          institute_name: profile.institute_name, hourly_budget: profile.hourly_budget
+          institute_name: profile.institute_name, hourly_budget: profile.hourly_budget,
+          time_from: profile.time_from, time_to: profile.time_to
         })
       });
       const d = await r.json();
@@ -114,6 +164,12 @@ function ParentDashboard({ user, setPage }) {
   }
   const REQ_SUBS  = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Zoology"];
   const REQ_TIMES = ["Morning","Afternoon","Evening","Any time"];
+  // ADDED: hourly time slots for the "Preferred Time Slot" dropdown
+  const TIME_SLOTS = [
+    "6-7 AM","7-8 AM","8-9 AM","9-10 AM","10-11 AM","11-12 PM",
+    "12-1 PM","1-2 PM","2-3 PM","3-4 PM","4-5 PM","5-6 PM",
+    "6-7 PM","7-8 PM","8-9 PM","9-10 PM",
+  ];
   const reqChip = (on, editable) => ({
     padding:"6px 12px", borderRadius:20, fontSize:12, fontWeight:600, userSelect:"none",
     cursor: editable ? "pointer" : "default",
@@ -125,13 +181,18 @@ function ParentDashboard({ user, setPage }) {
     { id:"overview",     icon:"🏠", label:"Overview" },
     { id:"profile",      icon:"👤", label:"My Profile" },
     { id:"requirement",  icon:"📋", label:"My Requirement" },
+    { id:"posts",        icon:"📝", label:"My Tuition Posts" }, // ADDED: multiple posts
     { id:"tutors",       icon:"🧑‍🎓", label:"Find Tutors" },
+    { id:"applicants",   icon:"📨", label:"Applicants" },      // ADDED: tutors who applied
+    { id:"pricing",      icon:"🏷️", label:"Pricing" },        // ADDED
+    { id:"payments",     icon:"🧾", label:"Payment History" },
   ];
 
   const [navOpen, setNavOpen] = useState(false);
   return (
     <div style={{ display:"flex", width:"100vw", minHeight:"100vh" }}>
       <SuccessPopup show={showSavePopup} onClose={() => setShowSavePopup(false)} message="Your requirement has been saved." />
+      <SaveErrorPopup show={!!saveError} onClose={() => setSaveError("")} message={saveError} />
       {/* Mobile nav toggle + backdrop */}
       <button className="mobile-nav-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
       <div className={"sidebar-backdrop" + (navOpen ? " show" : "")} onClick={() => setNavOpen(false)} />
@@ -146,6 +207,24 @@ function ParentDashboard({ user, setPage }) {
           <div style={{ fontWeight:700, fontSize:13, color:"#111827" }}>{user.name}</div>
           <div style={{ fontSize:11, color:"#6B7280", marginTop:2 }}>👨‍👩‍👧 Parent / Guardian</div>
           {profile.student_name && <div style={{ fontSize:11, color:"#1A56DB", fontWeight:600, marginTop:3 }}>Child: {profile.student_name}</div>}
+          {/* ADDED: credits shown on the left */}
+          <div
+            onClick={() => setTab("pricing")}
+            style={{ marginTop:10, display:"inline-flex", alignItems:"center", gap:6, cursor:"pointer",
+              background: (overviewCredits ?? 0) > 0 ? "linear-gradient(135deg,#F59E0B,#D97706)" : "linear-gradient(135deg,#EF4444,#DC2626)",
+              color:"#fff", fontWeight:800, fontSize:12.5, padding:"6px 12px", borderRadius:999,
+              boxShadow:"0 3px 10px rgba(217,119,6,.30)" }}
+            title="Your available credits">
+            🪙 {overviewCredits == null ? "…" : overviewCredits} credit{overviewCredits === 1 ? "" : "s"}
+          </div>
+          {/* ADDED: days left on the active plan */}
+          {planDays !== null && (
+            <div style={{ marginTop:8, display:"inline-flex", alignItems:"center", gap:6,
+              background: planDays > 0 ? "#ECFDF5" : "#FEF2F2", border:`1px solid ${planDays > 0 ? "#A7F3D0" : "#FECACA"}`,
+              color: planDays > 0 ? "#047857" : "#B91C1C", fontWeight:800, fontSize:12, padding:"5px 12px", borderRadius:999 }}>
+              📅 {planDays > 0 ? `${planDays} day${planDays === 1 ? "" : "s"} left` : "Plan expired"}
+            </div>
+          )}
         </div>
         <div className="sidebar-sec">Navigation</div>
         {MENU.map(m => (
@@ -333,6 +412,15 @@ function ParentDashboard({ user, setPage }) {
                   })}
                 </div>
               </div>
+              {/* ADDED: pick one or more hourly time slots (7-8 AM, 8-9 AM, …) as chips */}
+              <div className="fg"><label className="flabel">Preferred Time Slots (select one or more)</label>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:8, border:"1px solid #E5E7EB", borderRadius:10, padding:12, background:!editMode?"#F9FAFB":"#FAFBFC" }}>
+                  {TIME_SLOTS.map(s => {
+                    const on = csvArr("time_from").includes(s);
+                    return <span key={s} onClick={() => editMode && toggleCsv("time_from", s)} style={reqChip(on, editMode)}>{s}</span>;
+                  })}
+                </div>
+              </div>
               <div className="grid2">
                 <div className="fg"><label className="flabel">Monthly Budget (₹)</label>
                   <select className="input" value={profile.budget} onChange={e => editMode && up("budget",e.target.value)} style={{ pointerEvents:editMode?"auto":"none", background:!editMode?"#F9FAFB":"#fff" }}>
@@ -368,6 +456,166 @@ function ParentDashboard({ user, setPage }) {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {tab==="payments" && <PaymentHistory />}
+
+        {/* ADDED: multiple tuition posts (plan-limited) */}
+        {tab==="posts" && <ParentTuitionPosts setPage={setTab} />}
+
+        {/* ══ APPLICANTS ══ (ADDED: tutors who applied to this parent's requirement) */}
+        {tab==="applicants" && (
+          <div className="fadeUp" style={{ padding:"4px 0" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+              <div>
+                <div className="page-title">Applicants</div>
+                <div className="page-sub">Tutors who applied to your tuition requirement</div>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={loadApplicants}>↻ Refresh</button>
+            </div>
+
+            {applicantsLoading ? (
+              <div style={{ textAlign:"center", padding:"50px 0", color:"#9CA3AF" }}>Loading applicants…</div>
+            ) : applicants.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"56px 0", color:"#9CA3AF" }}>
+                <div style={{ fontSize:46, marginBottom:12 }}>📭</div>
+                <div style={{ fontWeight:700, fontSize:16, color:"#374151" }}>No applicants yet</div>
+                <div style={{ fontSize:13, marginTop:6 }}>When tutors apply to your requirement, they'll show up here with their details.</div>
+              </div>
+            ) : (
+              <div className="grid2" style={{ marginTop:18 }}>
+                {applicants.map(t => (
+                  <div key={t.id} className="card" style={{ padding:24 }}>
+                    <div style={{ display:"flex", alignItems:"flex-start", gap:14, marginBottom:14 }}>
+                      <div style={{ width:56, height:56, borderRadius:"50%", background:"#F5F3FF", border:"2px solid #DDD6FE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>🧑‍🎓</div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontWeight:800, fontSize:16, color:"#111827", lineHeight:1.25 }}>{t.name}</div>
+                        <div style={{ fontSize:13, color:"#6D28D9", fontWeight:700, marginTop:3 }}>{tcap(t.subjects || t.subject, 3)}</div>
+                        {(t.qualifications || t.qualification) && (
+                          <div style={{ fontSize:12, color:"#6B7280", fontWeight:600, marginTop:2 }}>{tcap(t.qualifications || t.qualification, 4)}</div>
+                        )}
+                      </div>
+                      <span style={{ fontSize:11, fontWeight:800, color:"#065F46", background:"#D1FAE5", borderRadius:999, padding:"3px 10px", whiteSpace:"nowrap" }}>{t.status || "Applied"}</span>
+                    </div>
+
+                    <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:14 }}>
+                      {(t.location || t.city) && <span style={{ fontSize:11.5, background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:20, padding:"3px 10px", color:"#B91C1C", fontWeight:600 }}>📍 {t.location || t.city}</span>}
+                      {t.experience    && <span style={{ fontSize:11.5, background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:20, padding:"3px 10px", color:"#92400E", fontWeight:600 }}>⏳ {t.experience}</span>}
+                      {t.teaching_mode && <span style={{ fontSize:11.5, background:"#EBF5FF", border:"1px solid #BFDBFE", borderRadius:20, padding:"3px 10px", color:"#1A56DB", fontWeight:700 }}>💻 {t.teaching_mode}</span>}
+                      {t.gender        && <span style={{ fontSize:11.5, background:"#FDF2F8", border:"1px solid #FBCFE8", borderRadius:20, padding:"3px 10px", color:"#9D174D", fontWeight:600 }}>👤 {t.gender}</span>}
+                    </div>
+
+                    {/* labeled detail rows (same format as Find Tutors) */}
+                    <div style={{ display:"grid", gridTemplateColumns:"auto 1fr", gap:"7px 14px", marginBottom:14, fontSize:12.5 }}>
+                      <span style={{ color:"#9CA3AF", fontWeight:600 }}>Subjects</span>
+                      <span style={{ color:"#374151", fontWeight:600 }}>{tcap(t.subjects || t.subject, 0)}</span>
+                      <span style={{ color:"#9CA3AF", fontWeight:600 }}>Classes Taught</span>
+                      <span style={{ color:"#374151", fontWeight:600 }}>{tcap(t.classes_taught, 0)}</span>
+                      <span style={{ color:"#9CA3AF", fontWeight:600 }}>Qualifications</span>
+                      <span style={{ color:"#374151", fontWeight:600 }}>{tcap(t.qualifications || t.qualification, 0)}</span>
+                      <span style={{ color:"#9CA3AF", fontWeight:600 }}>Available Timing</span>
+                      <span style={{ color:"#374151", fontWeight:600 }}>{tcap(t.availability, 0)}</span>
+                      <span style={{ color:"#9CA3AF", fontWeight:600 }}>Location</span>
+                      <span style={{ color:"#374151", fontWeight:600 }}>{t.location || t.city || "—"}</span>
+                      <span style={{ color:"#9CA3AF", fontWeight:600 }}>Hourly Price</span>
+                      <span style={{ color:"#059669", fontWeight:800 }}>{t.hourly_rate ? t.hourly_rate : "—"}</span>
+                    </div>
+
+                    {/* Contact Tutor — FREE (no credit deducted): just reveals the details */}
+                    {applicantContacted.includes(t.id) ? (
+                      <div style={{ borderTop:"1px solid #F3F4F6", paddingTop:14, display:"flex", flexDirection:"column", gap:8 }}>
+                        {t.phone && <a href={"tel:" + t.phone} style={{ ...contactRowA, color:"#1A56DB", borderColor:"#BFDBFE", background:"#EBF5FF" }}>📞 {t.phone}</a>}
+                        {t.phone && <a href={waLinkA(t.phone)} target="_blank" rel="noreferrer" style={{ ...contactRowA, color:"#059669", borderColor:"#A7F3D0", background:"#ECFDF5" }}>💬 WhatsApp</a>}
+                        {t.email && <a href={"mailto:" + t.email} style={{ ...contactRowA, color:"#92400E", borderColor:"#FDE68A", background:"#FFFBEB" }}>✉️ {t.email}</a>}
+                        {t.resume_link && (
+                          <a href={/^https?:\/\//.test(t.resume_link) ? t.resume_link : (API.replace("/api","") + t.resume_link)}
+                             target="_blank" rel="noreferrer"
+                             style={{ ...contactRowA, color:"#6D28D9", borderColor:"#DDD6FE", background:"#F5F3FF" }}>
+                            📄 View Resume{t.resume_file_name ? ` (${t.resume_file_name})` : ""}
+                          </a>
+                        )}
+                        {!t.phone && !t.email && !t.resume_link && <div style={{ textAlign:"center", fontSize:12, color:"#9CA3AF" }}>No contact details available</div>}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setApplicantContacted(c => c.includes(t.id) ? c : [...c, t.id])}
+                        style={{ width:"100%", marginTop:4, padding:"13px", borderRadius:12, border:"1.5px solid #DDD6FE", background:"#F5F3FF", color:"#6D28D9", fontWeight:800, fontSize:15, cursor:"pointer", fontFamily:"Nunito,sans-serif" }}>
+                        Contact Tutor →
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══ PRICING ══ (ADDED — same style/behaviour as the Teacher dashboard) */}
+        {tab==="pricing" && (
+          <div style={{ padding:"28px 28px" }} className="fadeUp">
+            <h2 style={{ fontSize:22, fontWeight:800, color:"#111827", marginBottom:6 }}>Choose your plan</h2>
+            <p style={{ color:"#6B7280", fontSize:14, marginBottom:24 }}>Upgrade to post more tuition requests and unlock tutor contacts. Payments are secured via Razorpay.</p>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(270px,1fr))", gap:20, maxWidth:1080 }}>
+              {(() => {
+                const _fallback = [
+                  {
+                    name:"Starter", tagline:"Most popular for parents", accent:"#DB2777", highlight:true,
+                    periods:[
+                      { id:"parent_starter_1m", label:"1 month",  price:"₹1,000" },
+                      { id:"parent_starter_3m", label:"3 months", price:"₹2,700", note:"save 10%" },
+                    ],
+                    features:["2–3 tuition requests","Access tutor profiles","60 unlock credits"],
+                  },
+                  {
+                    name:"Premium", tagline:"For serious parents", accent:"#7C3AED",
+                    periods:[
+                      { id:"parent_premium_1m", label:"1 month",  price:"₹2,000" },
+                      { id:"parent_premium_3m", label:"3 months", price:"₹5,400", note:"save 10%" },
+                    ],
+                    features:["4–5 tuition requests","100 unlock credits","Dedicated recruiter support","Demo class scheduling","One month dedicated support"],
+                  },
+                ];
+                // ADDED: the free "Inaugural Offer" plan (shown on the public Pricing
+                // page) so the parent dashboard also shows all 3 plans, not just 2.
+                const _free = {
+                  name:"Inaugural Offer", tagline:"Limited launch offer", accent:"#059669", free:true, badge:"🎉 Launch Offer",
+                  periods:[{ id:"parent_free", label:"Get Started Free", price:"", free:true }],
+                  features:["Post 1 tuition request","View tutor profiles","Academic updates","20 free credits"],
+                };
+                const _db = (catalog && Array.isArray(catalog.parent)) ? catalog.parent : [];
+                let plans = _db.length ? _db : _fallback;
+                // make sure the free/inaugural plan is present (like the public Pricing page)
+                if (!plans.some(p => /free|inaugural/i.test(String(p.name || "")))) plans = [_free, ...plans];
+                return plans.map(p => (
+                  <div key={p.name} style={{ background:"#fff", border:`2px solid ${p.highlight?p.accent:"#E5E7EB"}`, borderRadius:16, padding:24, display:"flex", flexDirection:"column", position:"relative", boxShadow:p.highlight?"0 8px 24px rgba(219,39,119,.12)":"none" }}>
+                    {p.highlight && <span style={{ position:"absolute", top:-12, left:24, background:p.accent, color:"#fff", fontSize:11, fontWeight:800, padding:"4px 12px", borderRadius:20 }}>MOST POPULAR</span>}
+                    {p.badge && <span style={{ position:"absolute", top:-12, left:24, background:p.accent, color:"#fff", fontSize:11, fontWeight:800, padding:"4px 12px", borderRadius:20 }}>{p.badge}</span>}
+                    <div style={{ fontWeight:800, fontSize:18, color:"#111827" }}>{p.name}</div>
+                    <div style={{ fontSize:13, color:"#6B7280", marginTop:4, marginBottom:16 }}>{p.tagline}</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
+                      {p.periods.map(per => (
+                        <button key={per.id}
+                          onClick={() => { if (per.free || p.free) { setTab("tutors"); return; } startPayment(per.id, { onSuccess: () => refreshCredits() }); }}
+                          style={{ display:"flex", alignItems:"center", justifyContent:(per.free||p.free)?"center":"space-between", width:"100%", padding:"11px 14px", borderRadius:10, border:`1.5px solid ${p.accent}`, background:p.highlight?p.accent:"#fff", color:p.highlight?"#fff":p.accent, cursor:"pointer", fontWeight:800, fontFamily:"Nunito,sans-serif", fontSize:14 }}>
+                          <span>{per.label}{(per.free||p.free) ? " →" : ""}</span>
+                          {!(per.free || p.free) && <span>{per.price}{per.note ? <span style={{ fontSize:11, fontWeight:700, opacity:.85, marginLeft:6 }}>&middot; {per.note}</span> : null}</span>}
+                        </button>
+                      ))}
+                      {!p.free && <div style={{ fontSize:11, color:"#9CA3AF", textAlign:"center", marginTop:2 }}>Tap a duration to pay</div>}
+                    </div>
+                    <div style={{ borderTop:"1px solid #F3F4F6", paddingTop:14, marginTop:"auto" }}>
+                      {p.features.map(f => (
+                        <div key={f} style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:13, color:"#374151", marginBottom:8 }}>
+                          <span style={{ color:"#059669", fontWeight:800 }}>✓</span><span>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+            <p style={{ fontSize:12, color:"#9CA3AF", marginTop:20 }}>Prices are exclusive of GST where applicable. You'll be charged securely through Razorpay.</p>
           </div>
         )}
 
@@ -492,9 +740,12 @@ function TutorFinder({ user, profile, setPage }) {
 
       {/* Filters */}
       <div style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:12, padding:"16px 20px", marginBottom:20 }}>
-        <div className="parent-filter-bar" style={{ display:"flex", gap:20, flexWrap:"wrap", alignItems:"flex-start" }}>
-          <div style={{ flex:"1 1 320px" }}>
-            <div style={{ fontSize:12, fontWeight:700, color:"#6B7280", marginBottom:8 }}>📚 Filter by subject (select any)</div>
+        <div className="parent-filter-bar" style={{ display:"flex", gap:16, flexWrap:"wrap", alignItems:"stretch" }}>
+          <div style={{ flex:"1 1 340px", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:10, padding:"14px 16px" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+              <div style={{ fontSize:12.5, fontWeight:800, color:"#374151", letterSpacing:.2 }}>📚 Filter by Subject</div>
+              {filter.subjects.length > 0 && <span style={{ fontSize:11, fontWeight:700, color:"#1A56DB", background:"#EBF5FF", border:"1px solid #BFDBFE", borderRadius:999, padding:"2px 9px" }}>{filter.subjects.length} selected</span>}
+            </div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
               {subjectOptions.length === 0
                 ? <span style={{ fontSize:12, color:"#9CA3AF" }}>No subjects available</span>
@@ -511,8 +762,8 @@ function TutorFinder({ user, profile, setPage }) {
                   })}
             </div>
           </div>
-          <div className="parent-city-filter" style={{ flex:"0 0 200px" }}>
-            <div style={{ fontSize:12, fontWeight:700, color:"#6B7280", marginBottom:8 }}>📍 Filter by city</div>
+          <div className="parent-city-filter" style={{ flex:"0 0 260px", background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:10, padding:"14px 16px" }}>
+            <div style={{ fontSize:12.5, fontWeight:800, color:"#374151", marginBottom:10, letterSpacing:.2 }}>📍 Filter by City</div>
             {/* Original dropdown kept (not deleted) — hidden; native popup overflowed phone screens */}
             <select className="input parent-city-select-old" style={{ display:"none" }} value={filter.city} onChange={e => setFilter(f => ({ ...f, city:e.target.value }))}>
               <option value="">Select City</option>
@@ -573,21 +824,43 @@ function TutorFinder({ user, profile, setPage }) {
             <div key={t.id} className="card" style={{ padding:24, transition:"all .2s" }}
               onMouseEnter={e => { e.currentTarget.style.boxShadow="0 8px 28px rgba(26,86,219,.12)"; e.currentTarget.style.borderColor="#93C5FD"; }}
               onMouseLeave={e => { e.currentTarget.style.boxShadow=""; e.currentTarget.style.borderColor="#E5E7EB"; }}>
-              <div style={{ display:"flex", alignItems:"flex-start", gap:14, marginBottom:16 }}>
-                <div style={{ width:52, height:52, borderRadius:"50%", background:"#EBF5FF", border:"2px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>🧑‍🎓</div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{t.name}</div>
-                  <div style={{ fontSize:12, color:"#1A56DB", fontWeight:600, marginTop:2 }}>{t.subject||"—"}</div>
-                  {t.hourly_rate && <div style={{ fontSize:12, color:"#059669", fontWeight:700, marginTop:2 }}>💰 {t.hourly_rate}</div>}
+              {/* CHANGED per request: richer tutor card (same style as the Browse Tutors card).
+                  Nothing removed — the Contact Tutor action below is exactly as before. */}
+              <div style={{ display:"flex", alignItems:"flex-start", gap:14, marginBottom:14 }}>
+                <div style={{ width:56, height:56, borderRadius:"50%", background:"#F5F3FF", border:"2px solid #DDD6FE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>🧑‍🎓</div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:800, fontSize:16, color:"#111827", lineHeight:1.25 }}>{t.name}</div>
+                  <div style={{ fontSize:13, color:"#6D28D9", fontWeight:700, marginTop:3 }}>{tcap(t.subjects || t.subject, 3)}</div>
+                  {(t.qualifications || t.qualification) && (
+                    <div style={{ fontSize:12, color:"#6B7280", fontWeight:600, marginTop:2 }}>{tcap(t.qualifications || t.qualification, 4)}</div>
+                  )}
                 </div>
               </div>
+
+              {/* chips row */}
               <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:14 }}>
-                {t.city           && <span style={{ fontSize:11, background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:6, padding:"2px 8px", color:"#6B7280" }}>📍 {t.city}</span>}
-                {t.experience     && <span style={{ fontSize:11, background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:6, padding:"2px 8px", color:"#6B7280" }}>🎓 {t.experience}</span>}
-                {t.teaching_mode  && <span style={{ fontSize:11, background:"#EBF5FF", border:"1px solid #BFDBFE", borderRadius:6, padding:"2px 8px", color:"#1A56DB", fontWeight:600 }}>{t.teaching_mode}</span>}
-                {t.qualification  && <span style={{ fontSize:11, background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:6, padding:"2px 8px", color:"#6B7280" }}>📜 {t.qualification}</span>}
+                {(t.location || t.city) && <span style={{ fontSize:11.5, background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:20, padding:"3px 10px", color:"#B91C1C", fontWeight:600 }}>📍 {t.location || t.city}</span>}
+                {t.experience    && <span style={{ fontSize:11.5, background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:20, padding:"3px 10px", color:"#92400E", fontWeight:600 }}>⏳ {t.experience}</span>}
+                {t.teaching_mode && <span style={{ fontSize:11.5, background:"#EBF5FF", border:"1px solid #BFDBFE", borderRadius:20, padding:"3px 10px", color:"#1A56DB", fontWeight:700 }}>💻 {t.teaching_mode}</span>}
+                {t.gender        && <span style={{ fontSize:11.5, background:"#FDF2F8", border:"1px solid #FBCFE8", borderRadius:20, padding:"3px 10px", color:"#9D174D", fontWeight:600 }}>👤 {t.gender}</span>}
               </div>
-              {t.bio && <p style={{ fontSize:12, color:"#6B7280", lineHeight:1.6, marginBottom:14 }}>{t.bio.slice(0,100)}{t.bio.length>100?"...":""}</p>}
+
+              {/* labeled detail rows */}
+              <div style={{ display:"grid", gridTemplateColumns:"auto 1fr", gap:"7px 14px", marginBottom:14, fontSize:12.5 }}>
+                <span style={{ color:"#9CA3AF", fontWeight:600 }}>Subjects</span>
+                <span style={{ color:"#374151", fontWeight:600 }}>{tcap(t.subjects || t.subject, 0)}</span>
+                <span style={{ color:"#9CA3AF", fontWeight:600 }}>Classes Taught</span>
+                <span style={{ color:"#374151", fontWeight:600 }}>{tcap(t.classes_taught, 0)}</span>
+                <span style={{ color:"#9CA3AF", fontWeight:600 }}>Qualifications</span>
+                <span style={{ color:"#374151", fontWeight:600 }}>{tcap(t.qualifications || t.qualification, 0)}</span>
+                <span style={{ color:"#9CA3AF", fontWeight:600 }}>Available Timing</span>
+                <span style={{ color:"#374151", fontWeight:600 }}>{tcap(t.availability, 0)}</span>
+                <span style={{ color:"#9CA3AF", fontWeight:600 }}>Location</span>
+                <span style={{ color:"#374151", fontWeight:600 }}>{t.location || t.city || "—"}</span>
+                <span style={{ color:"#9CA3AF", fontWeight:600 }}>Hourly Price</span>
+                <span style={{ color:"#059669", fontWeight:800 }}>{t.hourly_rate ? t.hourly_rate : "—"}</span>
+              </div>
+
               <div style={{ borderTop:"1px solid #F3F4F6", paddingTop:14 }}>
                 {contacted.includes(t.id) ? (
                   <div style={{ display:"flex", flexDirection:"column", gap:8 }}>

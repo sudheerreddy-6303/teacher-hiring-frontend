@@ -20,3 +20,66 @@
   .otp-input { width: 42px; height: 50px; font-size: 18px; }
   .auth-step-bar { margin-bottom: 20px; }
 }
+
+/* ADDED: bottom-to-top auto-scrolling profiles feed on the blue auth left panel.
+   Purely additive — nothing above was removed. */
+.auth-marquee {
+  position: relative;
+  margin-top: 30px;
+  max-width: 340px;
+  height: 236px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 13%, #000 87%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 13%, #000 87%, transparent 100%);
+}
+.auth-marquee-track {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: authMarqueeUp 24s linear infinite;
+  will-change: transform;
+}
+.auth-marquee:hover .auth-marquee-track { animation-play-state: paused; }
+@keyframes authMarqueeUp {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+.auth-mq-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.20);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.auth-mq-ico {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  background: rgba(255,255,255,.92);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; flex-shrink: 0;
+}
+.auth-mq-body { min-width: 0; }
+.auth-mq-title {
+  color: #fff; font-size: 13px; font-weight: 800;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.auth-mq-sub {
+  color: #BFDBFE; font-size: 11.5px; margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.auth-mq-tag {
+  margin-left: auto; flex-shrink: 0;
+  font-size: 10px; font-weight: 800; color: #1E429F;
+  background: #fff; border-radius: 999px; padding: 3px 9px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-marquee-track { animation: none; }
+}
+@media (max-width: 900px) {
+  .auth-marquee { height: 158px; margin-top: 22px; max-width: 100%; }
+}
+@media (max-width: 640px) {
+  .auth-marquee { height: 132px; }
+}

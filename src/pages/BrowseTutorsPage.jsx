@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Navbar } from "../components/common/Shared";
 import { useAuth } from "../context/AuthContext";
 import apiBase from "../config/apiBase";
+import SiteBanner from "../components/common/SiteBanner"; // ADDED: admin-managed banner
+import JobsTicker from "../components/common/JobsTicker"; // ADDED: right-to-left scrolling strip
 
 const SUBJECTS = ["All","Mathematics","Physics","Chemistry","Biology","English","Hindi","Computer Science","Economics","Accountancy","Social Science","Zoology"];
 const MODES    = ["All","Online","Offline","Both"];
@@ -131,14 +133,25 @@ export default function BrowseTutorsPage({ setPage }) {
   return (
     <div className="browse-page" style={{ minHeight:"100vh", background:"#F9FAFB" }}>
       <Navbar setPage={setPage} page="tutors" />
-      <div style={{ paddingTop:90 }}>
+      <div className="browse-top" style={{ paddingTop:90 }}>
 
-        {/* ADDED: Browse Tutors top banner (image in public/ as "browse tutors top banner.png") */}
-        <img
-          src="/browse tutors top banner.png"
-          alt="Find the Perfect Tutor"
-          style={{ width:"100%", height:400, objectFit:"cover", objectPosition:"center", display:"block" }}
+        {/* ADDED: Browse Tutors top banner — admin-managed, with the static image as fallback */}
+        <SiteBanner
+          placement="browse_tutors"
+          imgClassName="browse-banner"
+          onNavigate={setPage}
+          fallback={
+            <img
+              className="browse-banner"
+              src="/browse-tutors-banner.jpg"
+              alt="Find the Perfect Tutor"
+              style={{ width:"100%", objectFit:"cover", objectPosition:"center", display:"block" }}
+            />
+          }
         />
+
+        {/* ADDED: right-to-left scrolling strip of latest tuition requirements (live from the database) */}
+        <JobsTicker setPage={setPage} type="tuitions" />
 
         {/* Hero — REMOVED from view per request (kept in code, NOT deleted). Change false to true to bring it back. */}
         {false && (

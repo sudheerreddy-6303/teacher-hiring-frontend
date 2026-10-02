@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { SUBS } from "../../constants";
 import { COUNTRIES, INDIAN_STATES, citiesForState } from "../../locationData"; // ADDED: location dropdown data
@@ -374,7 +374,74 @@ function AuthPage({ mode, setPage }) {
   const ITYPES = ["School (CBSE)","School (ICSE)","School (State Board)","Junior College","Degree College","Coaching Institute","Tuition Centre","Online Platform"];
   const stepLabels = ["Your Info","Details","Verify Email"];
 
+  // ADDED: auto-scrolling (bottom-to-top) feed on the blue left panel, built from
+  // REAL database records — latest jobs, tuitions, tutors and teacher profiles.
+  // Uses the existing public endpoints (no login needed). Deletes nothing.
+  const [liveFeed, setLiveFeed] = useState([]);
 
+  useEffect(() => {
+    let alive = true;
+    const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+    const first = (v, n) => {
+      if (!v) return "";
+      const a = String(v).split(",").map(s => s.trim()).filter(Boolean);
+      return (!n || a.length <= n) ? a.join(", ") : a.slice(0, n).join(", ");
+    };
+    const get = (url) => fetch(url).then(r => r.ok ? r.json() : []).then(d => Array.isArray(d) ? d : []).catch(() => []);
+
+    Promise.all([
+      get(`${API}/jobs`),
+      get(`${API}/admin/public/tuitions`),
+      get(`${API}/admin/public/tutors`),
+      get(`${API}/admin/public/teachers`),
+    ]).then(([jobs, tuitions, tutors, teachers]) => {
+      if (!alive) return;
+
+      const jobItems = (jobs || [])
+        .filter(j => String(j.status || "").toLowerCase() === "approved")
+        .slice(0, 6)
+        .map(j => ({
+          ico: "💼",
+          title: j.title || `${j.requirement_type || "Teacher"}${j.subject ? " — " + first(j.subject, 1) : ""}`,
+          sub: [j.institution_name || j.posted_by_name, [j.location_city, j.location_state].filter(Boolean).join(", ")].filter(Boolean).join(" · ") || "AcadHr Partner School",
+          tag: "Job",
+        }));
+
+      const tuitionItems = (tuitions || []).slice(0, 6).map(t => ({
+        ico: "📚",
+        title: [t.student_class ? `Class ${t.student_class}` : "", first(t.subject, 2)].filter(Boolean).join(" ") || "Tuition Requirement",
+        sub: [t.location || t.user_city, t.mode].filter(Boolean).join(" · ") || "Home / Online",
+        tag: "Tuition",
+      }));
+
+      const tutorItems = (tutors || []).slice(0, 6).map(t => ({
+        ico: "🧑‍🎓",
+        title: t.name || "Private Tutor",
+        sub: [first(t.subjects || t.subject, 2), t.experience].filter(Boolean).join(" · ") || "Private Tutor",
+        tag: "Tutor",
+      }));
+
+      const teacherItems = (teachers || []).slice(0, 6).map(t => ({
+        ico: "👩‍🏫",
+        title: t.full_name || t.name || "Teacher",
+        sub: [first(t.specialization || t.subjects, 2), t.total_experience].filter(Boolean).join(" · ") || "Teacher profile",
+        tag: "Teacher",
+      }));
+
+      // Interleave the four types so the scroll shows a good mix.
+      const mixed = [];
+      const max = Math.max(jobItems.length, tuitionItems.length, tutorItems.length, teacherItems.length);
+      for (let i = 0; i < max; i++) {
+        if (jobItems[i])     mixed.push(jobItems[i]);
+        if (tuitionItems[i]) mixed.push(tuitionItems[i]);
+        if (tutorItems[i])   mixed.push(tutorItems[i]);
+        if (teacherItems[i]) mixed.push(teacherItems[i]);
+      }
+      setLiveFeed(mixed);
+    });
+
+    return () => { alive = false; };
+  }, []);
 
   return (
     <div className="auth-layout">
@@ -388,6 +455,10 @@ function AuthPage({ mode, setPage }) {
         <p style={{ color:"#BFDBFE", lineHeight:1.85, fontSize:15, maxWidth:320 }}>
           {mode==="login" ? "Sign in to access your dashboard and continue your career journey." : "Create your free account and connect with India's best schools and educators."}
         </p>
+        {/* REMOVED per request (kept here, not deleted): the static stat sentences
+            (3,200+ verified institutes, 12,400+ active educators, etc.). They are
+            replaced by the live database feed above. */}
+        {false && (
         <div style={{ marginTop:40 }}>
           {[["🏫","3,200+ verified institutes"],["👩‍🏫","12,400+ active educators"],["✅","Moderated and trusted platform"],["🔒","Email-verified accounts only"]].map(([i,t]) => (
             <div key={t} style={{ display:"flex", gap:12, alignItems:"center", marginBottom:14, color:"#BFDBFE", fontSize:14 }}>
@@ -395,6 +466,26 @@ function AuthPage({ mode, setPage }) {
             </div>
           ))}
         </div>
+        )}
+
+        {/* ADDED: bottom-to-top auto-scrolling feed of REAL jobs / tuitions / tutors / teacher profiles from the database */}
+        {liveFeed.length > 0 && (
+          <div className="auth-marquee" aria-hidden="true">
+            <div className="auth-marquee-track">
+              {[...liveFeed, ...liveFeed].map((f, idx) => (
+                <div className="auth-mq-card" key={idx}>
+                  <span className="auth-mq-ico">{f.ico}</span>
+                  <div className="auth-mq-body">
+                    <div className="auth-mq-title">{f.title}</div>
+                    <div className="auth-mq-sub">{f.sub}</div>
+                  </div>
+                  <span className="auth-mq-tag">{f.tag}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {mode==="login" && (
           <div style={{  }}>
             {/* <div style={{ fontWeight:800, marginBottom:5, color:"#fff", fontSize:13 }}>Demo Accounts</div>

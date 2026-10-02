@@ -3,11 +3,35 @@ import { useAuth } from "../../context/AuthContext";
 import { SUBS, INDIA_LOCATIONS } from "../../constants";
 import { Toast, InlineBrowseJobs, FilterBar } from "../common/Shared";
 import SuccessPopup from "../common/SuccessPopup";
+import PaymentHistory from "../common/PaymentHistory"; // ADDED: payment history
+import NoCreditsPopup from "../common/NoCreditsPopup"; // ADDED: zero-credits popup
+import { startPayment } from "../../payments"; // ADDED: payments
 import './Teacher.css';
 
 function TeacherDashboard({ user, setPage }) {
   const { logout } = useAuth();
   const [tab, setTab]         = useState("overview");
+  const [noCredits, setNoCredits] = useState(false); // ADDED
+  const [catalog, setCatalog] = useState({}); // ADDED: admin-editable plans catalog
+  useEffect(() => {
+    fetch((process.env.REACT_APP_API_URL || "http://localhost:5000/api") + "/payments/config")
+      .then(r => r.json()).then(d => setCatalog(d && d.catalog ? d.catalog : {})).catch(() => {});
+  }, []);
+
+  // ── Credits: live balance from the payments API ──
+  const [credits, setCredits] = useState(null);
+  const [planDays, setPlanDays] = useState(null); // ADDED: days left on the active plan
+  const loadCredits = async () => {
+    try {
+      const token = localStorage.getItem("acadhr_token");
+      const base  = (process.env.REACT_APP_API_URL || "http://localhost:5000/api");
+      const res   = await fetch(base + "/payments/credits", { headers: token ? { Authorization: "Bearer " + token } : {} });
+      const data  = await res.json();
+      setCredits(Number(data.credits) || 0);
+      setPlanDays(typeof data.days_left === "number" ? data.days_left : null); // ADDED
+    } catch (e) { /* keep previous value on error */ }
+  };
+  useEffect(() => { loadCredits(); }, [tab]);
   const [editMode, setEditMode]     = useState(false);
   const [saved, setSaved]           = useState(false);
   const [showSavePopup, setShowSavePopup] = useState(false);
@@ -302,6 +326,8 @@ function TeacherDashboard({ user, setPage }) {
     { id:"applications", icon:"📋", label:"My Applications" },
     { id:"analytics",    icon:"📊", label:"Analytics" },
     { id:"resume",       icon:"📄", label:"Resume & Docs" },
+    { id:"pricing",      icon:"🏷️", label:"Pricing" },
+    { id:"payments",     icon:"🧾", label:"Payment History" },
     { id:"settings",     icon:"⚙️",  label:"Settings" },
   ];
 
@@ -316,6 +342,20 @@ function TeacherDashboard({ user, setPage }) {
     <div style={{ display:"flex", width:"100vw", overflowX:"hidden", minHeight:"100vh" }}>
 
       <SuccessPopup show={showSavePopup} onClose={() => setShowSavePopup(false)} />
+
+      <NoCreditsPopup show={noCredits} onGoPricing={() => { setNoCredits(false); setTab("pricing"); }} />
+
+      {/* ADDED: save error / validation popup (saveError had no UI before) */}
+      {saveError && (
+        <div onClick={() => setSaveError("")} style={{ position:"fixed", inset:0, background:"rgba(17,24,39,.55)", zIndex:99999, display:"flex", alignItems:"center", justifyContent:"center", padding:20, fontFamily:"Nunito,sans-serif" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:18, maxWidth:460, width:"100%", padding:"32px 28px", textAlign:"center", boxShadow:"0 24px 60px rgba(0,0,0,.28)" }}>
+            <div style={{ width:64, height:64, borderRadius:"50%", background:"#FEF2F2", border:"3px solid #FECACA", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", fontSize:32 }}>⚠️</div>
+            <div style={{ fontSize:20, fontWeight:800, color:"#111827", marginBottom:8 }}>Couldn't save</div>
+            <div style={{ fontSize:14, color:"#6B7280", marginBottom:22, lineHeight:1.5, maxHeight:220, overflowY:"auto" }}>{saveError}</div>
+            <button onClick={() => setSaveError("")} style={{ width:"100%", padding:"12px 0", border:"none", borderRadius:10, background:"#1A56DB", color:"#fff", fontWeight:800, fontSize:15, cursor:"pointer", fontFamily:"Nunito,sans-serif" }}>OK</button>
+          </div>
+        </div>
+      )}
 
       {/* Mobile nav toggle + backdrop */}
       <button className="mobile-nav-toggle" aria-label="Menu" onClick={() => setNavOpen(o => !o)}>{navOpen ? "✕" : "☰"}</button>
@@ -341,6 +381,22 @@ function TeacherDashboard({ user, setPage }) {
             <div>
               <div style={{ fontWeight:700, fontSize:13, color:"#111827" }}>{profile.full_name || user.name}</div>
               <div style={{ fontSize:11, color:"#6B7280", marginTop:2 }}>{profile.specialization || user.subject || "Educator"}</div>
+              {credits === 0 ? (
+                <button onClick={() => setTab("pricing")}
+                  style={{ marginTop:8, display:"inline-flex", alignItems:"center", gap:6, background:"#1A56DB", color:"#fff", border:"none", borderRadius:20, padding:"5px 14px", fontSize:12, fontWeight:800, cursor:"pointer", fontFamily:"Nunito,sans-serif" }}>
+                  ⚡ Upgrade
+                </button>
+              ) : (
+                <div style={{ marginTop:8, display:"inline-flex", alignItems:"center", gap:6, background:"#FFF7ED", border:"1px solid #FDE68A", borderRadius:20, padding:"3px 12px", fontSize:12, fontWeight:800, color:"#D97706" }}>
+                  🪙 {credits == null ? "…" : credits} credits
+                </div>
+              )}
+              {/* ADDED: days left on the active plan */}
+              {planDays !== null && (
+                <div style={{ marginTop:8, marginLeft:6, display:"inline-flex", alignItems:"center", gap:6, background: planDays > 0 ? "#ECFDF5" : "#FEF2F2", border:`1px solid ${planDays > 0 ? "#A7F3D0" : "#FECACA"}`, borderRadius:20, padding:"3px 12px", fontSize:12, fontWeight:800, color: planDays > 0 ? "#047857" : "#B91C1C" }}>
+                  📅 {planDays > 0 ? `${planDays} day${planDays === 1 ? "" : "s"} left` : "Plan expired"}
+                </div>
+              )}
             </div>
           </div>
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4, fontSize:11, fontWeight:700 }}>
@@ -1328,7 +1384,10 @@ function TeacherDashboard({ user, setPage }) {
               </div>
             )}
             <InlineBrowseJobs user={user} canApply={canApply}
-              onApplyBlocked={() => { setTab("profile"); }} />
+              onApplyBlocked={() => { setTab("profile"); }}
+              onApplied={() => loadCredits()}
+              credits={credits}
+              onNoCredits={() => setNoCredits(true)} />
           </div>
         )}
 
@@ -1537,6 +1596,73 @@ function TeacherDashboard({ user, setPage }) {
         )}
 
         {/* ══ SETTINGS ══ */}
+        {tab==="pricing" && (
+          <div style={{ padding:"28px 28px" }} className="fadeUp">
+            <h2 style={{ fontSize:22, fontWeight:800, color:"#111827", marginBottom:6 }}>Choose your plan</h2>
+            <p style={{ color:"#6B7280", fontSize:14, marginBottom:24 }}>Upgrade to apply to more jobs and boost your profile. Payments are secured via Razorpay.</p>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(270px,1fr))", gap:20, maxWidth:1080 }}>
+              {(() => {
+                const _fallback = [
+                  {
+                    name:"Starter", tagline:"For teachers getting started", accent:"#1A56DB",
+                    periods:[
+                      { id:"teacher_starter_1m", label:"1 month",  price:"₹1,500" },
+                      { id:"teacher_starter_3m", label:"3 months", price:"₹4,050", note:"save 10%" },
+                    ],
+                    features:["Apply to up to 10 jobs","Priority profile visibility","Resume building","Access to shortlisted jobs"],
+                  },
+                  {
+                    name:"Premium", tagline:"Most popular for active teachers", accent:"#4F46E5", highlight:true,
+                    periods:[
+                      { id:"teacher_premium_1m", label:"1 month",  price:"₹2,000" },
+                      { id:"teacher_premium_3m", label:"3 months", price:"₹5,400", note:"save 10%" },
+                    ],
+                    features:["Top priority visibility","Direct interview opportunities","Dedicated profile promotion","Early alerts to high-paying roles"],
+                  },
+                  {
+                    name:"Prestige", tagline:"For leadership roles", accent:"#B45309",
+                    periods:[
+                      { id:"teacher_prestige_1m", label:"1 month",  price:"₹2,500" },
+                      { id:"teacher_prestige_3m", label:"3 months", price:"₹6,750", note:"save 10%" },
+                    ],
+                    features:["Dedicated HR for interviews","Profile boosting","Early job alerts"],
+                  },
+                ];
+                const _db = (catalog && Array.isArray(catalog.teacher)) ? catalog.teacher : [];
+                const plans = _db.length ? _db : _fallback;
+                return plans.map(p => (
+                  <div key={p.name} style={{ background:"#fff", border:`2px solid ${p.highlight?p.accent:"#E5E7EB"}`, borderRadius:16, padding:24, display:"flex", flexDirection:"column", position:"relative", boxShadow:p.highlight?"0 8px 24px rgba(79,70,229,.12)":"none" }}>
+                    {p.highlight && <span style={{ position:"absolute", top:-12, left:24, background:p.accent, color:"#fff", fontSize:11, fontWeight:800, padding:"4px 12px", borderRadius:20 }}>MOST POPULAR</span>}
+                    <div style={{ fontWeight:800, fontSize:18, color:"#111827" }}>{p.name}</div>
+                    <div style={{ fontSize:13, color:"#6B7280", marginTop:4, marginBottom:16 }}>{p.tagline}</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
+                      {p.periods.map(per => (
+                        <button key={per.id}
+                          onClick={() => { startPayment(per.id, { onSuccess: () => loadCredits() }); }}
+                          style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", padding:"11px 14px", borderRadius:10, border:`1.5px solid ${p.accent}`, background:p.highlight?p.accent:"#fff", color:p.highlight?"#fff":p.accent, cursor:"pointer", fontWeight:800, fontFamily:"Nunito,sans-serif", fontSize:14 }}>
+                          <span>{per.label}</span>
+                          <span>{per.price}{per.note ? <span style={{ fontSize:11, fontWeight:700, opacity:.85, marginLeft:6 }}>&middot; {per.note}</span> : null}</span>
+                        </button>
+                      ))}
+                      <div style={{ fontSize:11, color:"#9CA3AF", textAlign:"center", marginTop:2 }}>Tap a duration to pay</div>
+                    </div>
+                    <div style={{ borderTop:"1px solid #F3F4F6", paddingTop:14, marginTop:"auto" }}>
+                      {p.features.map(f => (
+                        <div key={f} style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:13, color:"#374151", marginBottom:8 }}>
+                          <span style={{ color:"#059669", fontWeight:800 }}>✓</span><span>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+            <p style={{ fontSize:12, color:"#9CA3AF", marginTop:20 }}>Prices are exclusive of GST where applicable. You'll be charged securely through Razorpay.</p>
+          </div>
+        )}
+
+        {tab==="payments" && <PaymentHistory />}
+
         {tab==="settings" && (
           <div className="fadeUp">
             <div className="page-title">Settings</div>

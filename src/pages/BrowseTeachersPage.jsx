@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Navbar } from "../components/common/Shared";
 import { useAuth } from "../context/AuthContext";
 import apiBase from "../config/apiBase";
+import SiteBanner from "../components/common/SiteBanner"; // ADDED: admin-managed banner
+import JobsTicker from "../components/common/JobsTicker"; // ADDED: right-to-left scrolling jobs strip
 
 const SUBJECTS  = ["All","Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Zoology"];
 const CITIES    = ["All","Hyderabad","Delhi","Mumbai","Bangalore","Chennai","Pune","Kolkata","Ahmedabad","Visakhapatnam","Vijayawada"];
@@ -122,14 +124,25 @@ export default function BrowseTeachersPage({ setPage }) {
   return (
     <div className="browse-page" style={{ minHeight:"100vh", background:"#F9FAFB" }}>
       <Navbar setPage={setPage} page="teachers" />
-      <div style={{ paddingTop:90 }}>
+      <div className="browse-top" style={{ paddingTop:90 }}>
 
-        {/* ADDED: Browse Teachers top banner (image in public/ as browse-teachers-banner.png) */}
-        <img
-          src="/browse-teachers-banner.png"
-          alt="Find the Right Teacher for Your School"
-          style={{ width:"100%", height:400, objectFit:"cover", objectPosition:"center", display:"block" }}
+        {/* ADDED: Browse Teachers top banner — admin-managed, with the static image as fallback */}
+        <SiteBanner
+          placement="browse_teachers"
+          imgClassName="browse-banner"
+          onNavigate={setPage}
+          fallback={
+            <img
+              className="browse-banner"
+              src="/browse-teachers-banner.jpg"
+              alt="Find the Right Teacher for Your School"
+              style={{ width:"100%", objectFit:"cover", objectPosition:"center", display:"block" }}
+            />
+          }
         />
+
+        {/* ADDED: right-to-left scrolling strip of latest posted jobs (live from the database) */}
+        <JobsTicker setPage={setPage} />
 
         {/* Hero — REMOVED from view per request (kept in code, NOT deleted). Change false to true to bring it back. */}
         {false && (
