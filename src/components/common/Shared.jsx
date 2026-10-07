@@ -48,30 +48,8 @@ function Navbar({ setPage, page }) {
           <span className="nav-link" onClick={() => go("tutors")} style={isActive("tutors") ? activeLinkStyle : undefined}>Browse Tutors</span>
           <span className="nav-link" onClick={() => go("tuitions")} style={isActive("tuitions") ? activeLinkStyle : undefined}>Browse Tuitions</span>
           <span className="nav-link" onClick={() => go("collaboration")} style={isActive("collaboration") ? activeLinkStyle : undefined}>School Solutions</span>
-          {/* CHANGED: "FAQ" replaced with a "Social Media" dropdown (FAQ page kept in code, just no nav link). */}
-          <span className="nav-link"
-            style={{ position:"relative", cursor:"pointer" }}
-            onMouseEnter={() => setSocialOpen(true)}
-            onMouseLeave={() => setSocialOpen(false)}
-            onClick={() => setSocialOpen(o => !o)}>
-            Social Media <span style={{ fontSize:11 }}>▾</span>
-            {socialOpen && (
-              <div style={{ position:"absolute", top:"100%", left:0, marginTop:6, background:"#fff", border:"1px solid #E5E7EB", borderRadius:10, boxShadow:"0 12px 32px rgba(0,0,0,.14)", padding:6, minWidth:190, zIndex:1200 }}>
-                {SOCIAL_LINKS.filter(s => s.url && s.url.trim() !== "").length === 0 ? (
-                  <div style={{ padding:"9px 12px", fontSize:13, color:"#9CA3AF" }}>Links coming soon</div>
-                ) : (
-                  SOCIAL_LINKS.filter(s => s.url && s.url.trim() !== "").map(s => (
-                    <a key={s.label} href={s.url} target="_blank" rel="noreferrer"
-                      style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", borderRadius:8, fontSize:14, fontWeight:600, color:"#374151", textDecoration:"none" }}
-                      onMouseEnter={e => e.currentTarget.style.background = "#F0F4FF"}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                      <span style={{ fontSize:17 }}>{s.icon}</span>{s.label}
-                    </a>
-                  ))
-                )}
-              </div>
-            )}
-          </span>
+          {/* CHANGED: "YouTube" now opens the in-app Videos page (all channel videos). */}
+          <span className="nav-link" onClick={() => go("youtube")} style={isActive("youtube") ? activeLinkStyle : undefined}>YouTube</span>
           <span className="nav-link" onClick={() => go("pricing")} style={isActive("pricing") ? activeLinkStyle : undefined}>Pricing</span>
           {user ? (
             <>

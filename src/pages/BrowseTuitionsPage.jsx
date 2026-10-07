@@ -131,7 +131,7 @@ export default function BrowseTuitionsPage({ setPage }) {
         />
 
         {/* ADDED: right-to-left scrolling strip of featured tutors (live from the database) */}
-        <JobsTicker setPage={setPage} type="tutors" />
+        <JobsTicker setPage={setPage} type="tuitions" />
 
         {/* Hero — REMOVED from view per request (kept in code, NOT deleted). Change false to true to bring it back. */}
         {false && (

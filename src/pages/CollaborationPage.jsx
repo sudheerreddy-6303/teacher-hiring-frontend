@@ -98,34 +98,71 @@ function CollaborationPage({ setPage }) {
       {/* ── Hero banner ── */}
       <section style={{ background:"linear-gradient(135deg,#1E429F 0%,#1A56DB 100%)", padding:"72px 0 80px", position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(circle,rgba(255,255,255,.04) 1px,transparent 1px)", backgroundSize:"32px 32px", pointerEvents:"none" }} />
-        <div className="container" style={{ position:"relative", zIndex:1, textAlign:"center" }}>
-          <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.25)", borderRadius:30, padding:"6px 18px", marginBottom:24 }}>
-            <span style={{ fontSize:12, fontWeight:700, color:"#fff", letterSpacing:.5 }}>ACADEMIC MANAGEMENT · OPERATIONS · GROWTH</span>
+        <div className="container coll-hero-grid" style={{ position:"relative", zIndex:1, display:"grid", gridTemplateColumns:"1.05fr .95fr", gap:44, alignItems:"center" }}>
+          <div style={{ textAlign:"left" }}>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.25)", borderRadius:30, padding:"6px 18px", marginBottom:22 }}>
+              <span style={{ fontSize:12, fontWeight:700, color:"#fff", letterSpacing:.5 }}>ACADEMIC MANAGEMENT · OPERATIONS · GROWTH</span>
+            </div>
+            <h1 style={{ fontFamily:"Playfair Display,serif", fontSize:"clamp(30px,4vw,48px)", fontWeight:800, color:"#fff", marginBottom:16, lineHeight:1.14 }}>
+              School Academic Management & <em style={{ color:"#93C5FD" }}>Operations Partnership</em>
+            </h1>
+            <p style={{ fontSize:18, color:"#DBEAFE", fontWeight:700, margin:"0 0 14px", lineHeight:1.6 }}>
+              Focus on Growth. Leave the Academic Operations to AcadHR.
+            </p>
+            <p style={{ fontSize:15.5, color:"#BFDBFE", margin:"0 0 28px", lineHeight:1.8 }}>
+              Running a successful school demands strong academic leadership, structured planning, disciplined execution, and efficient operations. AcadHR partners with schools to take responsibility for Academic Management, Academic Operations, and School Administration — so your team can focus on strategic growth while we ensure excellence in execution.
+            </p>
+            <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
+              <button className="btn btn-lg" style={{ background:"#fff", color:"#1E429F", fontWeight:800, boxShadow:"0 10px 30px rgba(0,0,0,.18)" }} onClick={() => setPage("signup")}>Book a Consultation</button>
+              <button className="btn btn-lg" style={{ background:"transparent", color:"#fff", border:"2px solid rgba(255,255,255,.4)" }} onClick={() => setPage("teachers")}>Browse Educators</button>
+            </div>
+
+            {/* ADDED: hero highlight chips */}
+            <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginTop:28 }}>
+              {[["🎓","Experienced Academic Leadership"],["📊","AI-Enabled Insights"],["🏆","Board + NEET / JEE Integration"],["⚙️","End-to-End Operations"]].map(([ic,t]) => (
+                <div key={t} style={{ display:"inline-flex", alignItems:"center", gap:9, background:"rgba(255,255,255,.1)", border:"1px solid rgba(255,255,255,.22)", borderRadius:30, padding:"8px 16px", color:"#EFF6FF", fontSize:12.5, fontWeight:700 }}>
+                  <span style={{ fontSize:15 }}>{ic}</span>{t}
+                </div>
+              ))}
+            </div>
           </div>
-          <h1 style={{ fontFamily:"Playfair Display,serif", fontSize:"clamp(32px,4.6vw,54px)", fontWeight:800, color:"#fff", marginBottom:18, lineHeight:1.12 }}>
-            School Academic Management & <em style={{ color:"#93C5FD" }}>Operations Partnership</em>
-          </h1>
-          <p style={{ fontSize:18, color:"#DBEAFE", fontWeight:700, maxWidth:640, margin:"0 auto 16px", lineHeight:1.6 }}>
-            Focus on Growth. Leave the Academic Operations to AcadHR.
-          </p>
-          <p style={{ fontSize:16, color:"#BFDBFE", maxWidth:640, margin:"0 auto 36px", lineHeight:1.8 }}>
-            Running a successful school demands strong academic leadership, structured planning, disciplined execution, and efficient operations. AcadHR partners with schools to take responsibility for Academic Management, Academic Operations, and School Administration — so your team can focus on strategic growth while we ensure excellence in execution.
-          </p>
-          <div style={{ display:"flex", gap:14, justifyContent:"center", flexWrap:"wrap" }}>
-            <button className="btn btn-lg" style={{ background:"#fff", color:"#1E429F", fontWeight:800 }} onClick={() => setPage("signup")}>Book a Consultation</button>
-            <button className="btn btn-lg" style={{ background:"transparent", color:"#fff", border:"2px solid rgba(255,255,255,.4)" }} onClick={() => setPage("teachers")}>Browse Educators</button>
+
+          {/* ADDED: HD hero image */}
+          <div className="coll-hero-img" style={{ borderRadius:22, overflow:"hidden", boxShadow:"0 26px 64px rgba(0,0,0,.34)", border:"4px solid rgba(255,255,255,.18)", aspectRatio:"4 / 3.3" }}>
+            <img src="/schoolsol-hero.svg" alt="Academic leadership & classroom excellence" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
           </div>
         </div>
       </section>
 
-      {/* ── Intro ── */}
+      {/* ── ADDED: trust / stats band ── */}
+      <section style={{ background:"#fff", borderBottom:"1px solid #EEF2F7" }}>
+        <div className="container" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:0 }}>
+          {[["🏫","Every Board","CBSE · ICSE · State · IB"],["👩‍🏫","Faculty First","Training & mentoring built-in"],["🧩","Tailored Roadmaps","Built around your school"],["🤝","True Partnership","An extension of your team"]].map(([ic,h,s],i) => (
+            <div key={h} style={{ display:"flex", alignItems:"center", gap:14, padding:"26px 24px", borderLeft: i===0 ? "none" : "1px solid #EEF2F7" }}>
+              <div style={{ width:48, height:48, borderRadius:14, background:"linear-gradient(135deg,#EBF5FF,#E0F2FE)", border:"1px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>{ic}</div>
+              <div>
+                <div style={{ fontWeight:800, fontSize:15, color:"#111827" }}>{h}</div>
+                <div style={{ fontSize:12.5, color:"#6B7280", marginTop:2 }}>{s}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Intro (with HD image) ── */}
       <section style={{ padding:"72px 0 40px", background:"#fff" }}>
-        <div className="container" style={{ maxWidth:820, textAlign:"center" }}>
-          <div className="sec-eye" style={{ justifyContent:"center" }}>End-to-End Solutions</div>
-          <h2 className="sec-title">Comprehensive School <em style={{ color:"#1A56DB" }}>Academic Management</em></h2>
-          <p style={{ color:"#6B7280", fontSize:15.5, lineHeight:1.9, marginTop:14 }}>
-            Whether you are a newly established school or an existing institution looking to improve academic quality, AcadHR provides end-to-end academic management solutions tailored to your school's vision. Our experienced academic leadership team works alongside school management to create a high-performing educational ecosystem.
-          </p>
+        <div className="container coll-two" style={{ display:"grid", gridTemplateColumns:"0.9fr 1.1fr", gap:44, alignItems:"center" }}>
+          {/* ADDED: HD image */}
+          <div className="coll-two-img" style={{ borderRadius:20, overflow:"hidden", boxShadow:"0 18px 44px rgba(16,42,120,.16)", aspectRatio:"4 / 3.4" }}>
+            <img src="/schoolsol-plan.svg" alt="Structured academic planning" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+          </div>
+          <div>
+            <div className="sec-eye">End-to-End Solutions</div>
+            <h2 className="sec-title">Comprehensive School <em style={{ color:"#1A56DB" }}>Academic Management</em></h2>
+            <p style={{ color:"#6B7280", fontSize:15.5, lineHeight:1.9, marginTop:14 }}>
+              Whether you are a newly established school or an existing institution looking to improve academic quality, AcadHR provides end-to-end academic management solutions tailored to your school's vision. Our experienced academic leadership team works alongside school management to create a high-performing educational ecosystem.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -137,18 +174,26 @@ function CollaborationPage({ setPage }) {
             <h2 className="sec-title">A Complete <em style={{ color:"#1A56DB" }}>Academic Framework</em></h2>
           </div>
           <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
-            {MANAGE.map((m,i) => (
-              <div key={i} className="card" style={{ padding:"28px 30px" }}>
-                <div style={{ display:"flex", gap:14, alignItems:"center", marginBottom:10 }}>
-                  <div style={{ width:52, height:52, borderRadius:14, background:"linear-gradient(135deg,#EBF5FF,#E0F2FE)", border:"1px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>{m.icon}</div>
-                  <h3 style={{ fontSize:19, fontWeight:800, color:"#111827" }}>{m.title}</h3>
+            {MANAGE.map((m,i) => {
+              const ACCENTS = ["#1A56DB","#0EA5E9","#7C3AED","#059669"];
+              const ac = ACCENTS[i % ACCENTS.length];
+              return (
+              <div key={i} style={{ background:"#fff", border:"1px solid #E5E7EB", borderLeft:`5px solid ${ac}`, borderRadius:16, padding:"28px 30px", boxShadow:"0 6px 22px rgba(16,42,120,.06)", transition:"box-shadow .2s, transform .2s" }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow="0 14px 36px rgba(16,42,120,.13)"; e.currentTarget.style.transform="translateY(-3px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow="0 6px 22px rgba(16,42,120,.06)"; e.currentTarget.style.transform="none"; }}>
+                <div style={{ display:"flex", gap:14, alignItems:"center", marginBottom:12 }}>
+                  <div style={{ width:54, height:54, borderRadius:14, background:`${ac}14`, border:`1px solid ${ac}40`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>{m.icon}</div>
+                  <div>
+                    <div style={{ fontSize:11, fontWeight:800, color:ac, letterSpacing:1, textTransform:"uppercase" }}>Service {String(i+1).padStart(2,"0")}</div>
+                    <h3 style={{ fontSize:19, fontWeight:800, color:"#111827", marginTop:2 }}>{m.title}</h3>
+                  </div>
                 </div>
                 <p style={{ color:"#6B7280", fontSize:14, lineHeight:1.75, marginBottom:14 }}>{m.intro}</p>
                 <ul style={{ listStyle:"none", padding:0, margin:0, display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", columnGap:24, rowGap:0 }}>
                   {m.items.map((it,j) => <Bullet key={j}>{it}</Bullet>)}
                 </ul>
               </div>
-            ))}
+            );})}
 
             {/* Leadership Support (two columns) */}
             <div className="card" style={{ padding:"28px 30px" }}>
@@ -182,9 +227,11 @@ function CollaborationPage({ setPage }) {
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:12 }}>
             {OPERATIONS.map((o,i) => (
-              <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"#fff", border:"1px solid #E5E7EB", borderRadius:12, padding:"14px 16px", boxShadow:"0 1px 4px rgba(0,0,0,.04)" }}>
-                <span style={{ width:26, height:26, borderRadius:8, background:"#EBF5FF", color:"#1A56DB", fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:13 }}>✓</span>
-                <span style={{ fontSize:13.5, color:"#374151", fontWeight:600 }}>{o}</span>
+              <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"#fff", border:"1px solid #E5E7EB", borderRadius:12, padding:"15px 16px", boxShadow:"0 2px 8px rgba(16,42,120,.05)", transition:"all .18s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor="#BFDBFE"; e.currentTarget.style.boxShadow="0 8px 22px rgba(26,86,219,.12)"; e.currentTarget.style.transform="translateY(-2px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor="#E5E7EB"; e.currentTarget.style.boxShadow="0 2px 8px rgba(16,42,120,.05)"; e.currentTarget.style.transform="none"; }}>
+                <span style={{ width:28, height:28, borderRadius:9, background:"linear-gradient(135deg,#1A56DB,#12327A)", color:"#fff", fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:13 }}>✓</span>
+                <span style={{ fontSize:13.5, color:"#374151", fontWeight:700 }}>{o}</span>
               </div>
             ))}
           </div>
@@ -196,6 +243,10 @@ function CollaborationPage({ setPage }) {
         <div className="container">
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))", gap:36, alignItems:"center" }}>
             <div>
+              {/* ADDED: HD image */}
+              <div style={{ borderRadius:18, overflow:"hidden", boxShadow:"0 16px 40px rgba(16,42,120,.14)", marginBottom:22, aspectRatio:"16 / 10" }}>
+                <img src="/schoolsol-review.svg" alt="Academic review & improvement planning" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              </div>
               <div className="sec-eye">School Improvement Program</div>
               <h2 className="sec-title" style={{ marginBottom:14 }}>Facing Academic <em style={{ color:"#1A56DB" }}>Challenges?</em></h2>
               <p style={{ color:"#6B7280", fontSize:15, lineHeight:1.85 }}>
@@ -243,12 +294,16 @@ function CollaborationPage({ setPage }) {
             <p style={{ color:"#6B7280", fontSize:15, marginTop:10, maxWidth:620, margin:"10px auto 0" }}>Educational expertise combined with modern technology gives management real-time visibility into academic performance and operational effectiveness.</p>
           </div>
           <div className="grid3">
-            {TECH.map((t,i) => (
-              <div key={i} className="card card-hover" style={{ padding:"20px 22px", display:"flex", alignItems:"center", gap:14 }}>
-                <div style={{ width:44, height:44, borderRadius:12, background:"linear-gradient(135deg,#EBF5FF,#E0F2FE)", border:"1px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>⚡</div>
+            {TECH.map((t,i) => {
+              const ICONS = ["🖥️","📈","📝","📊","🤖","🎓","📱","✅","🧭"];
+              return (
+              <div key={i} style={{ padding:"20px 22px", display:"flex", alignItems:"center", gap:14, background:"#fff", border:"1px solid #E5E7EB", borderRadius:14, boxShadow:"0 3px 12px rgba(16,42,120,.05)", transition:"all .18s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor="#BFDBFE"; e.currentTarget.style.boxShadow="0 12px 28px rgba(26,86,219,.13)"; e.currentTarget.style.transform="translateY(-3px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor="#E5E7EB"; e.currentTarget.style.boxShadow="0 3px 12px rgba(16,42,120,.05)"; e.currentTarget.style.transform="none"; }}>
+                <div style={{ width:46, height:46, borderRadius:12, background:"linear-gradient(135deg,#EBF5FF,#E0F2FE)", border:"1px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:21, flexShrink:0 }}>{ICONS[i % ICONS.length]}</div>
                 <span style={{ fontSize:14.5, fontWeight:700, color:"#111827" }}>{t}</span>
               </div>
-            ))}
+            );})}
           </div>
         </div>
       </section>
@@ -262,9 +317,11 @@ function CollaborationPage({ setPage }) {
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(230px,1fr))", gap:12, marginBottom:64 }}>
             {BENEFITS.map((b,i) => (
-              <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"#fff", border:"1px solid #E5E7EB", borderRadius:12, padding:"14px 16px" }}>
-                <span style={{ color:"#059669", fontSize:16, flexShrink:0 }}>✓</span>
-                <span style={{ fontSize:13.5, color:"#374151", fontWeight:600 }}>{b}</span>
+              <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"#fff", border:"1px solid #E5E7EB", borderRadius:12, padding:"15px 16px", boxShadow:"0 2px 8px rgba(5,150,105,.05)", transition:"all .18s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor="#A7F3D0"; e.currentTarget.style.boxShadow="0 8px 22px rgba(5,150,105,.14)"; e.currentTarget.style.transform="translateY(-2px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor="#E5E7EB"; e.currentTarget.style.boxShadow="0 2px 8px rgba(5,150,105,.05)"; e.currentTarget.style.transform="none"; }}>
+                <span style={{ width:28, height:28, borderRadius:9, background:"linear-gradient(135deg,#10B981,#059669)", color:"#fff", fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:13 }}>✓</span>
+                <span style={{ fontSize:13.5, color:"#374151", fontWeight:700 }}>{b}</span>
               </div>
             ))}
           </div>
@@ -275,10 +332,11 @@ function CollaborationPage({ setPage }) {
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:16 }}>
             {MODEL.map((s,i) => (
-              <div key={i} style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:16, padding:"24px 18px", boxShadow:"0 2px 10px rgba(0,0,0,.05)", textAlign:"center", position:"relative" }}>
-                <div style={{ width:52, height:52, borderRadius:14, background:"linear-gradient(135deg,#EBF5FF,#E0F2FE)", border:"1px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, margin:"0 auto 12px" }}>{s.icon}</div>
-                <div style={{ width:26, height:26, borderRadius:"50%", background:"#1A56DB", color:"#fff", fontSize:11, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 12px" }}>{i+1}</div>
-                <div style={{ fontWeight:800, fontSize:14, color:"#111827", marginBottom:8 }}>{s.title}</div>
+              <div key={i} style={{ background:"#fff", border:"1px solid #E5E7EB", borderRadius:16, padding:"34px 18px 22px", boxShadow:"0 4px 16px rgba(16,42,120,.06)", textAlign:"center", position:"relative", marginTop:14 }}>
+                {/* step number badge */}
+                <div style={{ position:"absolute", top:-14, left:"50%", transform:"translateX(-50%)", width:34, height:34, borderRadius:"50%", background:"linear-gradient(135deg,#1A56DB,#12327A)", color:"#fff", fontSize:14, fontWeight:900, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 14px rgba(26,86,219,.35)" }}>{i+1}</div>
+                <div style={{ width:56, height:56, borderRadius:16, background:"linear-gradient(135deg,#EBF5FF,#E0F2FE)", border:"1px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, margin:"0 auto 14px" }}>{s.icon}</div>
+                <div style={{ fontWeight:800, fontSize:15, color:"#111827", marginBottom:8 }}>{s.title}</div>
                 <div style={{ fontSize:12.5, color:"#6B7280", lineHeight:1.65 }}>{s.desc}</div>
               </div>
             ))}
@@ -295,15 +353,20 @@ function CollaborationPage({ setPage }) {
           </div>
           <div style={{ display:"flex", flexWrap:"wrap", gap:12, justifyContent:"center", maxWidth:860, margin:"0 auto" }}>
             {BENEFICIARIES.map((b,i) => (
-              <span key={i} style={{ background:"#F9FAFB", border:"1px solid #E5E7EB", color:"#374151", borderRadius:12, padding:"12px 20px", fontSize:14, fontWeight:700 }}>{b}</span>
+              <span key={i} style={{ display:"inline-flex", alignItems:"center", gap:8, background:"#fff", border:"1.5px solid #E5E7EB", color:"#374151", borderRadius:30, padding:"11px 20px", fontSize:14, fontWeight:700, boxShadow:"0 2px 8px rgba(16,42,120,.05)", transition:"all .18s", cursor:"default" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor="#BFDBFE"; e.currentTarget.style.color="#1E429F"; e.currentTarget.style.boxShadow="0 8px 20px rgba(26,86,219,.12)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor="#E5E7EB"; e.currentTarget.style.color="#374151"; e.currentTarget.style.boxShadow="0 2px 8px rgba(16,42,120,.05)"; }}>
+                <span style={{ color:"#1A56DB" }}>🏫</span>{b}
+              </span>
             ))}
           </div>
         </div>
       </section>
 
       {/* ── Bottom CTA ── */}
-      <section style={{ background:"#1E429F", padding:"76px 0" }}>
-        <div className="container" style={{ textAlign:"center" }}>
+      <section style={{ background:"linear-gradient(135deg,#1E429F 0%,#1A56DB 100%)", padding:"76px 0", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(circle,rgba(255,255,255,.05) 1px,transparent 1px)", backgroundSize:"32px 32px", pointerEvents:"none" }} />
+        <div className="container" style={{ textAlign:"center", position:"relative", zIndex:1 }}>
           <div className="sec-eye" style={{ justifyContent:"center", color:"#93C5FD" }}>Transform Your School</div>
           <h2 style={{ fontSize:"clamp(28px,4vw,46px)", color:"#fff", marginBottom:14 }}>Let's Build a School That Inspires Excellence</h2>
           <p style={{ color:"#BFDBFE", fontSize:16, marginBottom:36, maxWidth:600, margin:"0 auto 36px", lineHeight:1.8 }}>

@@ -12,9 +12,10 @@ import { useState, useEffect } from "react";
 const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 const CONF = {
-  jobs:     { url: `${API}/jobs`,                   label: "Latest Jobs",     ico: "💼", tag: "Hiring",  tagCls: "hiring" },
-  tuitions: { url: `${API}/admin/public/tuitions`,  label: "Latest Tuitions", ico: "📚", tag: "Tuition", tagCls: "tuition" },
-  tutors:   { url: `${API}/admin/public/tutors`,    label: "Featured Tutors", ico: "🧑‍🎓", tag: "Tutor",   tagCls: "tutor" },
+  jobs:     { url: `${API}/jobs`,                   label: "Latest Jobs",       ico: "💼", tag: "Hiring",  tagCls: "hiring" },
+  tuitions: { url: `${API}/admin/public/tuitions`,  label: "Latest Tuitions",   ico: "📚", tag: "Tuition", tagCls: "tuition" },
+  tutors:   { url: `${API}/admin/public/tutors`,    label: "Featured Tutors",   ico: "🧑‍🎓", tag: "Tutor",   tagCls: "tutor" },
+  teachers: { url: `${API}/admin/public/teachers`,  label: "Featured Teachers", ico: "👩‍🏫", tag: "Teacher", tagCls: "tutor" },
 };
 
 const first = (v, n) => {
@@ -44,11 +45,18 @@ export default function JobsTicker({ setPage, type = "jobs", limit = 12 }) {
 
   if (rows.length === 0) return null;
 
-  const goTo = type === "tuitions" ? "tuitions" : type === "tutors" ? "tutors" : "jobs";
+  const goTo = type === "tuitions" ? "tuitions" : type === "tutors" ? "tutors" : type === "teachers" ? "teachers" : "jobs";
   const go = () => { if (setPage) setPage(goTo); };
 
   // Build the three display lines per row depending on the type.
   const build = (r) => {
+    if (type === "teachers") {
+      const title = r.full_name || r.name || "Teacher";
+      const sub = first(r.specialization || r.subjects, 2) || "Teacher";
+      const loc = r.current_location || r.city || "";
+      const exp = r.total_experience || r.experience || "";
+      return { title, sub, m1: loc, m1ico: "📍", m2: exp, m2ico: "⏳" };
+    }
     if (type === "tuitions") {
       const title = [r.student_class ? `Class ${r.student_class}` : "", first(r.subject, 2)].filter(Boolean).join(" ") || "Tuition Requirement";
       const sub = r.name || "Parent / Guardian";

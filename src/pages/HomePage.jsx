@@ -1818,7 +1818,8 @@ function HomePage({ setPage }) {
         </div>
       </footer>
 
-      {/* Social links — sits just above the floating Support button (home page only) */}
+      {/* Social links — DISABLED (kept, not deleted): replaced by the global <SocialFloat/> shown on ALL pages, to avoid a duplicate stack on the home page. */}
+      {false && (
       <div style={{ position:"fixed", right:22, bottom:74, zIndex:10000, display:"flex", flexDirection:"column", gap:10 }}>
         <a href="https://www.linkedin.com/company/acad-hr/?viewAsMember=true" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"
           style={{ width:42, height:42, borderRadius:"50%", background:"#0A66C2", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 18px rgba(10,102,194,.35)", textDecoration:"none" }}
@@ -1837,6 +1838,7 @@ function HomePage({ setPage }) {
           </svg>
         </a>
       </div>
+      )}
     </div>
   );
 }

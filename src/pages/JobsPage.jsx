@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Navbar } from "../components/common/Shared";
+import JobsTicker from "../components/common/JobsTicker"; // ADDED: right-to-left scrolling jobs strip
 import apiBase from "../config/apiBase";
 
 const SUBJECTS = ["All","Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Science","Computer Science","Economics","Commerce","Physical Education","Sanskrit","Zoology"];
@@ -130,6 +131,9 @@ function JobsPage({ setPage }) {
         alt="Browse Teaching Jobs"
         style={{ width:"100%", height:"auto", display:"block" }}
       />
+
+      {/* ADDED: right-to-left scrolling strip of latest jobs (same as Browse Teachers) */}
+      <JobsTicker setPage={setPage} />
 
       {/* Hero — REMOVED from view per request (kept in code, NOT deleted). Change false to true to bring it back. */}
       {false && (

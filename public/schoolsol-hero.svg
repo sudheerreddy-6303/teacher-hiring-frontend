@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 640" width="800" height="640" role="img" aria-label="Academic management and school excellence">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EAF2FF"/><stop offset="1" stop-color="#DCEAFF"/>
+    </linearGradient>
+    <linearGradient id="roof" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1A56DB"/><stop offset="1" stop-color="#12327A"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#1A56DB"/><stop offset="1" stop-color="#60A5FA"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="640" rx="28" fill="url(#bg)"/>
+  <!-- dotted texture -->
+  <g fill="#BFD3F5" opacity="0.5">
+    <circle cx="70" cy="70" r="3"/><circle cx="120" cy="70" r="3"/><circle cx="70" cy="120" r="3"/>
+    <circle cx="720" cy="560" r="3"/><circle cx="670" cy="560" r="3"/><circle cx="720" cy="510" r="3"/>
+  </g>
+  <!-- growth chart panel -->
+  <rect x="70" y="360" width="250" height="210" rx="18" fill="#fff" opacity="0.95"/>
+  <g>
+    <rect x="100" y="470" width="34" height="70" rx="6" fill="url(#bar)"/>
+    <rect x="150" y="440" width="34" height="100" rx="6" fill="url(#bar)"/>
+    <rect x="200" y="410" width="34" height="130" rx="6" fill="url(#bar)"/>
+    <rect x="250" y="385" width="34" height="155" rx="6" fill="url(#bar)"/>
+    <path d="M110 455 L165 425 L217 398 L268 372" fill="none" stroke="#F59E0B" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="268" cy="372" r="7" fill="#F59E0B"/>
+  </g>
+  <!-- school building -->
+  <g>
+    <!-- base -->
+    <rect x="380" y="300" width="340" height="250" rx="12" fill="#fff"/>
+    <!-- steps -->
+    <rect x="360" y="540" width="380" height="18" rx="6" fill="#C9D9F6"/>
+    <rect x="378" y="522" width="344" height="18" rx="6" fill="#D9E6FB"/>
+    <!-- roof -->
+    <path d="M360 300 L550 196 L740 300 Z" fill="url(#roof)"/>
+    <!-- pediment flag -->
+    <rect x="543" y="150" width="6" height="46" fill="#12327A"/>
+    <path d="M549 152 L585 162 L549 174 Z" fill="#F59E0B"/>
+    <!-- columns -->
+    <g fill="#EAF1FD" stroke="#CFDDF6" stroke-width="2">
+      <rect x="410" y="330" width="26" height="200" rx="5"/>
+      <rect x="470" y="330" width="26" height="200" rx="5"/>
+      <rect x="605" y="330" width="26" height="200" rx="5"/>
+      <rect x="665" y="330" width="26" height="200" rx="5"/>
+    </g>
+    <!-- door -->
+    <rect x="525" y="420" width="50" height="110" rx="25" fill="#1A56DB"/>
+    <!-- clock / window -->
+    <circle cx="550" cy="265" r="16" fill="#fff" stroke="#12327A" stroke-width="4"/>
+    <path d="M550 258 V266 L556 270" stroke="#12327A" stroke-width="3" stroke-linecap="round" fill="none"/>
+  </g>
+  <!-- graduation cap -->
+  <g transform="translate(300 150)">
+    <path d="M0 40 L90 10 L180 40 L90 70 Z" fill="#12327A"/>
+    <path d="M90 70 L90 102 M90 102 C120 102 150 92 160 80 L160 48" fill="none" stroke="#12327A" stroke-width="7" stroke-linecap="round"/>
+    <path d="M178 42 L178 92" stroke="#F59E0B" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="178" cy="98" r="8" fill="#F59E0B"/>
+  </g>
+  <!-- books -->
+  <g transform="translate(150 300)">
+    <rect x="0" y="34" width="150" height="20" rx="4" fill="#1A56DB"/>
+    <rect x="10" y="16" width="150" height="20" rx="4" fill="#0EA5E9"/>
+    <rect x="4" y="-2" width="150" height="20" rx="4" fill="#F59E0B"/>
+  </g>
+</svg>

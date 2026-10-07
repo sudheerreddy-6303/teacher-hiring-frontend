@@ -142,7 +142,7 @@ export default function BrowseTeachersPage({ setPage }) {
         />
 
         {/* ADDED: right-to-left scrolling strip of latest posted jobs (live from the database) */}
-        <JobsTicker setPage={setPage} />
+        <JobsTicker setPage={setPage} type="teachers" />
 
         {/* Hero — REMOVED from view per request (kept in code, NOT deleted). Change false to true to bring it back. */}
         {false && (

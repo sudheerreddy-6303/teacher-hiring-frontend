@@ -11,6 +11,7 @@ import BrowseTutorsPage   from "./pages/BrowseTutorsPage";
 import BrowseTuitionsPage from "./pages/BrowseTuitionsPage";
 import PricingPage        from "./pages/PricingPage";
 import FaqPage            from "./pages/FaqPage";
+import YouTubePage        from "./pages/YouTubePage"; // ADDED: in-app YouTube videos page
 import PrivacyPolicyPage  from "./pages/PrivacyPolicyPage";
 import TermsAndConditionsPage from "./pages/TermsAndConditionsPage";
 import AuthPage           from "./components/auth/AuthPage";
@@ -20,6 +21,7 @@ import TutorDashboard     from "./components/tutor/TutorDashboard";
 import ParentDashboard    from "./components/parent/ParentDashboard";
 import SchoolDashboard    from "./components/school/SchoolDashboard";
 import FeedbackWidget     from "./components/common/FeedbackWidget";
+import SocialFloat        from "./components/common/SocialFloat"; // ADDED: floating LinkedIn + Instagram
 import PublicProfile      from "./pages/PublicProfile";
 
 export default function App() {
@@ -109,6 +111,7 @@ export default function App() {
       {page === "tuitions"   && <BrowseTuitionsPage setPage={setPage} />}
       {page === "pricing"    && <PricingPage        setPage={setPage} />}
       {page === "faq"        && <FaqPage            setPage={setPage} />}
+      {page === "youtube"    && <YouTubePage        setPage={setPage} />}
       {page === "privacy"    && <PrivacyPolicyPage  setPage={setPage} />}
       {page === "terms"      && <TermsAndConditionsPage setPage={setPage} />}
       {page === "login"      && <AuthPage           mode="login"  setPage={setPage} />}
@@ -117,6 +120,8 @@ export default function App() {
 
       {/* Floating feedback widget — shown on every page */}
       <FeedbackWidget page={page} />
+      {/* ADDED: floating LinkedIn + Instagram, just above the Support button */}
+      <SocialFloat />
       {/* ── Welcome Role Selection Popup ── */}
       {showWelcome && !user && (
         <div style={{
