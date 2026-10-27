@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom"; // ADDED: Browse Jobs popups render over the whole page
 import { useAuth } from "../../context/AuthContext";
+import { toast } from "./Toasts"; // ADDED: toast popups (e.g. "Already applied")
 import { HERO_SLIDES, SUBS } from "../../constants";
 
 
@@ -1244,8 +1245,9 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked, onApplied, credits, 
                   <button className="btn btn-ghost btn-sm" style={{ flex:1, justifyContent:"center" }}
                     onClick={(e) => { e.stopPropagation(); setSelected(job); }}>View Details</button>
                   {applied.includes(job.id) ? (
-                    <button className="btn btn-sm" disabled onClick={(e) => e.stopPropagation()}
-                      style={{ flex:1, justifyContent:"center", background:"#ECFDF5", color:"#059669", border:"1px solid #A7F3D0", fontWeight:700 }}>✓ Applied</button>
+                    <button className="btn btn-sm"
+                      onClick={(e) => { e.stopPropagation(); toast.info("Already applied", `You have already applied for "${job.title}". Please wait for a response.`); }}
+                      style={{ flex:1, justifyContent:"center", background:"#ECFDF5", color:"#059669", border:"1px solid #A7F3D0", fontWeight:700, cursor:"pointer" }}>✓ Applied</button>
                   ) : (
                     <button className="btn btn-primary btn-sm" style={{ flex:1, justifyContent:"center" }}
                       disabled={applying} onClick={(e) => askApply(job, e)}>Apply Now →</button>

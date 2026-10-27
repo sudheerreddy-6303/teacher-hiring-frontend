@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { SUBS } from "../../constants";
 import { COUNTRIES, INDIAN_STATES, citiesForState } from "../../locationData"; // ADDED: location dropdown data
 import { Toast, Spinner, JobCard, OtpBoxes, InlineBrowseJobs, FilterBar } from "../../components/common/Shared";
+import { toast } from "../../components/common/Toasts"; // ADDED: toast popups for validations & confirmations
 import './Auth.css';
 // ADDED: teacher registration shows the same fields as Admin → Teachers → Add Teacher
 import TeacherSignupProfile, { TEACHER_SIGNUP_DEFAULTS, teacherSignupMissing } from "./TeacherSignupProfile";
@@ -86,6 +87,7 @@ function AuthPage({ mode, setPage }) {
       up("resume_base64", reader.result);
       up("resume_name", file.name);
       up("resume_type", file.type || "application/octet-stream");
+      toast.success("Resume / CV added", file.name); // ADDED
     };
     reader.readAsDataURL(file);
   }
@@ -98,9 +100,14 @@ function AuthPage({ mode, setPage }) {
       up("tutor_photo_base64", reader.result);
       up("tutor_photo_name", file.name);
       up("tutor_photo_type", file.type || "image/jpeg");
+      toast.success("Tutor photo added", file.name); // ADDED
     };
     reader.readAsDataURL(file);
   }
+
+  // ADDED: mirror validation / OTP errors as toast popups (inline message is kept too).
+  useEffect(() => { if (err)    toast.warning(err); }, [err]);
+  useEffect(() => { if (otpErr) toast.error(otpErr); }, [otpErr]);
   // ADDED: multi-select toggle with a maximum pick limit (used for "Which Class Can Teach", max 3)
   function toggleMultiMax(key, val, max) {
     const arr = form[key] || [];
@@ -138,6 +145,8 @@ function AuthPage({ mode, setPage }) {
     e.preventDefault(); setErr(""); setLoginOtpLoading(true);
     try {
       const res = await import('../../api.js').then(m => m.authAPI.sendLoginOtp(form.email, form.password));
+      // ADDED: demo accounts log in directly (backend returns a token, no OTP step).
+      if (res && res.direct && res.token && res.user) { login(res.user, res.token); return; }
       setLoginStep(2);
       if (res.dev) setErr("⚠️ Dev mode: OTP is printed in the server console (no email configured).");
       startResendTimer(setLoginResendTimer);

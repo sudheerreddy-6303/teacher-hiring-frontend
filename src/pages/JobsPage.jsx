@@ -127,7 +127,7 @@ function JobsPage({ setPage }) {
       <Navbar setPage={setPage} page="jobs" />
       {/* ADDED: Browse Jobs top banner (image in public/ as "browse jobs top banner.png") */}
       <img
-        src="/browse jobs top banner.png"
+        src="/browse jobs top banner.webp"
         alt="Browse Teaching Jobs"
         style={{ width:"100%", height:"auto", display:"block" }}
       />

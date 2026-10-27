@@ -22,6 +22,7 @@ import ParentDashboard    from "./components/parent/ParentDashboard";
 import SchoolDashboard    from "./components/school/SchoolDashboard";
 import FeedbackWidget     from "./components/common/FeedbackWidget";
 import SocialFloat        from "./components/common/SocialFloat"; // ADDED: floating LinkedIn + Instagram
+import { ToastHost, toast, toastFromAlert } from "./components/common/Toasts"; // ADDED: app-wide toast popups
 import PublicProfile      from "./pages/PublicProfile";
 
 export default function App() {
@@ -74,6 +75,22 @@ export default function App() {
     return () => window.removeEventListener("acadhr:unauthorized", handleUnauthorized);
   }, []);
 
+  // ADDED: route every window.alert(...) in the app through the toast popups.
+  // Additive — no alert() call site is changed; if anything goes wrong we fall
+  // back to the browser's original alert.
+  useEffect(() => {
+    const original = window.alert;
+    window.alert = (message) => {
+      try {
+        const { type, title, msg } = toastFromAlert(message);
+        toast(type, title, msg);
+      } catch (e) {
+        try { original(message); } catch (_) {}
+      }
+    };
+    return () => { window.alert = original; };
+  }, []);
+
   // Restore session on refresh
   if (!user) {
     const saved = localStorage.getItem("acadhr_user");
@@ -118,6 +135,8 @@ export default function App() {
       {page === "signup"     && <AuthPage           mode="signup" setPage={setPage} />}
       {page === "dashboard"  && <DashboardRouter />}
 
+      {/* ADDED: app-wide toast popups host (renders the toast stack) */}
+      <ToastHost />
       {/* Floating feedback widget — shown on every page */}
       <FeedbackWidget page={page} />
       {/* ADDED: floating LinkedIn + Instagram, just above the Support button */}

@@ -343,7 +343,8 @@ function TeacherDashboard({ user, setPage }) {
     { id:"profile",      icon:"👤", label:"My Profile" },
     { id:"browse",       icon:"🔍", label:"Browse Jobs" },
     { id:"applications", icon:"📋", label:"My Applications" },
-    { id:"analytics",    icon:"📊", label:"Analytics" },
+    // REMOVED per request: Analytics tab hidden from the teacher portal (code kept below, not rendered).
+    // { id:"analytics",    icon:"📊", label:"Analytics" },
     { id:"resume",       icon:"📄", label:"Resume & Docs" },
     { id:"pricing",      icon:"🏷️", label:"Pricing" },
     { id:"payments",     icon:"🧾", label:"Payment History" },
@@ -420,17 +421,19 @@ function TeacherDashboard({ user, setPage }) {
           </div>
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4, fontSize:11, fontWeight:700 }}>
             <span style={{ color:"#374151" }}>Profile Complete</span>
-            <span style={{ color:progressColor }}>{completion}%</span>
+            <span style={{ color:progressColor }}>{profileLoading ? "…" : `${completion}%`}</span>
           </div>
           <div style={{ height:6, background:"#E5E7EB", borderRadius:3, overflow:"hidden" }}>
-            <div style={{ height:6, borderRadius:3, background:progressColor, width:`${completion}%`, transition:"width .4s" }} />
+            <div style={{ height:6, borderRadius:3, background:progressColor, width: profileLoading ? "0%" : `${completion}%`, transition:"width .4s" }} />
           </div>
-          {!canApply && (
+          {/* ADDED: don't show the 70% warning/ready line until the profile has loaded
+              (avoids the brief wrong 11% flash on first paint). */}
+          {!profileLoading && !canApply && (
             <div style={{ fontSize:10, color:"#DC2626", marginTop:5, fontWeight:600 }}>
               ⚠ Complete 70% to apply for jobs
             </div>
           )}
-          {canApply && (
+          {!profileLoading && canApply && (
             <div style={{ fontSize:10, color:"#059669", marginTop:5, fontWeight:600 }}>
               ✓ You can apply for jobs
             </div>
@@ -460,7 +463,12 @@ function TeacherDashboard({ user, setPage }) {
             <div className="page-title">Welcome back, {(profile.full_name||user.name).split(" ")[0]} 👋</div>
             <div className="page-sub">Your job search at a glance</div>
 
-            {/* Profile completion banner */}
+            {/* Profile completion banner — hidden until the profile loads (avoids the wrong 11% flash) */}
+            {profileLoading ? (
+              <div style={{ background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:14, padding:"20px 24px", marginBottom:24, color:"#9CA3AF", fontWeight:700, fontSize:14 }}>
+                Loading your profile…
+              </div>
+            ) : (
             <div style={{ background: canApply ? "#ECFDF5" : "#FFF7ED", border:`1px solid ${canApply?"#A7F3D0":"#FDE68A"}`, borderRadius:14, padding:"20px 24px", marginBottom:24, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:16 }}>
               <div style={{ flex:1 }}>
                 <div style={{ fontWeight:800, fontSize:15, color: canApply?"#065F46":"#92400E", marginBottom:6 }}>
@@ -482,6 +490,7 @@ function TeacherDashboard({ user, setPage }) {
                 {canApply ? "✏️ Edit Profile" : "Complete Profile →"}
               </button>
             </div>
+            )}
 
             {/* KPI cards */}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:18, marginBottom:26 }}>

@@ -786,8 +786,24 @@ function AdminTeacherForm({ form, up }) {
   );
 }
 
-/* ── Tutor form — mirrors TutorDashboard → My Profile ── */
+/* ── Option lists that MIRROR the Tutor Registration form (AuthPage) ── */
+const TUTOR_EXPS    = ["Fresher (0-1 year)","1-3 years","3-5 years","5-10 years","10+ years"];
+const TUTOR_CLASSES = ["Class 1","Class 2","Class 3","Class 4","Class 5","Class 6","Class 7","Class 8","Class 9","Class 10","Class 11","Class 12","JEE","NEET","FOUNDATION","IPMAT","CA FOUNDATION"];
+const TUTOR_QUALS   = ["B.Sc","M.Sc","B.Tech","M.Tech","B.Ed","M.Ed","PhD","Diploma","B.A","M.A","B.Com","M.Com","B.E","BCA","MCA","BBA","MBA","M.Phil","MBBS","BDS","B.Pharm","M.Pharm","B.Arch","LLB","LLM","CA","CS","CMA","B.Sc Nursing"];
+const TUTOR_AVAIL   = ["Morning","Afternoon","Evening","Any Time"];
+
+/* ── Tutor form — mirrors the FULL Tutor REGISTRATION form (AuthPage).
+   Same fields the tutor fills when they self-register, so the admin can add a
+   complete tutor profile on their behalf. (Admin-only "Profile Status" kept.) ── */
 function AdminTutorForm({ form, up }) {
+  // Read an uploaded file (photo / resume) into the form as base64 — mirrors registration.
+  const readFile = (file, prefix) => {
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => { up(prefix + "_base64", r.result); up(prefix + "_name", file.name); up(prefix + "_type", file.type || ""); };
+    r.readAsDataURL(file);
+  };
+  const uploadBox = { display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4, textAlign:"center", border:"1.5px dashed #C7D2FE", borderRadius:12, padding:"16px 14px", background:"#F8FAFF", cursor:"pointer" };
   return (
     <>
       <div style={{ ...SECTION, marginTop:0 }}>👤 Account & Contact</div>
@@ -801,29 +817,96 @@ function AdminTutorForm({ form, up }) {
       </div>
 
       <div style={SECTION}>📚 Tutor Profile</div>
-      <div className="grid2">
-        <div className="fg"><label className="flabel">Subject(s) * (select one or more)</label>
-          <PillMulti options={SUBS} value={form.subject} onChange={v=>up("subject",v)} grid />
-        </div>
-        <div className="fg"><label className="flabel">City</label><input className="input" value={form.city} onChange={e=>up("city",e.target.value)} placeholder="e.g. Hyderabad" /></div>
+
+      {/* Tutor Photo — same as registration */}
+      <div className="fg"><label className="flabel">Tutor Photo</label>
+        <label style={uploadBox}>
+          <input type="file" accept="image/*" onChange={e=>readFile(e.target.files && e.target.files[0], "tutor_photo")} style={{ display:"none" }} />
+          {form.tutor_photo_base64
+            ? <img src={form.tutor_photo_base64} alt="Tutor" style={{ width:84, height:84, borderRadius:"50%", objectFit:"cover", border:"3px solid #C7D2FE" }} />
+            : <span style={{ fontSize:22 }}>📷</span>}
+          <span style={{ fontSize:13, color:"#374151", fontWeight:700 }}>{form.tutor_photo_name ? "Change photo" : "Tap to upload a photo"}</span>
+          <span style={{ fontSize:11, color:"#9CA3AF" }}>JPG or PNG, max 5 MB</span>
+        </label>
+        {form.tutor_photo_name && <div style={{ fontSize:12, color:"#059669", marginTop:7, fontWeight:700 }}>✓ {form.tutor_photo_name} attached</div>}
       </div>
+
+      {/* Which Class Can Teach — multi (server keeps up to 3) */}
+      <div className="fg"><label className="flabel">Which Class Can Teach (select up to 3)</label>
+        <PillMulti options={TUTOR_CLASSES} value={form.classes_taught} onChange={v=>up("classes_taught",v)} grid />
+        <div style={{ fontSize:11, color:"#9CA3AF", marginTop:6 }}>Up to 3 are saved.</div>
+      </div>
+
+      {/* Subjects — multi */}
+      <div className="fg"><label className="flabel">Subjects * (select one or more)</label>
+        <PillMulti options={SUBS} value={form.subject} onChange={v=>up("subject",v)} grid />
+      </div>
+
+      {/* Qualifications — multi */}
+      <div className="fg"><label className="flabel">Qualifications (select one or more)</label>
+        <PillMulti options={TUTOR_QUALS} value={form.qualifications} onChange={v=>up("qualifications",v)} grid />
+      </div>
+
       <div className="grid2">
         <div className="fg"><label className="flabel">Experience</label>
           <select className="input" value={form.experience} onChange={e=>up("experience",e.target.value)}>
-            <option value="">Select</option>{["Fresher","1–2 Years","2–3 Years","3–5 Years","5–8 Years","8–10 Years","10+ Years"].map(x=><option key={x}>{x}</option>)}
+            <option value="">Select Experience</option>{TUTOR_EXPS.map(x=><option key={x}>{x}</option>)}
           </select>
         </div>
-        <div className="fg"><label className="flabel">Qualification</label><input className="input" value={form.qualification} onChange={e=>up("qualification",e.target.value)} placeholder="e.g. M.Sc, B.Ed" /></div>
+        <div className="fg"><label className="flabel">Hourly Charges</label><input className="input" value={form.hourly_rate} onChange={e=>up("hourly_rate",e.target.value)} placeholder="e.g. ₹800/hr" /></div>
       </div>
+
       <div className="grid2">
-        <div className="fg"><label className="flabel">Hourly Rate (₹)</label><input className="input" value={form.hourly_rate} onChange={e=>up("hourly_rate",e.target.value)} placeholder="e.g. 500" /></div>
+        <div className="fg"><label className="flabel">Gender</label>
+          <select className="input" value={form.gender} onChange={e=>up("gender",e.target.value)}>
+            <option value="">Select</option><option>Male</option><option>Female</option><option>Other</option>
+          </select>
+        </div>
         <div className="fg"><label className="flabel">Teaching Mode</label>
           <select className="input" value={form.teaching_mode} onChange={e=>up("teaching_mode",e.target.value)}>
-            <option>Both</option><option>Online</option><option>Offline</option>
+            <option>Online</option><option>Offline</option><option>Both</option>
           </select>
         </div>
       </div>
-      <div className="fg"><label className="flabel">Bio</label><textarea className="input" rows={3} value={form.bio} onChange={e=>up("bio",e.target.value)} placeholder="A short bio..." /></div>
+
+      {/* Available Timings — multi */}
+      <div className="fg"><label className="flabel">Available Timings (select one or more)</label>
+        <PillMulti options={TUTOR_AVAIL} value={form.availability} onChange={v=>up("availability",v)} />
+      </div>
+
+      <div className="fg"><label className="flabel">Address</label>
+        <input className="input" value={form.address} onChange={e=>up("address",e.target.value)} placeholder="House no., street, area" />
+      </div>
+
+      <div className="grid2">
+        <div className="fg"><label className="flabel">Location</label><input className="input" value={form.tutor_location} onChange={e=>up("tutor_location",e.target.value)} placeholder="e.g. Banjara Hills, Hyderabad" /></div>
+        <div className="fg"><label className="flabel">Pincode</label><input className="input" value={form.pincode} onChange={e=>up("pincode",e.target.value)} placeholder="e.g. 500034" /></div>
+      </div>
+
+      <div className="fg"><label className="flabel">City</label><input className="input" value={form.city} onChange={e=>up("city",e.target.value)} placeholder="e.g. Hyderabad" /></div>
+
+      <div className="fg"><label className="flabel">Class Link (Google Meet / Zoom)</label>
+        <input className="input" value={form.class_link} onChange={e=>up("class_link",e.target.value)} placeholder="https://meet.google.com/..." />
+      </div>
+
+      <div className="fg"><label className="flabel">Demo Class Link (YouTube / Instagram)</label>
+        <input className="input" value={form.demo_class_link} onChange={e=>up("demo_class_link",e.target.value)} placeholder="https://youtube.com/...  or  https://instagram.com/..." />
+      </div>
+
+      <div className="fg"><label className="flabel">Write About Yourself (in ~300 words)</label>
+        <textarea className="input" rows={6} value={form.about_yourself} onChange={e=>up("about_yourself",e.target.value)} placeholder="Teaching journey, style, achievements, what makes them a great tutor..." />
+      </div>
+
+      {/* Resume / CV — same as registration */}
+      <div className="fg"><label className="flabel">Resume / CV</label>
+        <label style={uploadBox}>
+          <input type="file" accept=".pdf,.doc,.docx,image/*" onChange={e=>readFile(e.target.files && e.target.files[0], "resume")} style={{ display:"none" }} />
+          <span style={{ fontSize:22 }}>📄</span>
+          <span style={{ fontSize:13, color:"#374151", fontWeight:700 }}>{form.resume_name ? "Change file" : "Tap to upload resume"}</span>
+          <span style={{ fontSize:11, color:"#9CA3AF" }}>PDF, DOC or image</span>
+        </label>
+        {form.resume_name && <div style={{ fontSize:12, color:"#059669", marginTop:7, fontWeight:700 }}>✓ {form.resume_name} attached</div>}
+      </div>
 
       {/* ADDED: admin approval — only Active (Approved) tutors appear on Browse Tutors & Home */}
       <div className="fg"><label className="flabel">Profile Status (Approval)</label>
@@ -884,13 +967,18 @@ function AdminTuitionForm({ form, up }) {
           ))}
         </div>
       </div>
-      <div className="grid2">
-        <div className="fg"><label className="flabel">Board</label>
-          <select className="input" value={form.board} onChange={e=>up("board",e.target.value)}>
-            <option value="">Select board</option><option>CBSE</option><option>ICSE</option><option>State Board (AP)</option><option>State Board (TS)</option><option>IB</option><option>IGCSE</option>
-          </select>
+      <div className="fg"><label className="flabel">Board</label>
+        <select className="input" value={form.board} onChange={e=>up("board",e.target.value)}>
+          <option value="">Select board</option><option>CBSE</option><option>ICSE</option><option>State Board (AP)</option><option>State Board (TS)</option><option>IB</option><option>IGCSE</option>
+        </select>
+      </div>
+      {/* CHANGED to match registration: Subject(s) is now a multi-select chip picker */}
+      <div className="fg"><label className="flabel">Subject(s) Required * (select all that apply)</label>
+        <div style={chipBox}>
+          {SUBS.map(s => (
+            <span key={s} onClick={()=>togCsv("subject",s)} style={chip(inCsv("subject",s))}>{s}</span>
+          ))}
         </div>
-        <div className="fg"><label className="flabel">Subject(s) Required *</label><input className="input" value={form.subject} onChange={e=>up("subject",e.target.value)} placeholder="e.g. Mathematics, Physics" /></div>
       </div>
       <div className="fg"><label className="flabel">Location / Area</label><input className="input" value={form.location} onChange={e=>up("location",e.target.value)} placeholder="e.g. Banjara Hills, Hyderabad" /></div>
       <div className="grid2">
@@ -909,10 +997,13 @@ function AdminTuitionForm({ form, up }) {
         </div>
       </div>
       <div className="grid2">
-        <div className="fg"><label className="flabel">Preferred Time</label>
-          <select className="input" value={form.preferred_time} onChange={e=>up("preferred_time",e.target.value)}>
-            <option value="">Select</option><option>Morning (6am–12pm)</option><option>Afternoon (12pm–4pm)</option><option>Evening (4pm–8pm)</option><option>Flexible</option>
-          </select>
+        {/* CHANGED to match registration: Preferred Time is now a multi-select chip picker */}
+        <div className="fg"><label className="flabel">Preferred Time (select all that apply)</label>
+          <div style={chipBox}>
+            {["Morning","Afternoon","Evening","Any time"].map(t => (
+              <span key={t} onClick={()=>togCsv("preferred_time",t)} style={chip(inCsv("preferred_time",t))}>{t}</span>
+            ))}
+          </div>
         </div>
         <div className="fg"><label className="flabel">Monthly Budget (₹)</label>
           <select className="input" value={form.budget} onChange={e=>up("budget",e.target.value)}>
@@ -1191,7 +1282,7 @@ const ADD_REQUIRED = {
 
 const ADD_INIT = {
   teacher: { full_name:"", email:"", mobile:"", password:"Welcome@123", gender:"", dob:"", current_location:"", preferred_locations:"", qualification:"", specialization:"", total_experience:"", relevant_experience:"", current_role:"", current_org:"", current_salary:"", expected_salary:"", notice_period:"", available_from:"", certifications:"", work_mode:"", tutor_type:"", subjects:"", grades_handling:"", boards_handled:"", competitive_exams:"", teaching_mode:"", languages:"", demo_available:"", demo_link:"", residential_pref:"", relocation_ready:"", accommodation_req:"", aadhaar_verified:"", resume_link:"", resume_file_name:"", profile_status:"Active", remarks:"", terms_accepted:"" },
-  tutor:   { name:"", email:"", phone:"", password:"Welcome@123", subject:"", city:"", experience:"", qualification:"", hourly_rate:"", teaching_mode:"Both", bio:"", profile_status:"Active" },
+  tutor:   { name:"", email:"", phone:"", password:"Welcome@123", subject:"", subjects:"", city:"", experience:"", qualification:"", qualifications:"", hourly_rate:"", teaching_mode:"Both", gender:"", availability:"", classes_taught:"", address:"", tutor_location:"", pincode:"", class_link:"", demo_class_link:"", about_yourself:"", bio:"", tutor_photo_base64:"", tutor_photo_name:"", tutor_photo_type:"", resume_base64:"", resume_name:"", resume_type:"", profile_status:"Active" },
   tuition: { name:"", email:"", phone:"", city:"", password:"Welcome@123", student_name:"", student_class:"", board:"", subject:"", courses:"", preferred_days:"", location:"", state:"", pincode:"", landmark:"", institute_name:"", mode:"Home", preferred_time:"", budget:"", hourly_budget:"", tutor_gender_pref:"", experience_req:"", notes:"" },
   job:     { institution_name:"", institution_type:"", location_state:"", location_city:"", contact_person:"", contact_number:"", contact_email:"", requirement_type:"Teacher", subject:"", grades:[], board:"CBSE", experience:"", salary_min:"", salary_max:"", joining_timeline:"Immediate", work_mode:"Full-time", residential:"No", accommodation:"Not Provided", gender_preference:"No Preference", interview_mode:"Online", demo_required:"No", positions:1, status:"Open", assigned_recruiter:"", notes:"" },
 };

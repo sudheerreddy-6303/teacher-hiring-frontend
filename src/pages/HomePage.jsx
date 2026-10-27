@@ -842,10 +842,10 @@ function HomePage({ setPage }) {
   //   go    = page the "View All" / card click opens
   //   cta   = label on the per-row button
   const bannerDefs = [
-    { key:"tutors",   img:"/home-banner-tutors.png",   title:"🏫 Schools Hiring Now",   list:"schools",  go:"jobs",     cta:"View",  box:[63.6,17.3,97.5,78.4] },
-    { key:"teachers", img:"/home-banner-teachers.png", title:"📣 Latest Teaching Jobs", list:"jobs",     go:"jobs",     cta:"Apply", box:[64.8,14.8,97.4,74.9] },
-    { key:"parents",  img:"/home-banner-parents.png",  title:"🧑‍🏫 Top Tutors for You",  list:"tutors",   go:"tutors",   cta:"View",  box:[63.1,18.6,97.3,80.1] },
-    { key:"schools",  img:"/home-banner-schools.png",  title:"👩‍🏫 Qualified Teachers",  list:"teachers", go:"teachers", cta:"View",  box:[66.1,16.6,97.7,81.8] },
+    { key:"tutors",   img:"/home-banner-tutors.webp",   title:"🏫 Schools Hiring Now",   list:"schools",  go:"jobs",     cta:"View",  box:[63.6,17.3,97.5,78.4] },
+    { key:"teachers", img:"/home-banner-teachers.webp", title:"📣 Latest Teaching Jobs", list:"jobs",     go:"jobs",     cta:"Apply", box:[64.8,14.8,97.4,74.9] },
+    { key:"parents",  img:"/home-banner-parents.webp",  title:"🧑‍🏫 Top Tutors for You",  list:"tutors",   go:"tutors",   cta:"View",  box:[63.1,18.6,97.3,80.1] },
+    { key:"schools",  img:"/home-banner-schools.webp",  title:"👩‍🏫 Qualified Teachers",  list:"teachers", go:"teachers", cta:"View",  box:[66.1,16.6,97.7,81.8] },
   ];
   const bannerSlides = [...bannerDefs, bannerDefs[0]]; // append a clone of #1 for the seamless wrap
   const [bannerIdx, setBannerIdx]   = useState(0);
