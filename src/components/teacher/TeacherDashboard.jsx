@@ -7,6 +7,7 @@ import PaymentHistory from "../common/PaymentHistory"; // ADDED: payment history
 import NoCreditsPopup from "../common/NoCreditsPopup"; // ADDED: zero-credits popup
 import { startPayment } from "../../payments"; // ADDED: payments
 import './Teacher.css';
+import { COUNTRIES, INDIAN_STATES } from "../../locationData"; // ADDED: State / Country dropdowns (same lists as registration)
 
 function TeacherDashboard({ user, setPage }) {
   const { logout } = useAuth();
@@ -219,6 +220,12 @@ function TeacherDashboard({ user, setPage }) {
           terms_accepted:     data.terms_accepted     || "",
         }));
         setDemoLinks((() => { const a = data.demo_link ? data.demo_link.split(",").map(x=>x.trim()).filter(Boolean) : []; return a.length ? a : [""]; })());
+        // ADDED: the database sends dates like "1990-08-20T00:00:00.000Z" but date boxes need "1990-08-20",
+        // otherwise Date of Birth / Available From show blank (dd-mm-yyyy) in My Profile.
+        const _ymd = v => { if (!v) return ""; if (/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return String(v); const d = new Date(v); if (isNaN(d)) return ""; return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); };
+        setProfile(p => ({ ...p, dob: _ymd(p.dob), available_from: _ymd(p.available_from) }));
+        // ADDED: registration details that were not shown in My Profile before
+        setProfile(p => ({ ...p, bio: data.bio || "", state: data.state || "", country: data.country || "" }));
         if (data.completion_pct) {
           localStorage.setItem("acadhr_teacher_completion", String(data.completion_pct));
         }
@@ -232,7 +239,19 @@ function TeacherDashboard({ user, setPage }) {
   async function saveProfile() {
     // ADDED (mandatory fields): all profile fields are required before saving
     {
+      // ADDED (per request): mandatory on Save = ONLY the fields that are mandatory in the registration form,
+      // so the popup never asks for a field the teacher was not asked at registration.
       const REQUIRED = [
+        ["full_name","Full Name"],["mobile","Mobile"],["email","Email"],["gender","Gender"],["dob","Date of Birth"],
+        ["current_location","Current Location"],
+        ["qualification","Qualification"],["specialization","Specialization"],
+        ["total_experience","Total Experience"],["relevant_experience","Relevant Experience"],
+        ["current_role","Current Role"],["work_mode","Work Mode"],["subjects","Subjects"],
+        ["grades_handling","Grades"],["boards_handled","Boards"],["teaching_mode","Teaching Mode"],["languages","Languages"],
+      ];
+      // CHANGED per request (NOT deleted — kept, no longer used): previous full mandatory list
+      // eslint-disable-next-line no-unused-vars
+      const REQUIRED_OLD_ALL = [
         ["full_name","Full Name"],["mobile","Mobile"],["email","Email"],["gender","Gender"],["dob","Date of Birth"],
         ["current_location","Current Location"],["preferred_locations","Preferred Locations"],
         ["qualification","Qualification"],["specialization","Specialization"],
@@ -590,7 +609,10 @@ function TeacherDashboard({ user, setPage }) {
                       ["Gender",       profile.gender,                     "⚥"],
                       ["Date of Birth",profile.dob ? new Date(profile.dob).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : null, "🎂"],
                       ["Location",     profile.current_location,           "📍"],
+                      ["State",        profile.state,                      "🏙️"], // ADDED
+                      ["Country",      profile.country,                    "🌏"], // ADDED
                       ["Preferred Cities", profile.preferred_locations,    "🗺️"],
+                      ["Short Bio",    profile.bio,                        "📝"], // ADDED
                     ].filter(([,v]) => v).map(([label, value, icon]) => (
                       <div key={label} style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:10 }}>
                         <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>{icon}</span>
@@ -890,6 +912,26 @@ function TeacherDashboard({ user, setPage }) {
                     {!profile.preferred_locations && !editMode && <span style={{ color:"#9CA3AF", fontSize:13 }}>—</span>}
                   </div>
                 </div>
+              </div>
+              {/* ADDED: State, Country & Short Bio — the same details the teacher gave at registration */}
+              <div className="grid2">
+                <div className="fg"><label className="flabel">State</label>
+                  <select className="input" disabled={!editMode} value={profile.state || ""} onChange={e => up("state", e.target.value)} style={{ background: !editMode?"#F9FAFB":"#fff" }}>
+                    <option value="">Select State</option>
+                    {profile.state && !INDIAN_STATES.includes(profile.state) && <option value={profile.state}>{profile.state}</option>}
+                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="fg"><label className="flabel">Country</label>
+                  <select className="input" disabled={!editMode} value={profile.country || ""} onChange={e => up("country", e.target.value)} style={{ background: !editMode?"#F9FAFB":"#fff" }}>
+                    <option value="">Select Country</option>
+                    {profile.country && !COUNTRIES.includes(profile.country) && <option value={profile.country}>{profile.country}</option>}
+                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="fg"><label className="flabel">Short Bio</label>
+                <textarea className="input" rows={3} readOnly={!editMode} value={profile.bio || ""} onChange={e => up("bio", e.target.value)} placeholder="Tell schools about yourself..." style={{ background: !editMode?"#F9FAFB":"#fff" }} />
               </div>
             </div>
 

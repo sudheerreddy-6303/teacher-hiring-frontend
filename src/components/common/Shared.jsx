@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom"; // ADDED: Browse Jobs popups render over the whole page
 import { useAuth } from "../../context/AuthContext";
 import { HERO_SLIDES, SUBS } from "../../constants";
 
@@ -980,6 +981,85 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked, onApplied, credits, 
   const [applyJob,  setApplyJob]  = useState(null);
   const [applying,  setApplying]  = useState(false);
   const [applyErr,  setApplyErr]  = useState("");
+  // ADDED (per request): Share button on Browse Jobs cards — same as public Jobs page
+  const [shareToast, setShareToast] = useState(false);
+  async function shareJob(job, e) {
+    if (e) e.stopPropagation();
+    const url = window.location.origin;
+    const lines = [];
+    if (job.title)            lines.push(`📌 ${job.title}`);
+    if (job.institute)        lines.push(`🏫 ${job.institute}${job.institution_type ? " (" + job.institution_type + ")" : ""}`);
+    if (job.requirement_id)   lines.push(`🔖 Job ID: ${job.requirement_id}`);
+    if (job.subject)          lines.push(`📚 Subject: ${job.subject}`);
+    if (job.grades)           lines.push(`📖 Grades: ${job.grades}`);
+    if (job.board)            lines.push(`🏷️ Board: ${job.board}`);
+    if (job.experience)       lines.push(`🎓 Experience: ${job.experience}`);
+    const jtype = [job.type, job.work_mode].filter(Boolean).join(" · ");
+    if (jtype)                lines.push(`💼 Type: ${jtype}`);
+    lines.push(`💰 Salary: ${job.salary}`);
+    if (job.joining_timeline) lines.push(`📅 Joining: ${job.joining_timeline}`);
+    if (Number(job.positions) > 1) lines.push(`👥 Positions: ${job.positions}`);
+    const loc = [job.location, job.location_state].filter(Boolean).join(", ");
+    if (loc)                  lines.push(`📍 Location: ${loc}`);
+    if (job.description)      lines.push(`📝 ${job.description}`);
+    const text = lines.join("\n") + `\n\nApply on AcadHr: ${url}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: job.title ? `AcadHr · ${job.title}` : "AcadHr Job", text, url });
+      } else {
+        await navigator.clipboard.writeText(text);
+        setShareToast(true);
+        setTimeout(() => setShareToast(false), 1800);
+      }
+    } catch (_) { /* user cancelled or share unavailable — no-op */ }
+  }
+  const _typeBadge = (t) => t==="Part-Time" ? { bg:"#E0F2FE", color:"#0369A1" } : t==="Home Tuition" ? { bg:"#FEF3C7", color:"#B45309" } : { bg:"#EBF5FF", color:"#1A56DB" };
+  const _statusBadge = (st) => st==="approved" ? { label:"✅ Live", bg:"#ECFDF5", color:"#059669", border:"#A7F3D0" }
+                             : st==="pending"  ? { label:"⏳ Pending", bg:"#FFFBEB", color:"#D97706", border:"#FDE68A" }
+                             : { label:st || "✅ Live", bg:st?"#F3F4F6":"#ECFDF5", color:st?"#6B7280":"#059669", border:st?"#E5E7EB":"#A7F3D0" };
+
+  // ── ADDED (per request): Apply button on every card + popups for every step ──
+  const [confirmJob,  setConfirmJob]  = useState(null);   // "Apply? 1 credit will be used" popup
+  const [infoPopup,   setInfoPopup]   = useState(null);   // { icon, title, msg, tone, okText, onOk }
+  const [creditsLeft, setCreditsLeft] = useState(null);   // shown in the success popup
+  function askApply(job, e) {
+    if (e) e.stopPropagation();
+    if (!user) return;
+    if (user.role !== "teacher") { setInfoPopup({ icon:"🚫", tone:"err", title:"Only teachers can apply", msg:"Please log in with a Teacher account to apply for jobs." }); return; }
+    if (applied.includes(job.id)) { setInfoPopup({ icon:"✅", tone:"ok", title:"Already applied", msg:`You have already applied for "${job.title}". No credit was used again.` }); return; }
+    if (!canApply) { setInfoPopup({ icon:"📝", tone:"warn", title:"Complete your profile", msg:"Your profile must be at least 70% complete to apply for jobs.", okText:"Go to My Profile", onOk:() => onApplyBlocked && onApplyBlocked() }); return; }
+    if (typeof credits === "number" && credits <= 0) { onNoCredits && onNoCredits(); return; }
+    setSelected(null);
+    setConfirmJob(job);
+  }
+  async function doApply(job) {
+    setConfirmJob(null);
+    setApplying(true); setApplyErr("");
+    try {
+      const token = localStorage.getItem("acadhr_token");
+      const res = await fetch(`${API}/jobs/applications`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", Authorization:"Bearer "+token },
+        body: JSON.stringify({ job_id: job.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setApplied(a => [...a, job.id]);
+        setCreditsLeft(typeof data.credits_left === "number" ? data.credits_left : (typeof credits === "number" ? Math.max(credits - 1, 0) : null));
+        setJobs(js => js.map(x => x.id === job.id ? { ...x, applicants:(Number(x.applicants)||0) + 1 } : x));
+        setApplyJob(job);
+        if (onApplied) onApplied(); // refresh credits in the dashboard
+      } else if (res.status === 409) {
+        setApplied(a => [...a, job.id]);
+        setInfoPopup({ icon:"✅", tone:"ok", title:"Already applied", msg:`You have already applied for "${job.title}". No credit was used.` });
+      } else if (res.status === 402) {
+        onNoCredits && onNoCredits();
+      } else {
+        setInfoPopup({ icon:"⚠️", tone:"err", title:"Couldn't apply", msg: data.message || "Failed to apply. Please try again." });
+      }
+    } catch { setInfoPopup({ icon:"⚠️", tone:"err", title:"Network error", msg:"Please check your internet connection and try again." }); }
+    finally { setApplying(false); }
+  }
 
   const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
@@ -1024,6 +1104,20 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked, onApplied, credits, 
       })
       .catch(() => setLoading(false));
   }, []);
+
+  // ADDED (per request): always show "✓ Applied" — load this teacher's existing applications from the database
+  useEffect(() => {
+    const token = localStorage.getItem("acadhr_token");
+    if (!token || !user || user.role !== "teacher") return;
+    fetch(`${API}/my-applications`, { headers:{ Authorization:"Bearer "+token } })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (!Array.isArray(data)) return;
+        const ids = data.map(a => a.job_id).filter(x => x !== undefined && x !== null);
+        setApplied(prev => Array.from(new Set([...prev, ...ids])));
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line
 
   const filtered = jobs.filter(j =>
     (!filter.subject  || j.subject.toLowerCase().includes(filter.subject.toLowerCase())) &&
@@ -1087,7 +1181,18 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked, onApplied, credits, 
         {loading ? "Loading jobs..." : <><strong style={{ color:"#111827" }}>{filtered.length}</strong> position{filtered.length!==1?"s":""} found</>}
       </div>
 
-      {applyErr && <div className="alert a-err" style={{ marginBottom:14 }}>❌ {applyErr}</div>}
+      {/* CHANGED per request (NOT deleted — deactivated): errors now show as a popup */}
+      {false && applyErr && <div className="alert a-err" style={{ marginBottom:14 }}>❌ {applyErr}</div>}
+      {/* ADDED: responsive tweaks for the Browse Jobs cards and popups */}
+      <style>{`
+        .ibj-portal .overlay{z-index:100001}
+        @media (max-width:520px){
+          .ibj-details-grid{grid-template-columns:1fr !important}
+          .ibj-actions{flex-direction:column}
+          .ibj-pop-btns{flex-direction:column-reverse}
+          .ibj-modal-pad{padding-left:18px !important;padding-right:18px !important}
+        }
+      `}</style>
 
       {loading ? (
         <div style={{ textAlign:"center", padding:"60px 0", color:"#6B7280" }}>
@@ -1098,6 +1203,58 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked, onApplied, credits, 
         <div className="grid3">
           {filtered.map(job => (
             <div key={job.id} style={{ position:"relative" }}>
+              {/* ADDED (per request): card design same as public Browse Jobs page (Share · type · Live badges, Board/Grades/Joining/positions, salary + date, REQ id) */}
+              {(() => { const tb = _typeBadge(job.type); const sb = _statusBadge(job.status); return (
+              <div className="card jcard card-hover" onClick={() => setSelected(job)} style={{ cursor:"pointer" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                  <div style={{ width:44, height:44, borderRadius:12, background:"#EBF5FF", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>🏫</div>
+                  <div style={{ display:"flex", gap:5, flexWrap:"wrap", justifyContent:"flex-end" }}>
+                    <button onClick={(e) => shareJob(job, e)} title="Share this job"
+                      style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#EBF5FF", color:"#1A56DB", border:"1px solid #BFDBFE", borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:700, cursor:"pointer", lineHeight:1.4 }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                        <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" /><line x1="15.4" y1="6.5" x2="8.6" y2="10.5" />
+                      </svg>
+                      Share
+                    </button>
+                    <span style={{ background:tb.bg, color:tb.color, borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:700 }}>{job.type}</span>
+                    <span style={{ background:sb.bg, color:sb.color, border:`1px solid ${sb.border}`, borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:700 }}>{sb.label}</span>
+                  </div>
+                </div>
+                <div style={{ fontWeight:800, fontSize:15, color:"#111827", marginBottom:4, lineHeight:1.3 }}>{job.title}</div>
+                <div style={{ fontSize:13, color:"#1A56DB", fontWeight:700, marginBottom:10 }}>{job.institute || "Institution"}</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:12 }}>
+                  {job.location         && <span style={{ fontSize:12, color:"#6B7280" }}>📍 {job.location}{job.location_state ? `, ${job.location_state}` : ""}</span>}
+                  {job.subject          && <span style={{ fontSize:12, color:"#6B7280" }}>📚 {job.subject}</span>}
+                  {job.board            && <span style={{ fontSize:12, color:"#6B7280" }}>🏫 Board: {job.board}</span>}
+                  {job.grades           && <span style={{ fontSize:12, color:"#6B7280" }}>📖 Grades: {job.grades}</span>}
+                  {job.experience       && <span style={{ fontSize:12, color:"#6B7280" }}>🎓 Exp: {job.experience}</span>}
+                  {job.joining_timeline && <span style={{ fontSize:12, color:"#6B7280" }}>📅 Joining: {job.joining_timeline}</span>}
+                  {job.positions > 1    && <span style={{ fontSize:12, color:"#059669", fontWeight:600 }}>👥 {job.positions} positions</span>}
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:10, borderTop:"1px solid #F3F4F6" }}>
+                  <span style={{ fontWeight:800, fontSize:13, color:"#059669" }}>{job.salary}</span>
+                  <span style={{ fontSize:11, color:"#9CA3AF" }}>{job.posted}</span>
+                </div>
+                {job.requirement_id && (
+                  <div style={{ fontSize:10, color:"#9CA3AF", marginTop:8, fontFamily:"Fira Code,monospace", letterSpacing:.3 }}>🔖 {job.requirement_id}</div>
+                )}
+                {/* ADDED (per request): View Details + Apply buttons */}
+                <div className="ibj-actions" style={{ display:"flex", gap:8, marginTop:14 }}>
+                  <button className="btn btn-ghost btn-sm" style={{ flex:1, justifyContent:"center" }}
+                    onClick={(e) => { e.stopPropagation(); setSelected(job); }}>View Details</button>
+                  {applied.includes(job.id) ? (
+                    <button className="btn btn-sm" disabled onClick={(e) => e.stopPropagation()}
+                      style={{ flex:1, justifyContent:"center", background:"#ECFDF5", color:"#059669", border:"1px solid #A7F3D0", fontWeight:700 }}>✓ Applied</button>
+                  ) : (
+                    <button className="btn btn-primary btn-sm" style={{ flex:1, justifyContent:"center" }}
+                      disabled={applying} onClick={(e) => askApply(job, e)}>Apply Now →</button>
+                  )}
+                </div>
+              </div>
+              ); })()}
+              {/* CHANGED per request (NOT deleted — deactivated): old Browse Jobs card kept below */}
+              {false && (
               <div className="card jcard card-hover" onClick={() => setSelected(job)} style={{ cursor:"pointer" }}>
                 <div className="flexb" style={{ marginBottom:14 }}>
                   <div className="jcard-logo">🏫</div>
@@ -1118,7 +1275,9 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked, onApplied, credits, 
                 <div style={{ marginTop:6, fontSize:11, color:"#9CA3AF" }}>🕐 {job.posted}</div>
                 <div style={{ marginTop:8, fontSize:11, color:"#1A56DB", fontWeight:600 }}>View Details →</div>
               </div>
-              {applied.includes(job.id) && (
+              )}
+              {/* CHANGED per request (NOT deleted — deactivated): corner badge overlapped Share/Live; card now shows "✓ Applied" button */}
+              {false && applied.includes(job.id) && (
                 <div style={{ position:"absolute", top:12, right:12 }}>
                   <span className="badge bgreen">✓ Applied</span>
                 </div>
@@ -1134,8 +1293,16 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked, onApplied, credits, 
         </div>
       )}
 
+      {/* ADDED: Share confirmation toast (clipboard fallback) */}
+      {shareToast && (
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#111827", color:"#fff", padding:"10px 18px", borderRadius:10, fontSize:13, fontWeight:600, zIndex:99999, boxShadow:"0 8px 24px rgba(0,0,0,.25)" }}>
+          ✓ Job link copied to clipboard
+        </div>
+      )}
+
       {/* ── Job Detail Modal ─────────────────────────────────────────────── */}
-      {selected && (
+      {/* CHANGED: rendered over the whole page (portal) so it covers sidebar & floating icons */}
+      {selected && createPortal(<div className="ibj-portal">
         <div className="overlay" onClick={() => setSelected(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth:600, padding:0, overflow:"hidden" }}>
 
@@ -1167,7 +1334,7 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked, onApplied, credits, 
               </div>
 
               {/* Details grid — NO school email/phone */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:18 }}>
+              <div className="ibj-details-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:18 }}>
                 {[
                   ["💰 Salary",        selected.salary],
                   ["📚 Subject",       selected.subject],
@@ -1211,18 +1378,29 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked, onApplied, credits, 
                   ✓ Already Applied
                 </button>
               ) : (
+                <>
+                {/* ADDED: Apply asks for confirmation (1 credit) in a popup */}
+                <button className="btn btn-primary" style={{ flex:2, justifyContent:"center" }}
+                  onClick={() => askApply(selected)} disabled={applying}>
+                  {applying ? "Submitting..." : "Apply Now →"}
+                </button>
+                {/* CHANGED per request (NOT deleted — deactivated): direct apply without confirmation */}
+                {false && (
                 <button className="btn btn-primary" style={{ flex:2, justifyContent:"center" }}
                   onClick={() => handleApply(selected)} disabled={applying}>
                   {applying ? "Submitting..." : "Apply Now →"}
                 </button>
+                )}
+                </>
               )}
             </div>
           </div>
         </div>
-      )}
+      </div>, document.body)}
 
       {/* ── Apply success ─────────────────────────────────────────────────── */}
-      {applyJob && (
+      {/* CHANGED: rendered over the whole page (portal) */}
+      {applyJob && createPortal(<div className="ibj-portal">
         <div className="overlay" onClick={() => setApplyJob(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth:440 }}>
             <div style={{ textAlign:"center", padding:"10px 0 20px" }}>
@@ -1231,6 +1409,10 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked, onApplied, credits, 
               <p style={{ color:"#6B7280", fontSize:14 }}>You applied for <strong>{applyJob.title}</strong> at <strong style={{ color:"#1A56DB" }}>{applyJob.institute}</strong></p>
             </div>
             <div className="alert a-ok" style={{ marginBottom:14 }}>✅ The school will review your profile and contact you if shortlisted.</div>
+            {/* ADDED: credit used / credits left */}
+            <div style={{ background:"#FFF7ED", border:"1px solid #FDE68A", borderRadius:10, padding:"12px 14px", marginBottom:14, fontSize:13, color:"#92400E", fontWeight:700, textAlign:"center" }}>
+              🪙 1 credit used{creditsLeft !== null ? ` · ${creditsLeft} credit${creditsLeft === 1 ? "" : "s"} left` : ""}
+            </div>
             <div style={{ background:"#EBF5FF", borderRadius:10, padding:"12px 14px", marginBottom:18, fontSize:13, color:"#1E429F" }}>
               💡 Track your application in <strong>My Applications</strong>
             </div>
@@ -1239,7 +1421,48 @@ function InlineBrowseJobs({ user, canApply, onApplyBlocked, onApplied, credits, 
             </button>
           </div>
         </div>
-      )}
+      </div>, document.body)}
+
+      {/* ── ADDED: Apply confirmation popup (1 credit) ───────────────────────── */}
+      {confirmJob && createPortal(<div className="ibj-portal">
+        <div className="overlay" onClick={() => setConfirmJob(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth:440, textAlign:"center" }}>
+            <div style={{ width:68, height:68, borderRadius:"50%", background:"#EBF5FF", border:"3px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 14px", fontSize:30 }}>📨</div>
+            <h2 style={{ fontSize:20, fontWeight:900, color:"#111827", marginBottom:6 }}>Apply for this job?</h2>
+            <p style={{ color:"#6B7280", fontSize:14, marginBottom:14 }}>
+              <strong style={{ color:"#111827" }}>{confirmJob.title}</strong><br />
+              <span style={{ color:"#1A56DB", fontWeight:700 }}>{confirmJob.institute}</span>
+            </p>
+            <div style={{ background:"#FFF7ED", border:"1px solid #FDE68A", borderRadius:10, padding:"12px 14px", marginBottom:18, fontSize:13, color:"#92400E", fontWeight:700 }}>
+              🪙 1 credit will be used{typeof credits === "number" ? ` · You have ${credits} credit${credits === 1 ? "" : "s"} → ${Math.max(credits - 1, 0)} after applying` : ""}
+            </div>
+            <div className="ibj-pop-btns" style={{ display:"flex", gap:10 }}>
+              <button className="btn btn-ghost" style={{ flex:1, justifyContent:"center" }} onClick={() => setConfirmJob(null)}>Cancel</button>
+              <button className="btn btn-primary" style={{ flex:1, justifyContent:"center" }} disabled={applying} onClick={() => doApply(confirmJob)}>
+                {applying ? "Submitting..." : "Yes, Apply"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>, document.body)}
+
+      {/* ── ADDED: Info / error popup ─────────────────────────────────────── */}
+      {infoPopup && createPortal(<div className="ibj-portal">
+        <div className="overlay" onClick={() => setInfoPopup(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth:420, textAlign:"center" }}>
+            <div style={{ width:68, height:68, borderRadius:"50%", margin:"0 auto 14px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:30,
+              background: infoPopup.tone==="ok" ? "#ECFDF5" : infoPopup.tone==="warn" ? "#FFF7ED" : "#FEF2F2",
+              border: `3px solid ${infoPopup.tone==="ok" ? "#A7F3D0" : infoPopup.tone==="warn" ? "#FDE68A" : "#FECACA"}` }}>{infoPopup.icon}</div>
+            <h2 style={{ fontSize:20, fontWeight:900, color:"#111827", marginBottom:8 }}>{infoPopup.title}</h2>
+            <p style={{ color:"#6B7280", fontSize:14, lineHeight:1.6, marginBottom:20 }}>{infoPopup.msg}</p>
+            <div className="ibj-pop-btns" style={{ display:"flex", gap:10 }}>
+              {infoPopup.onOk && <button className="btn btn-ghost" style={{ flex:1, justifyContent:"center" }} onClick={() => setInfoPopup(null)}>Close</button>}
+              <button className="btn btn-primary" style={{ flex:1, justifyContent:"center" }}
+                onClick={() => { const f = infoPopup.onOk; setInfoPopup(null); if (f) f(); }}>{infoPopup.okText || "OK"}</button>
+            </div>
+          </div>
+        </div>
+      </div>, document.body)}
     </div>
   );
 }

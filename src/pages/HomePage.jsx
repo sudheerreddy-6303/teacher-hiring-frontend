@@ -835,6 +835,42 @@ function HomePage({ setPage }) {
   }, []);
   const goToHeroSlide = (i) => setHeroSlide(((i % heroPosters.length) + heroPosters.length) % heroPosters.length);
 
+  // Home banner slider — shows the 4 NEW banners ONE BY ONE, sliding right → left,
+  // in a SEAMLESS forward loop. Each banner's built-in white box holds a live,
+  // auto-scrolling list fed from the DB. (ADDED — old 5-poster code above kept.)
+  //   list  = which live array fills the white box
+  //   go    = page the "View All" / card click opens
+  //   cta   = label on the per-row button
+  const bannerDefs = [
+    { key:"tutors",   img:"/home-banner-tutors.png",   title:"🏫 Schools Hiring Now",   list:"schools",  go:"jobs",     cta:"View",  box:[63.6,17.3,97.5,78.4] },
+    { key:"teachers", img:"/home-banner-teachers.png", title:"📣 Latest Teaching Jobs", list:"jobs",     go:"jobs",     cta:"Apply", box:[64.8,14.8,97.4,74.9] },
+    { key:"parents",  img:"/home-banner-parents.png",  title:"🧑‍🏫 Top Tutors for You",  list:"tutors",   go:"tutors",   cta:"View",  box:[63.1,18.6,97.3,80.1] },
+    { key:"schools",  img:"/home-banner-schools.png",  title:"👩‍🏫 Qualified Teachers",  list:"teachers", go:"teachers", cta:"View",  box:[66.1,16.6,97.7,81.8] },
+  ];
+  const bannerSlides = [...bannerDefs, bannerDefs[0]]; // append a clone of #1 for the seamless wrap
+  const [bannerIdx, setBannerIdx]   = useState(0);
+  const [bannerAnim, setBannerAnim] = useState(true);
+  // Auto-advance one banner at a time (slow — longer hold between slides).
+  useEffect(() => {
+    const t = setInterval(() => setBannerIdx(i => i + 1), 9000);
+    return () => clearInterval(t);
+  }, []);
+  // When we reach the cloned first slide at the end, jump back to the real first
+  // instantly (no animation) once the slide finishes — so the loop never rewinds.
+  useEffect(() => {
+    if (bannerIdx === bannerSlides.length - 1) {
+      const t = setTimeout(() => { setBannerAnim(false); setBannerIdx(0); }, 1250);
+      return () => clearTimeout(t);
+    }
+  }, [bannerIdx]);
+  // Re-enable the sliding animation on the next frame after an instant jump.
+  useEffect(() => {
+    if (!bannerAnim) {
+      const r = requestAnimationFrame(() => requestAnimationFrame(() => setBannerAnim(true)));
+      return () => cancelAnimationFrame(r);
+    }
+  }, [bannerAnim]);
+
   // Tuition requirements posted by parents (public, fetched from DB)
   const [homeTuitions, setHomeTuitions] = useState([]);
   useEffect(() => {
@@ -1039,6 +1075,93 @@ function HomePage({ setPage }) {
     return live.length ? { ...g, cards: live } : g;
   });
 
+  // ── Banner white-box scroll lists (ADDED) ───────────────────────────────
+  // Maps a live DB array into the small card shape the banner box scrolls.
+  // Falls back to a few sample rows when the DB list is empty, so the box is
+  // never blank on a fresh database. Purely additive.
+  const _bannerSamples = {
+    jobs: [
+      { t:"Mathematics Teacher", s:"Delhi Public School, Hyderabad", m:"Class 9-12 · Full Time", d:"Full Time role · On-site · CBSE. Apply now to get shortlisted.", ic:"🏫", bg:"#DBEAFE" },
+      { t:"Physics Teacher",     s:"Sri Chaitanya Jr College",       m:"Class 11-12 · Full Time", d:"Senior-secondary Physics faculty for IIT/NEET batches. Immediate joining.", ic:"🏛️", bg:"#EDE9FE" },
+      { t:"English Teacher",     s:"Oakridge Intl School",           m:"Class 6-10 · Full Time", d:"Middle-school English teacher · IGCSE/CBSE. Apply now to get shortlisted.", ic:"🏫", bg:"#FFEDD5" },
+      { t:"Biology Faculty",     s:"Narayana College, Guntur",       m:"Class 11-12 · Full Time", d:"NEET-focused Biology faculty · on-site. Great growth opportunity.", ic:"🧪", bg:"#DCFCE7" },
+    ],
+    tutors: [
+      { t:"Ananya Sharma", s:"Mathematics Tutor · 5+ yrs", m:"Online / Home", d:"M.Sc Mathematics. Teaches Class 6-12 & JEE foundation. Available evenings.", ic:"🧑‍🏫", bg:"#EDE9FE" },
+      { t:"Rahul Verma",   s:"Physics Tutor · 7 yrs",      m:"Online",        d:"B.Tech, IIT alumnus. Teaches Physics & Chemistry for JEE/NEET. Weekend slots.", ic:"👨‍🏫", bg:"#DBEAFE" },
+      { t:"Sneha Reddy",   s:"English Tutor · 4+ yrs",     m:"Home",          d:"M.A English. Spoken English, grammar & writing for Class 1-8. Flexible timings.", ic:"👩‍🏫", bg:"#DCFCE7" },
+      { t:"Divya Nair",    s:"Maths Tutor · JEE",          m:"Online",        d:"Teaches Class 11-12 Maths & JEE advanced. Doubt-solving and weekly tests.", ic:"🧑‍🏫", bg:"#FFEDD5" },
+    ],
+    teachers: [
+      { t:"Priya Reddy",  s:"Mathematics Teacher · 5 yrs", m:"Hyderabad · B.Ed",  d:"B.Ed, M.Sc. Teaches Mathematics for Class 9-12 (CBSE, State). Available now.", ic:"👩‍🏫", bg:"#DBEAFE" },
+      { t:"Rahul Sharma", s:"Science Teacher · 3 yrs",     m:"Bangalore · M.Sc",  d:"M.Sc Physics. Teaches Science & Physics for Class 8-10 (ICSE, CBSE).", ic:"👨‍🏫", bg:"#DCFCE7" },
+      { t:"Sneha Verma",  s:"English Teacher · 4 yrs",     m:"Chennai · M.A",     d:"M.A English, B.Ed. Teaches English & Literature for Class 6-12. Immediate.", ic:"👩‍🏫", bg:"#FFEDD5" },
+      { t:"Arjun Kumar",  s:"Physics Teacher · 6 yrs",     m:"Pune · M.Sc, B.Ed", d:"M.Sc, B.Ed. Senior Physics teacher for Class 11-12 (CBSE). JEE/NEET coaching.", ic:"👨‍🏫", bg:"#EDE9FE" },
+    ],
+    schools: [
+      { t:"Delhi Public School",   s:"Hyderabad, Telangana", m:"Actively hiring", d:"Delhi Public School is hiring qualified educators in Hyderabad. View openings.", ic:"🏫", bg:"#DBEAFE" },
+      { t:"Oakridge Intl School",  s:"Bengaluru",            m:"Actively hiring", d:"Oakridge International is hiring teachers across subjects in Bengaluru.", ic:"🏢", bg:"#DCFCE7" },
+      { t:"Sri Chaitanya College", s:"Vijayawada",           m:"Actively hiring", d:"Sri Chaitanya is hiring junior-college faculty for IIT/NEET streams.", ic:"🏛️", bg:"#EDE9FE" },
+      { t:"Narayana School",       s:"Guntur",               m:"Actively hiring", d:"Narayana School is hiring qualified educators in Guntur. Tap to view roles.", ic:"🏫", bg:"#FFEDD5" },
+    ],
+  };
+  const _clip = (s, n = 42) => { s = (s == null ? "" : String(s)).trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
+  const _clipd = (s, n = 100) => { s = (s == null ? "" : String(s)).replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
+  const scrollListFor = (listKey) => {
+    let cards = [];
+    if (listKey === "jobs") {
+      cards = (liveJobs || []).map(r => ({
+        t: _clip(r.title || "Teaching Job"),
+        s: _clip(`${r.institution_name || "School"}${r.location_city ? `, ${r.location_city}` : ""}`),
+        m: _clip(`${r.subject ? r.subject + " · " : ""}${r.job_type || r.work_mode || "Full Time"}`),
+        d: _clipd([
+          `${r.job_type || "Full Time"} role`,
+          r.work_mode,
+          (r.salary_range || r.salary) ? `Salary ${r.salary_range || r.salary}` : "",
+          "Apply now to get shortlisted.",
+        ].filter(Boolean).join(" · ")),
+        ic: "🏫", bg: "#DBEAFE",
+      }));
+    } else if (listKey === "tutors") {
+      cards = (liveTutors || []).map(r => {
+        const subj = (r.subject || r.subjects || "").toString().split(",")[0].trim();
+        return {
+          t: _clip(r.name || "Tutor"),
+          s: _clip([subj ? subj + " Tutor" : "Tutor", r.experience].filter(Boolean).join(" · ")),
+          m: _clip(r.teaching_mode || r.availability || "Online / Home"),
+          d: _clipd([
+            r.qualification || r.qualifications ? `${r.qualification || r.qualifications}.` : "",
+            (r.subjects || r.subject) ? `Teaches ${r.subjects || r.subject}.` : "",
+            r.availability ? `Available: ${r.availability}.` : "",
+          ].filter(Boolean).join(" ") || "Experienced private tutor — view full profile."),
+          ic: "🧑‍🏫", bg: "#EDE9FE",
+        };
+      });
+    } else if (listKey === "teachers") {
+      cards = (liveTeachers || []).map(r => ({
+        t: _clip(r.name || r.full_name || "Teacher"),
+        s: _clip([r.specialization ? `${r.specialization} Teacher` : "Teacher", r.total_experience].filter(Boolean).join(" · ")),
+        m: _clip([r.current_location || r.city, r.qualification].filter(Boolean).join(" · ")),
+        d: _clipd([
+          r.qualification ? `${r.qualification}.` : "",
+          (r.subjects || r.specialization) ? `Teaches ${r.subjects || r.specialization}` : "",
+          r.boards_handled ? `(${r.boards_handled})` : "",
+          r.grades_handling ? `· Grades ${r.grades_handling}` : "",
+        ].filter(Boolean).join(" ") || "Qualified educator — view full profile."),
+        ic: "👩‍🏫", bg: "#DCFCE7",
+      }));
+    } else if (listKey === "schools") {
+      cards = (liveSchools || []).map(r => ({
+        t: _clip(r.institute_name || r.name || "School"),
+        s: _clip(r.city || r.location || ""),
+        m: "Actively hiring",
+        d: _clipd(`${r.institute_name || r.name || "This school"} is hiring qualified educators${r.city || r.location ? ` in ${r.city || r.location}` : ""}. Tap to view current openings.`),
+        ic: "🏫", bg: "#FFEDD5",
+      }));
+    }
+    return cards.length ? cards : (_bannerSamples[listKey] || []);
+  };
+
   // Refs + scroll handler for the arrow-controlled rows below.
   const communityScrollRefs = useRef([]);
   const scrollCommunityRow = (gi, dir) => {
@@ -1189,6 +1312,143 @@ function HomePage({ setPage }) {
   return (
     <div className="home-page">
       <Navbar setPage={setPage} page="home" />
+
+      {/* ── HOME BANNER SLIDER — 4 banners, ONE BY ONE, seamless forward loop.
+           Each banner's built-in white box holds a LIVE auto-scrolling list. (ADDED) ── */}
+      <section className="home-banner-slider" style={{ width:"100%", overflow:"hidden", background:"#fff" }}>
+        <style>{`
+          /* Offset the fixed navbar so the FULL banner shows (top wasn't hidden behind it). */
+          .home-banner-slider { padding: 90px 0 4px; }
+          @media (max-width: 900px){ .home-banner-slider { padding-top: 68px; } }
+          .home-banner-slider .hbx-img { display:block; width:100%; height:auto; }
+          .home-banner-slider .hbx-imgclip { display:block; width:100%; overflow:hidden; line-height:0; }
+
+          /* Live scroll panel sitting inside the banner's white box */
+          .hbx-panel { position:absolute; display:flex; flex-direction:column; overflow:hidden; z-index:3; }
+          .hbx-head { display:flex; align-items:center; justify-content:space-between; font-weight:900; color:#0F2E73; font-size:1.2vw; padding:0 .3vw .7vw; }
+          .hbx-va { color:#1A56DB; font-size:.9vw; font-weight:800; cursor:pointer; white-space:nowrap; }
+          .hbx-scroller { flex:1; overflow:hidden; position:relative;
+            -webkit-mask-image:linear-gradient(to bottom,transparent,#000 5%,#000 95%,transparent);
+            mask-image:linear-gradient(to bottom,transparent,#000 5%,#000 95%,transparent); }
+          .hbx-track { display:flex; flex-direction:column; gap:1vw; animation:hbxScrollUp 22s linear infinite; }
+          /* NOTE: duration is set inline per panel = (card count × fixed seconds)
+             so every list scrolls at the SAME per-card speed, regardless of length.
+             Cards are sized so only ~2 profiles are visible in the box at a time. */
+          .hbx-panel:hover .hbx-track { animation-play-state:paused; }
+          @keyframes hbxScrollUp { from { transform:translateY(0); } to { transform:translateY(-50%); } }
+          .hbx-card { display:flex; align-items:flex-start; gap:.9vw; background:#F7FAFF; border:1px solid #EEF2F9; border-radius:1vw; padding:1.1vw 1.2vw; cursor:pointer; min-height:9vw; box-sizing:border-box; }
+          .hbx-ic { width:3.4vw; height:3.4vw; border-radius:.8vw; display:flex; align-items:center; justify-content:center; flex:0 0 auto; font-size:1.6vw; }
+          .hbx-mid { flex:1; min-width:0; }
+          .hbx-tt { font-weight:800; color:#1F2937; font-size:1.25vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+          .hbx-ss { color:#475569; font-size:1vw; margin-top:.25vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
+          .hbx-mm { color:#8A94A6; font-size:.88vw; margin-top:.15vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+          .hbx-dd { color:#5B6472; font-size:.9vw; line-height:1.4; margin-top:.4vw; white-space:normal;
+            display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+          .hbx-ap { background:#1A56DB; color:#fff; border:none; border-radius:.7vw; font-weight:800; font-size:1vw; padding:.6vw 1vw; cursor:pointer; flex:0 0 auto; align-self:center; }
+          @media (prefers-reduced-motion: reduce){ .hbx-track { animation:none; } }
+
+          /* ── RESPONSIVE: below 900px the white box is too small for readable text,
+             so the live list drops BELOW the banner art as a full-width card. ── */
+          @media (max-width: 900px){
+            /* Crop the empty white box off the banner: scale the image up and clip
+               the right side at the box's left edge (--cropw is set per banner). */
+            .home-banner-slider .hbx-img { width: var(--cropw, 100%); max-width:none; }
+            .hbx-panel {
+              position:static !important; left:auto !important; top:auto !important;
+              width:auto !important; height:auto !important;
+              margin:12px 14px 2px; background:#fff; border:1px solid #EEF2F7;
+              border-radius:14px; box-shadow:0 8px 22px rgba(16,42,120,.12); padding:12px;
+            }
+            .hbx-head { font-size:16px; padding:0 2px 9px; }
+            .hbx-va   { font-size:12.5px; }
+            .hbx-scroller { flex:none; height:244px; } /* ~2 profiles visible (with description) */
+            .hbx-track { gap:10px; }
+            .hbx-card { gap:10px; border-radius:12px; padding:11px 12px; min-height:0; align-items:flex-start; }
+            .hbx-ic   { width:40px; height:40px; border-radius:10px; font-size:19px; }
+            .hbx-tt   { font-size:14.5px; }
+            .hbx-ss   { font-size:12.5px; margin-top:2px; }
+            .hbx-mm   { font-size:11.5px; margin-top:1px; }
+            .hbx-dd   { font-size:12px; line-height:1.4; margin-top:5px; }
+            .hbx-ap   { font-size:12.5px; border-radius:8px; padding:8px 13px; align-self:center; }
+            .hbx-dots { display:none; } /* auto-advances; hidden so it doesn't overlap the list */
+          }
+          @media (max-width: 480px){
+            .hbx-scroller { height:232px; }
+            .hbx-head { font-size:15px; }
+            .hbx-tt { font-size:14px; } .hbx-ss { font-size:12px; } .hbx-mm { font-size:11px; }
+          }
+        `}</style>
+        <div style={{ position:"relative", width:"100%", overflow:"hidden" }}>
+          <div
+            style={{
+              display:"flex",
+              width:`${bannerSlides.length * 100}%`,
+              transform:`translateX(-${bannerIdx * (100 / bannerSlides.length)}%)`,
+              transition: bannerAnim ? "transform 1.2s ease" : "none",
+            }}
+          >
+            {bannerSlides.map((def, i) => {
+              const cards = scrollListFor(def.list);
+              const bx = def.box;
+              return (
+                <div key={i} style={{ flex:`0 0 ${100 / bannerSlides.length}%`, maxWidth:`${100 / bannerSlides.length}%`, position:"relative" }}>
+                  {/* On mobile/tablet the empty white box is cropped off (crop point = box's left edge). */}
+                  <div className="hbx-imgclip" style={{ ["--cropw"]: `${(10000 / bx[0]).toFixed(1)}%` }}>
+                    <img className="hbx-img" src={def.img} alt={`AcadHr ${def.key} banner`} loading="eager" />
+                  </div>
+                  <div
+                    className="hbx-panel"
+                    style={{
+                      left:   `${bx[0] + 0.8}%`,
+                      top:    `${bx[1] + 2.2}%`,
+                      width:  `${(bx[2] - bx[0]) - 1.6}%`,
+                      height: `${(bx[3] - bx[1]) - 4.2}%`,
+                    }}
+                  >
+                    <div className="hbx-head">
+                      <span>{def.title}</span>
+                      <span className="hbx-va" onClick={() => setPage(def.go)}>View All →</span>
+                    </div>
+                    <div className="hbx-scroller">
+                      <div className="hbx-track" style={{ animationDuration: `${Math.max(cards.length, 1) * 4.5}s` }}>
+                        {cards.concat(cards).map((c, k) => (
+                          <div className="hbx-card" key={k} onClick={() => setPage(def.go)}>
+                            <div className="hbx-ic" style={{ background:c.bg }}>{c.ic}</div>
+                            <div className="hbx-mid">
+                              <div className="hbx-tt">{c.t}</div>
+                              <div className="hbx-ss">{c.s}</div>
+                              <div className="hbx-mm">{c.m}</div>
+                              {c.d ? <div className="hbx-dd">{c.d}</div> : null}
+                            </div>
+                            <button className="hbx-ap" onClick={(e) => { e.stopPropagation(); setPage(def.go); }}>{def.cta}</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Dots (4 — the cloned wrap slide maps back to the first) */}
+          <div className="hbx-dots" style={{ position:"absolute", bottom:10, left:"50%", transform:"translateX(-50%)", display:"flex", gap:7, zIndex:4 }}>
+            {bannerDefs.map((d, i) => {
+              const activeDot = bannerIdx % bannerDefs.length;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  aria-label={`Go to banner ${i + 1}`}
+                  onClick={() => { setBannerAnim(true); setBannerIdx(i); }}
+                  style={{ width:9, height:9, borderRadius:"50%", border:"none", cursor:"pointer", padding:0, background: i === activeDot ? "#1A56DB" : "rgba(17,24,39,.25)", transition:"background .2s" }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* ── HERO (original — kept in code, not rendered; replaced below by the poster carousel) ── */}
       {false && (
       <section className="hero-section" style={{ display:"flex", flexDirection:"column", background:"#fff", position:"relative", overflow:"hidden", minHeight:"auto" }}>
@@ -1472,8 +1732,11 @@ function HomePage({ setPage }) {
       {/* ── ADMIN-MANAGED HOME BANNERS (renders only when the admin adds some) ── */}
       <SiteBanner placement="home" onNavigate={setPage} fallback={null} />
 
-      {/* ── LIVE POSTED-JOBS BANNER (auto — shows newest approved jobs) ── */}
+      {/* ── LIVE POSTED-JOBS BANNER (auto — shows newest approved jobs) ──
+           DISABLED per request — code kept, not deleted. Change false to true to re-enable. */}
+      {false && (
       <JobsBanner setPage={setPage} />
+      )}
 
       {/* ── COUNTRIES WE ARE PROVIDING TUITION (marquee) ──────────────────── */}
       <CountriesMarquee />

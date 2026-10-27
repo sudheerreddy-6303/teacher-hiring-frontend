@@ -4,6 +4,11 @@ import { SUBS } from "../../constants";
 import { COUNTRIES, INDIAN_STATES, citiesForState } from "../../locationData"; // ADDED: location dropdown data
 import { Toast, Spinner, JobCard, OtpBoxes, InlineBrowseJobs, FilterBar } from "../../components/common/Shared";
 import './Auth.css';
+// ADDED: teacher registration shows the same fields as Admin → Teachers → Add Teacher
+import TeacherSignupProfile, { TEACHER_SIGNUP_DEFAULTS, teacherSignupMissing } from "./TeacherSignupProfile";
+import SaveErrorPopup from "../common/SaveErrorPopup";
+import { createPortal } from "react-dom"; // popup rendered outside the <form> so its OK button cannot submit it
+import apiBase from "../../config/apiBase"; // ADDED: for the registration photo upload
 
 // Tutor multi-select chip styles
 const tutorChipWrap = { display:"flex", flexWrap:"wrap", gap:8 };
@@ -24,6 +29,7 @@ function AuthPage({ mode, setPage }) {
   const [step, setStep]           = useState(1);
   const [err,  setErr]            = useState("");
   const [loading, setLoading]     = useState(false);
+  const [tpMissing, setTpMissing] = useState(null); // ADDED: popup listing missing teacher fields
 
   // OTP state
   const [otpInput,    setOtpInput]    = useState(["","","","","",""]);
@@ -292,6 +298,12 @@ function AuthPage({ mode, setPage }) {
         if (!String(form.bio || "").trim()) { setErr("Please write a short bio."); return; }
         */
       }
+      // ADDED: teacher registration — popup lists every missing required field
+      if (form.role === "teacher") {
+        const _miss = teacherSignupMissing({ ...TEACHER_SIGNUP_DEFAULTS, ...(form.tp || {}) });
+        if (!String(form.bio || "").trim()) _miss.push("Short Bio");
+        if (_miss.length) { setTpMissing(_miss); return; }
+      }
       // ADDED (mandatory fields): teacher fields are required
       if (form.role === "teacher") {
         if (!String(form.subject || "").trim())       { setErr("Please select at least one subject."); return; }
@@ -349,6 +361,15 @@ function AuthPage({ mode, setPage }) {
       };
       const data = await import('../../api.js').then(m => m.authAPI.signup(payload));
       login(data.user, data.token);
+      // ADDED: upload the profile photo chosen at registration (same endpoint My Profile uses).
+      // A failed photo upload never blocks the new account — it can be added later in My Profile.
+      if (form.role === "teacher" && form.tp && form.tp._photo_file) {
+        try {
+          const fd = new FormData();
+          fd.append("photo", form.tp._photo_file);
+          await fetch(apiBase() + "/teacher/upload-photo", { method:"POST", headers:{ Authorization: "Bearer " + data.token }, body: fd });
+        } catch (e) { console.error("Registration photo upload failed:", e); }
+      }
       setPage("dashboard");
     } catch (ex) {
       setOtpErr(ex.message);
@@ -816,7 +837,26 @@ function AuthPage({ mode, setPage }) {
               {/* Step 2 — Professional details */}
               {step===2 && (form.role==="teacher" || form.role==="tutor") && (
                 <>
+                  {/* ADDED: teacher registration now uses the SAME profile sections as Admin → Teachers → Add Teacher */}
                   {form.role==="teacher" && (
+                    <TeacherSignupProfile form={{ ...TEACHER_SIGNUP_DEFAULTS, ...(form.tp || {}) }} up={(k,v) => setForm(f => {
+                      const tp = { ...(f.tp || {}), [k]: v };
+                      // keep the original teacher fields in sync so the existing checks & signup keep working
+                      const sync = {};
+                      if (k === "specialization")   sync.subject = v;
+                      if (k === "total_experience") sync.experience = v;
+                      if (k === "qualification")    sync.qualification = v;
+                      return { ...f, tp, ...sync };
+                    })} />
+                  )}
+                  {form.role==="teacher" && tpMissing && createPortal(
+                    <SaveErrorPopup show={!!tpMissing} onClose={() => setTpMissing(null)}
+                      title="Please fill the required fields"
+                      message={"Missing: " + (tpMissing || []).join(", ")} />,
+                    document.body
+                  )}
+                  {/* CHANGED per request (NOT deleted — kept, deactivated): old 3 teacher fields replaced by the section above */}
+                  {false && form.role==="teacher" && (
                     <>
                       <div className="fg"><label className="flabel">Subject Specialization (select one or more)</label>
                         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(150px, 1fr))", gap:8, border:"1px solid #E5E7EB", borderRadius:10, padding:"12px", background:"#FAFBFC" }}>
