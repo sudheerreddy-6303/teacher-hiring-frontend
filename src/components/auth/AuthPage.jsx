@@ -25,7 +25,16 @@ function AuthPage({ mode, setPage }) {
   const { login } = useAuth();
   const [form, setForm] = useState(() => {
     const savedRole = localStorage.getItem("acadhr_selected_role") || "teacher";
-    return { name:"", email:"", password:"", role: savedRole, phone:"", city:"", subject:"", experience:"", qualification:"", bio:"", institute_type:"", est_year:"", student_count:"", website:"", hourly_rate:"", teaching_mode:"Both", subjects:[], qualifications:[], availability:[], address:"", tutor_location:"", pincode:"", class_link:"", tutor_courses:[], demo_class_link:"", about_yourself:"", tutor_terms_accepted:false, resume_base64:"", resume_name:"", resume_type:"", preferred_times:[], parent_subjects:[], parent_courses:[], parent_days:[], parent_pincode:"", parent_state:"", parent_landmark:"", hourly_budget:"", institute_name:"", gender:"", tutor_photo_base64:"", tutor_photo_name:"", tutor_photo_type:"", classes_taught:[], state:"", country:"India", city_other:"", state_other:"" };
+    return { name:"", email:"", password:"", role: savedRole, phone:"", city:"", subject:"", experience:"", qualification:"", bio:"", institute_type:"", est_year:"", student_count:"", website:"", hourly_rate:"", teaching_mode:"Both", subjects:[], qualifications:[], availability:[], address:"", tutor_location:"", pincode:"", class_link:"", tutor_courses:[], demo_class_link:"", about_yourself:"", tutor_terms_accepted:false, resume_base64:"", resume_name:"", resume_type:"", preferred_times:[], parent_subjects:[], parent_courses:[], parent_days:[], parent_pincode:"", parent_state:"", parent_landmark:"", hourly_budget:"", institute_name:"", gender:"", tutor_photo_base64:"", tutor_photo_name:"", tutor_photo_type:"", classes_taught:[], state:"", country:"India", city_other:"", state_other:"",
+      // ── ADDED: full School / Institution registration fields (additive) ──
+      school_logo_base64:"", school_logo_name:"", school_logo_type:"",
+      board_university:"", contact_person:"", designation:"", official_email:"", alt_phone:"",
+      area_locality:"", full_address:"", school_pincode:"",
+      has_branches:"No", branches:[],
+      doc_reg_base64:"", doc_reg_name:"", doc_reg_type:"",
+      doc_aff_base64:"", doc_aff_name:"", doc_aff_type:"",
+      doc_id_base64:"", doc_id_name:"", doc_id_type:"",
+      confirm_password:"", school_terms_accepted:false, school_privacy_accepted:false };
   });
   const [step, setStep]           = useState(1);
   const [err,  setErr]            = useState("");
@@ -103,6 +112,27 @@ function AuthPage({ mode, setPage }) {
       toast.success("Tutor photo added", file.name); // ADDED
     };
     reader.readAsDataURL(file);
+  }
+
+  // ADDED: generic file reader for School logo / verification docs (prefix_base64/_name/_type)
+  function onSchoolFile(file, prefix, maxMB = 5) {
+    if (!file) return;
+    if (file.size > maxMB * 1024 * 1024) { setErr(`File must be under ${maxMB} MB.`); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      up(prefix + "_base64", reader.result);
+      up(prefix + "_name", file.name);
+      up(prefix + "_type", file.type || "application/octet-stream");
+      toast.success("File added", file.name);
+    };
+    reader.readAsDataURL(file);
+  }
+  // ADDED: branch array helpers for School / Institution registration
+  const BLANK_BRANCH = { name:"", code:"", contact_person:"", email:"", mobile:"", state:"", city:"", area:"", full_address:"", pincode:"", is_primary:"No" };
+  function addBranch() { up("branches", [...(form.branches || []), { ...BLANK_BRANCH }]); }
+  function removeBranch(i) { up("branches", (form.branches || []).filter((_, x) => x !== i)); }
+  function updateBranch(i, key, val) {
+    up("branches", (form.branches || []).map((b, x) => x === i ? { ...b, [key]: val } : b));
   }
 
   // ADDED: mirror validation / OTP errors as toast popups (inline message is kept too).
@@ -255,16 +285,18 @@ function AuthPage({ mode, setPage }) {
   async function handleSignupNext(e) {
     e.preventDefault(); setErr("");
     if (step === 1) {
-      // Validate mandatory phone
-      if (!form.phone.trim()) { setErr("Phone number is required."); return; }
+      // ADDED: full step-1 validation (applies to every role).
+      if (!form.name.trim())  { setErr(form.role === "school" ? "Institution name is required." : "Full name is required."); return; }
       if (!form.email.trim()) { setErr("Email address is required."); return; }
-      // ADDED (mandatory fields): all step-1 fields are required
-      if (!form.name.trim())     { setErr("Full name is required."); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { setErr("Please enter a valid email address."); return; }
+      if (!form.phone.trim()) { setErr("Phone number is required."); return; }
+      if (!/^[0-9+\s\-]{7,15}$/.test(form.phone.trim())) { setErr("Please enter a valid phone number."); return; }
+      // State → City → Country are all required now (State is picked first, City filters by it).
+      if (!String(form.state === "Other" ? form.state_other : form.state || "").trim()) { setErr("State is required."); return; }
       if (!form.city.trim())     { setErr("City is required."); return; }
-      // ADDED (mandatory fields): tutors must also pick State & Country
-      if (form.role === "tutor" && !String(form.state === "Other" ? form.state_other : form.state || "").trim()) { setErr("State is required."); return; }
-      if (form.role === "tutor" && !String(form.country || "").trim()) { setErr("Country is required."); return; }
+      if (!String(form.country || "").trim()) { setErr("Country is required."); return; }
       if (!form.password.trim()) { setErr("Password is required."); return; }
+      if (form.password.trim().length < 8) { setErr("Password must be at least 8 characters."); return; }
       setStep(2); return;
     }
     if (step === 2) {
@@ -322,9 +354,27 @@ function AuthPage({ mode, setPage }) {
       }
       // ADDED (mandatory fields): school fields are required
       if (form.role === "school") {
-        if (!String(form.institute_type || "").trim()) { setErr("Institute type is required."); return; }
-        if (!String(form.est_year || "").trim())       { setErr("Establishment year is required."); return; }
-        if (!String(form.student_count || "").trim())  { setErr("Student count is required."); return; }
+        // Name, Email, Phone, City, State, Country & Password are captured in step 1 (not repeated here).
+        if (!String(form.institute_type || "").trim())   { setErr("Institution type is required."); return; }
+        if (!String(form.board_university || "").trim()) { setErr("Board / University is required."); return; }
+        if (!String(form.school_logo_base64 || "").trim()) { setErr("Please upload the School / Institution logo."); return; }
+        if (!String(form.contact_person || "").trim())   { setErr("Contact person name is required."); return; }
+        if (!String(form.designation || "").trim())      { setErr("Designation is required."); return; }
+        if (!String(form.official_email || "").trim())   { setErr("Official email address is required."); return; }
+        if (!String(form.area_locality || "").trim())    { setErr("Area / Locality is required."); return; }
+        if (!String(form.full_address || "").trim())     { setErr("Full address is required."); return; }
+        if (!String(form.school_pincode || "").trim())   { setErr("PIN code is required."); return; }
+        if (form.has_branches === "Yes") {
+          if (!(form.branches && form.branches.length)) { setErr("Please add at least one branch (or choose No)."); return; }
+          for (let i = 0; i < form.branches.length; i++) {
+            const b = form.branches[i] || {};
+            for (const [k, lbl] of [["name","name"],["contact_person","contact person"],["mobile","mobile number"],["state","state"],["city","city"],["area","area/locality"],["full_address","full address"],["pincode","PIN code"]]) {
+              if (!String(b[k] || "").trim()) { setErr(`Branch ${i + 1}: ${lbl} is required.`); return; }
+            }
+          }
+        }
+        if (!form.school_terms_accepted)   { setErr("Please accept the Terms & Conditions."); return; }
+        if (!form.school_privacy_accepted) { setErr("Please accept the Privacy Policy."); return; }
       }
       // Send OTP to email
       setOtpLoading(true);
@@ -809,26 +859,26 @@ function AuthPage({ mode, setPage }) {
                       <label className="flabel">Phone Number *</label>
                       <input className="input" type="tel" placeholder="+91 98765 43210" value={form.phone} onChange={e => up("phone", e.target.value)} required pattern="[0-9+\s\-]{7,15}" title="Enter a valid phone number" />
                     </div>
+                    {/* CHANGED: State shown FIRST (right after Phone); City is filtered by it below. */}
+                    <div className="fg"><label className="flabel">State *</label>
+                      <select className="input" value={form.state} onChange={e => { up("state", e.target.value); up("city", ""); up("city_other", ""); }}>
+                        <option value="">Select State</option>
+                        {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      {form.state === "Other" && (
+                        <input className="input" style={{ marginTop:8 }} placeholder="Enter your state" value={form.state_other} onChange={e => up("state_other", e.target.value)} />
+                      )}
+                    </div>
+                  </div>
+                  {/* City (filtered by the selected State) then Country */}
+                  <div className="grid2">
                     <div className="fg"><label className="flabel">City *</label>
-                      {/* ADDED: City is now a dropdown (filtered by selected State). "Other" reveals the original text input below — nothing removed. */}
                       <select className="input" value={citiesForState(form.state).includes(form.city) ? form.city : (form.city ? "Other" : "")} onChange={e => { const v = e.target.value; if (v === "Other") { up("city", form.city_other || ""); up("city_other", form.city_other || " "); } else { up("city", v); up("city_other", ""); } }}>
                         <option value="">Select City</option>
                         {citiesForState(form.state).map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                       {(form.city_other !== "" || (form.city && !citiesForState(form.state).includes(form.city))) && (
                         <input className="input" style={{ marginTop:8 }} placeholder="Hyderabad" value={form.city} onChange={e => { up("city", e.target.value); up("city_other", e.target.value || " "); }} />
-                      )}
-                    </div>
-                  </div>
-                  {/* ADDED: State & Country dropdowns shown right after City */}
-                  <div className="grid2">
-                    <div className="fg"><label className="flabel">State *</label>
-                      <select className="input" value={form.state} onChange={e => { up("state", e.target.value); }}>
-                        <option value="">Select State</option>
-                        {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                      {form.state === "Other" && (
-                        <input className="input" style={{ marginTop:8 }} placeholder="Enter your state" value={form.state_other} onChange={e => up("state_other", e.target.value)} />
                       )}
                     </div>
                     <div className="fg"><label className="flabel">Country *</label>
@@ -1040,22 +1090,138 @@ function AuthPage({ mode, setPage }) {
                   )}
                 </>
               )}
-              {step===2 && form.role==="school" && (
+              {step===2 && form.role==="school" && (() => {
+                const SEC = { fontWeight:800, fontSize:14, color:"#111827", margin:"22px 0 12px", paddingBottom:6, borderBottom:"1px solid #F0F0F0" };
+                const UP  = tutorUpload;
+                const BOARDS = ["CBSE","ICSE","State Board","IB","IGCSE","University / Autonomous","Other"];
+                const YESNO = ["No","Yes"];
+                // CHANGED: Institution Type now offers School / Institution first (existing detailed types kept).
+                const STYPES = ["School", "Institution", ...ITYPES];
+                return (
                 <>
-                  <div className="fg"><label className="flabel">Institute Type</label>
-                    <select className="input" value={form.institute_type} onChange={e => up("institute_type", e.target.value)}>{ITYPES.map(s => <option key={s}>{s}</option>)}</select>
-                  </div>
+                  {/* ── 1. Institution Details ── (Institution Name is collected in step 1 — not repeated) */}
+                  <div style={{ ...SEC, marginTop:0 }}>🏫 Institution Details</div>
                   <div className="grid2">
-                    <div className="fg"><label className="flabel">Est. Year</label><input className="input" type="number" placeholder="e.g. 1995" value={form.est_year} onChange={e => up("est_year", e.target.value)} /></div>
-                    <div className="fg"><label className="flabel">No. of Students</label>
-                      <select className="input" value={form.student_count} onChange={e => up("student_count", e.target.value)}>
-                        <option>Under 500</option><option>500-1,000</option><option>1,000-3,000</option><option>3,000+</option>
-                      </select>
+                    <div className="fg"><label className="flabel">Institution Type *</label>
+                      <select className="input" value={form.institute_type} onChange={e => up("institute_type", e.target.value)}><option value="">Select type</option>{STYPES.map(s => <option key={s}>{s}</option>)}</select>
+                    </div>
+                    <div className="fg"><label className="flabel">Board / University *</label>
+                      <select className="input" value={form.board_university} onChange={e => up("board_university", e.target.value)}><option value="">Select board</option>{BOARDS.map(s => <option key={s}>{s}</option>)}</select>
                     </div>
                   </div>
-                  <div className="fg"><label className="flabel">Website (Optional)</label><input className="input" placeholder="https://yourschool.edu.in" value={form.website} onChange={e => up("website", e.target.value)} /></div>
+                  <div className="fg"><label className="flabel">School / Institution Logo *</label>
+                    <label style={UP}>
+                      <input type="file" accept="image/*" onChange={e => onSchoolFile(e.target.files && e.target.files[0], "school_logo")} style={{ display:"none" }} />
+                      {form.school_logo_base64
+                        ? <img src={form.school_logo_base64} alt="Logo" style={{ width:72, height:72, borderRadius:12, objectFit:"contain", border:"1px solid #E5E7EB", background:"#fff" }} />
+                        : <span style={{ fontSize:22 }}>🏫</span>}
+                      <span style={{ fontSize:13, color:"#374151", fontWeight:700 }}>{form.school_logo_name ? "Change logo" : "Upload logo"}</span>
+                      <span style={{ fontSize:11, color:"#9CA3AF" }}>JPG or PNG</span>
+                    </label>
+                    {form.school_logo_name && <div style={{ fontSize:12, color:"#059669", marginTop:6, fontWeight:700 }}>✓ {form.school_logo_name}</div>}
+                  </div>
+                  <div className="grid2">
+                    <div className="fg"><label className="flabel">Institution Website</label><input className="input" placeholder="https://yourschool.edu.in" value={form.website} onChange={e => up("website", e.target.value)} /></div>
+                    <div className="fg"><label className="flabel">Year Established</label><input className="input" type="number" placeholder="e.g. 1995" value={form.est_year} onChange={e => up("est_year", e.target.value)} /></div>
+                  </div>
+
+                  {/* ── 2. Contact Details ── (Mobile Number is collected in step 1 — not repeated) */}
+                  <div style={SEC}>📞 Contact Details</div>
+                  <div className="grid2">
+                    <div className="fg"><label className="flabel">Contact Person Name *</label><input className="input" placeholder="e.g. Rahul Sharma" value={form.contact_person} onChange={e => up("contact_person", e.target.value)} /></div>
+                    <div className="fg"><label className="flabel">Designation *</label><input className="input" placeholder="e.g. Principal, HR Manager" value={form.designation} onChange={e => up("designation", e.target.value)} /></div>
+                  </div>
+                  <div className="grid2">
+                    <div className="fg"><label className="flabel">Official Email Address *</label><input className="input" type="email" placeholder="office@school.edu.in" value={form.official_email} onChange={e => up("official_email", e.target.value)} /></div>
+                    <div className="fg"><label className="flabel">Alternate Contact Number</label><input className="input" placeholder="Optional" value={form.alt_phone} onChange={e => up("alt_phone", e.target.value)} /></div>
+                  </div>
+
+                  {/* ── 3. Institution Address ── (Country / State / City come from step 1's interlinked dropdowns — not repeated) */}
+                  <div style={SEC}>📍 Institution Address</div>
+                  <div className="fg"><label className="flabel">Area / Locality *</label><input className="input" placeholder="e.g. Banjara Hills" value={form.area_locality} onChange={e => up("area_locality", e.target.value)} /></div>
+                  <div className="fg"><label className="flabel">Full Address *</label><textarea className="input" rows={2} placeholder="Building, street, landmark…" value={form.full_address} onChange={e => up("full_address", e.target.value)} /></div>
+                  <div className="fg"><label className="flabel">PIN Code *</label><input className="input" placeholder="e.g. 500034" value={form.school_pincode} onChange={e => up("school_pincode", e.target.value)} /></div>
+
+                  {/* ── 4. Branch Details ── */}
+                  <div style={SEC}>🏢 Branch Details</div>
+                  <div className="fg"><label className="flabel">Do You Have Multiple Branches? *</label>
+                    <div style={{ display:"flex", gap:10, marginTop:6 }}>
+                      {YESNO.map(v => (
+                        <label key={v} onClick={() => up("has_branches", v)}
+                          style={{ flex:1, textAlign:"center", padding:"9px 0", borderRadius:10, border:`2px solid ${form.has_branches===v?"#1A56DB":"#E5E7EB"}`, background:form.has_branches===v?"#EBF5FF":"#F9FAFB", cursor:"pointer", fontSize:13, fontWeight:700, color:form.has_branches===v?"#1A56DB":"#6B7280", userSelect:"none" }}>{v}</label>
+                      ))}
+                    </div>
+                  </div>
+                  {form.has_branches === "Yes" && (
+                    <>
+                      {(form.branches || []).map((b, i) => (
+                        <div key={i} style={{ border:"1px solid #E5E7EB", borderRadius:12, padding:14, marginBottom:12, background:"#FCFCFD" }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                            <div style={{ fontWeight:800, fontSize:13, color:"#374151" }}>Branch {i + 1}</div>
+                            <button type="button" onClick={() => removeBranch(i)} style={{ border:"none", background:"#FEE2E2", color:"#DC2626", borderRadius:8, padding:"4px 10px", fontSize:12, fontWeight:700, cursor:"pointer" }}>Remove</button>
+                          </div>
+                          <div className="grid2">
+                            <div className="fg"><label className="flabel">Branch Name *</label><input className="input" value={b.name} onChange={e => updateBranch(i, "name", e.target.value)} /></div>
+                            <div className="fg"><label className="flabel">Branch Code / ID</label><input className="input" value={b.code} onChange={e => updateBranch(i, "code", e.target.value)} /></div>
+                          </div>
+                          <div className="grid2">
+                            <div className="fg"><label className="flabel">Branch Contact Person *</label><input className="input" value={b.contact_person} onChange={e => updateBranch(i, "contact_person", e.target.value)} /></div>
+                            <div className="fg"><label className="flabel">Branch Email Address</label><input className="input" type="email" value={b.email} onChange={e => updateBranch(i, "email", e.target.value)} /></div>
+                          </div>
+                          <div className="grid2">
+                            <div className="fg"><label className="flabel">Branch Mobile Number *</label><input className="input" value={b.mobile} onChange={e => updateBranch(i, "mobile", e.target.value)} /></div>
+                            <div className="fg"><label className="flabel">Branch State *</label><input className="input" value={b.state} onChange={e => updateBranch(i, "state", e.target.value)} /></div>
+                          </div>
+                          <div className="grid2">
+                            <div className="fg"><label className="flabel">Branch City *</label><input className="input" value={b.city} onChange={e => updateBranch(i, "city", e.target.value)} /></div>
+                            <div className="fg"><label className="flabel">Branch Area / Locality *</label><input className="input" value={b.area} onChange={e => updateBranch(i, "area", e.target.value)} /></div>
+                          </div>
+                          <div className="fg"><label className="flabel">Branch Full Address *</label><textarea className="input" rows={2} value={b.full_address} onChange={e => updateBranch(i, "full_address", e.target.value)} /></div>
+                          <div className="grid2">
+                            <div className="fg"><label className="flabel">Branch PIN Code *</label><input className="input" value={b.pincode} onChange={e => updateBranch(i, "pincode", e.target.value)} /></div>
+                            <div className="fg"><label className="flabel">Set as Primary Branch</label>
+                              <select className="input" value={b.is_primary} onChange={e => updateBranch(i, "is_primary", e.target.value)}><option>No</option><option>Yes</option></select>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <button type="button" onClick={addBranch} style={{ width:"100%", border:"1.5px dashed #1A56DB", background:"#F8FAFF", color:"#1A56DB", borderRadius:10, padding:"10px", fontSize:13, fontWeight:800, cursor:"pointer", marginBottom:6 }}>＋ Add {(form.branches||[]).length ? "Another " : ""}Branch</button>
+                    </>
+                  )}
+
+                  {/* ── 5. Verification Documents ── */}
+                  <div style={SEC}>📄 Verification Documents</div>
+                  {[
+                    ["doc_reg", "Institution Registration Certificate"],
+                    ["doc_aff", "Board Affiliation Certificate (if applicable)"],
+                    ["doc_id",  "Authorized Person ID Proof"],
+                  ].map(([pfx, label]) => (
+                    <div className="fg" key={pfx}><label className="flabel">{label}</label>
+                      <label style={UP}>
+                        <input type="file" accept=".pdf,.doc,.docx,image/*" onChange={e => onSchoolFile(e.target.files && e.target.files[0], pfx)} style={{ display:"none" }} />
+                        <span style={{ fontSize:20 }}>📄</span>
+                        <span style={{ fontSize:13, color:"#374151", fontWeight:700 }}>{form[pfx + "_name"] ? "Change file" : "Upload file"}</span>
+                        <span style={{ fontSize:11, color:"#9CA3AF" }}>PDF, DOC or image</span>
+                      </label>
+                      {form[pfx + "_name"] && <div style={{ fontSize:12, color:"#059669", marginTop:6, fontWeight:700 }}>✓ {form[pfx + "_name"]}</div>}
+                    </div>
+                  ))}
+
+                  {/* ── 6. Login Details come from step 1 (Email + Password) — not repeated here ── */}
+
+                  {/* ── 7. Terms & Submission ── */}
+                  <div style={SEC}>✅ Terms & Submission</div>
+                  <label style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:10, cursor:"pointer" }}>
+                    <input type="checkbox" checked={!!form.school_terms_accepted} onChange={e => up("school_terms_accepted", e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0 }} />
+                    <span style={{ fontSize:13, color:"#374151", fontWeight:600 }}>I accept the <b>Terms &amp; Conditions</b>. *</span>
+                  </label>
+                  <label style={{ display:"flex", alignItems:"flex-start", gap:10, cursor:"pointer" }}>
+                    <input type="checkbox" checked={!!form.school_privacy_accepted} onChange={e => up("school_privacy_accepted", e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0 }} />
+                    <span style={{ fontSize:13, color:"#374151", fontWeight:600 }}>I accept the <b>Privacy Policy</b>. *</span>
+                  </label>
                 </>
-              )}
+                );
+              })()}
 
               {step===2 && form.role==="parent" && (
                 <>
